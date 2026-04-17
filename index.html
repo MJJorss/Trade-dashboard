@@ -343,6 +343,65 @@
   .rs-score-val.mid  { color: var(--amber); }
   .rs-score-val.low  { color: var(--red); }
 
+  /* ─── CHARTINK SIGNALS ───────────────────────────── */
+  .ck-day-section { margin-bottom: 24px; }
+  .ck-day-label {
+    font-family: var(--font-head); font-weight: 700; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 1px;
+    color: var(--muted); margin-bottom: 10px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .ck-day-label::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+  .ck-day-label.today { color: var(--accent); }
+  .ck-grid {
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .ck-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: center;
+    transition: border-color 0.2s;
+    position: relative; overflow: hidden;
+  }
+  .ck-card:hover { border-color: var(--border2); }
+  .ck-card .ck-tier-stripe {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  }
+  .ck-card.tier-1 .ck-tier-stripe  { background: var(--gold); }
+  .ck-card.tier-2 .ck-tier-stripe  { background: var(--accent); }
+  .ck-card.tier-3 .ck-tier-stripe  { background: var(--green); }
+  .ck-card.tier-4 .ck-tier-stripe  { background: var(--muted); }
+  .ck-tier-badge {
+    font-family: var(--font-head); font-weight: 800;
+    font-size: 11px; padding: 3px 8px; border-radius: 6px;
+    white-space: nowrap;
+  }
+  .ck-tier-badge.t1star { background: rgba(255,213,79,0.15); color: var(--gold);   border: 1px solid rgba(255,213,79,0.35); }
+  .ck-tier-badge.t1     { background: rgba(255,213,79,0.08); color: var(--gold);   border: 1px solid rgba(255,213,79,0.2); }
+  .ck-tier-badge.t2     { background: rgba(0,212,255,0.10);  color: var(--accent); border: 1px solid rgba(0,212,255,0.25); }
+  .ck-tier-badge.t3     { background: rgba(0,230,118,0.08);  color: var(--green);  border: 1px solid rgba(0,230,118,0.2); }
+  .ck-tier-badge.t4     { background: rgba(90,122,150,0.10); color: var(--muted);  border: 1px solid rgba(90,122,150,0.2); }
+  .ck-body { padding-left: 4px; min-width: 0; }
+  .ck-symbol {
+    font-family: var(--font-head); font-weight: 800; font-size: 15px;
+    color: #fff; margin-bottom: 4px;
+  }
+  .ck-meta { font-size: 10px; color: var(--muted); }
+  .ck-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+  .ck-right { text-align: right; white-space: nowrap; }
+  .ck-time  { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .ck-scanners { display: flex; gap: 4px; justify-content: flex-end; flex-wrap: wrap; }
+  .tag-scanner-vcp    { background: rgba(0,230,118,0.10); color: var(--green);  border: 1px solid rgba(0,230,118,0.25); }
+  .tag-scanner-mark   { background: rgba(0,212,255,0.10); color: var(--accent); border: 1px solid rgba(0,212,255,0.25); }
+  .tag-scanner-jadhav { background: rgba(255,213,79,0.10); color: var(--gold);  border: 1px solid rgba(255,213,79,0.25); }
+
   /* ─── EMPTY / LOADING STATES ─────────────────────── */
   .loading-state {
     text-align: center; padding: 48px 16px;
@@ -463,6 +522,10 @@
   <button class="tab-btn" onclick="switchTab('portfolio',this)">
     <span class="tab-icon">💼</span>Portfolio
   </button>
+  <button class="tab-btn" onclick="switchTab('chartink',this)">
+    <span class="tab-icon">🎯</span>Chartink
+    <span class="tab-badge" id="chartinkBadge" style="display:none">0</span>
+  </button>
   <button class="tab-btn" onclick="switchTab('rs',this)">
     <span class="tab-icon">📈</span>RS Universe
   </button>
@@ -565,6 +628,49 @@
     </div>
   </div>
 
+  <!-- ══ CHARTINK TAB ══════════════════════════════ -->
+  <div class="tab-panel" id="tab-chartink">
+    <div class="summary-strip">
+      <div class="stat-card green">
+        <div class="stat-label">🌟 T1 Today</div>
+        <div class="stat-value" id="ckT1Count">—</div>
+        <div class="stat-sub">HC + HIGH RS</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="stat-label">🚀 T2 Today</div>
+        <div class="stat-value" id="ckT2Count">—</div>
+        <div class="stat-sub">Strong setups</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-label">📊 T3–T4 Today</div>
+        <div class="stat-value" id="ckT3Count">—</div>
+        <div class="stat-sub">Watch signals</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-label">📅 5-Day Total</div>
+        <div class="stat-value" id="ckTotalCount">—</div>
+        <div class="stat-sub">Rolling window</div>
+      </div>
+    </div>
+
+    <div class="section-header" style="margin-top:0">
+      <div class="filter-group" id="ckFilter">
+        <button class="filter-btn active" onclick="filterChartink('all',this)">All Tiers</button>
+        <button class="filter-btn" onclick="filterChartink('1',this)">T1 🌟</button>
+        <button class="filter-btn" onclick="filterChartink('2',this)">T2 🚀</button>
+        <button class="filter-btn" onclick="filterChartink('3',this)">T3–T4</button>
+      </div>
+      <div class="filter-group" id="ckScanFilter">
+        <button class="filter-btn active" onclick="filterChartinkScanner('all',this)">All Scanners</button>
+        <button class="filter-btn" onclick="filterChartinkScanner('VCP',this)">VCP</button>
+        <button class="filter-btn" onclick="filterChartinkScanner('Mark',this)">Mark</button>
+        <button class="filter-btn" onclick="filterChartinkScanner('Jadhav',this)">Jadhav</button>
+      </div>
+    </div>
+
+    <div id="chartinkDays"></div>
+  </div>
+
   <!-- ══ RS UNIVERSE TAB ════════════════════════════ -->
   <div class="tab-panel" id="tab-rs">
     <div class="summary-strip">
@@ -591,19 +697,12 @@
     </div>
 
     <div class="section-header">
-      <div class="section-title" id="rsSectionTitle"><span class="icon">📈</span>HIGH RS Stocks</div>
-    </div>
-    <div class="section-header" style="margin-top:0">
-      <div class="filter-group" id="rsTierFilter">
-        <button class="filter-btn active" onclick="filterRSTier('HIGH',this)">🟢 HIGH</button>
-        <button class="filter-btn" onclick="filterRSTier('MID',this)">🟡 MID</button>
-        <button class="filter-btn" onclick="filterRSTier('LOW',this)">🔴 LOW</button>
-      </div>
+      <div class="section-title"><span class="icon">📈</span>HIGH RS Stocks</div>
       <div class="filter-group" id="rsFilter">
-        <button class="filter-btn active" onclick="filterRSCap('all',this)">All</button>
-        <button class="filter-btn" onclick="filterRSCap('LARGE',this)">Large</button>
-        <button class="filter-btn" onclick="filterRSCap('MID',this)">Mid Cap</button>
-        <button class="filter-btn" onclick="filterRSCap('SMALL',this)">Small</button>
+        <button class="filter-btn active" onclick="filterRS('all',this)">All</button>
+        <button class="filter-btn" onclick="filterRS('LARGE',this)">Large</button>
+        <button class="filter-btn" onclick="filterRS('MID',this)">Mid</button>
+        <button class="filter-btn" onclick="filterRS('SMALL',this)">Small</button>
       </div>
     </div>
     <div class="rs-grid" id="rsGrid">
@@ -649,6 +748,7 @@
     <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px; font-size:11px; color:var(--muted); line-height:2;">
       <div><span style="color:var(--accent)">announcements_log.csv</span> → FCIS Intelligence (Action / Watchlist / Radar)</div>
       <div><span style="color:var(--accent)">positions.json</span> → Portfolio (7 slots, tiers, stops)</div>
+      <div><span style="color:var(--accent)">signals_today.json</span> → Chartink Signals (5-day rolling window)</div>
       <div><span style="color:var(--accent)">master_universe.json</span> → RS Universe (HIGH/MID/LOW)</div>
     </div>
 
@@ -686,10 +786,8 @@ const DEFAULTS = {
   user: '', repo: 'trade-dashboard-data', branch: 'main', token: ''
 };
 let cfg = loadCfg();
-let allFcisData  = [];
-let allRsData    = [];
-let currentRsTier = 'HIGH';
-let currentRsCap  = 'all';
+let allFcisData = [];
+let allRsData   = [];
 let refreshTimer = null;
 let refreshMins  = 60;
 
@@ -768,6 +866,7 @@ async function loadAllData() {
   await Promise.allSettled([
     loadFCIS(),
     loadPortfolio(),
+    loadChartink(),
     loadRS()
   ]);
 
@@ -974,6 +1073,159 @@ async function loadPortfolio() {
   }
 }
 
+// ─── CHARTINK SIGNALS ─────────────────────────────────────────────────────────
+let allCkData         = [];
+let ckTierFilter      = 'all';
+let ckScannerFilter   = 'all';
+
+async function loadChartink() {
+  try {
+    const text = await ghFetch('signals_today.json');
+    const raw  = JSON.parse(text);
+    allCkData  = raw.signals || [];
+    renderChartink();
+  } catch(e) {
+    document.getElementById('chartinkDays').innerHTML =
+      `<div class="error-state">⚠️ ${e.message}</div>`;
+    ['ckT1Count','ckT2Count','ckT3Count','ckTotalCount'].forEach(id => {
+      document.getElementById(id).textContent = '—';
+    });
+  }
+}
+
+function ckTierSort(a, b) {
+  // Primary: tier (1 < 2 < 3 < 4)
+  if (a.tier !== b.tier) return a.tier - b.tier;
+  // Secondary within same tier: tier_star first
+  if (a.tier_star !== b.tier_star) return a.tier_star ? -1 : 1;
+  // Tertiary: RS (HIGH > MID > LOW > N/A)
+  const rsRank = { HIGH: 0, MID: 1, LOW: 2, 'N/A': 3, UNRANKED: 3 };
+  const ra = rsRank[a.rs] ?? 3;
+  const rb = rsRank[b.rs] ?? 3;
+  if (ra !== rb) return ra - rb;
+  // Finally: time descending (latest first)
+  return (b.time || '').localeCompare(a.time || '');
+}
+
+function filterChartink(tier, btn) {
+  document.querySelectorAll('#ckFilter .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  ckTierFilter = tier;
+  renderChartink();
+}
+
+function filterChartinkScanner(scanner, btn) {
+  document.querySelectorAll('#ckScanFilter .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  ckScannerFilter = scanner;
+  renderChartink();
+}
+
+function renderChartink() {
+  const container = document.getElementById('chartinkDays');
+
+  // Apply filters
+  let data = allCkData;
+  if (ckTierFilter !== 'all') {
+    if (ckTierFilter === '3') {
+      data = data.filter(s => s.tier >= 3);
+    } else {
+      data = data.filter(s => s.tier === parseInt(ckTierFilter));
+    }
+  }
+  if (ckScannerFilter !== 'all') {
+    data = data.filter(s => (s.scanners || []).includes(ckScannerFilter));
+  }
+
+  // Today's IST date
+  const todayIST = new Date(new Date().toLocaleString('en-US', {timeZone:'Asia/Kolkata'}));
+  const todayStr = todayIST.toISOString().split('T')[0];
+
+  // Summary counts (unfiltered today only)
+  const todayAll = allCkData.filter(s => s.date === todayStr);
+  const t1Today  = todayAll.filter(s => s.tier === 1).length;
+  const t2Today  = todayAll.filter(s => s.tier === 2).length;
+  const t3Today  = todayAll.filter(s => s.tier >= 3).length;
+  document.getElementById('ckT1Count').textContent    = t1Today;
+  document.getElementById('ckT2Count').textContent    = t2Today;
+  document.getElementById('ckT3Count').textContent    = t3Today;
+  document.getElementById('ckTotalCount').textContent = allCkData.length;
+
+  // Badge on tab
+  const badge = document.getElementById('chartinkBadge');
+  if (t1Today + t2Today > 0) {
+    badge.textContent  = t1Today + t2Today;
+    badge.style.display = '';
+  } else {
+    badge.style.display = 'none';
+  }
+
+  if (!data.length) {
+    container.innerHTML = '<div class="empty-state">No signals match the selected filters</div>';
+    return;
+  }
+
+  // Group by date, sorted newest first
+  const byDate = {};
+  data.forEach(s => {
+    if (!byDate[s.date]) byDate[s.date] = [];
+    byDate[s.date].push(s);
+  });
+  const sortedDates = Object.keys(byDate).sort().reverse();
+
+  // Day label helpers
+  function dayLabel(dateStr) {
+    const d     = new Date(dateStr + 'T00:00:00');
+    const today = new Date(todayStr + 'T00:00:00');
+    const diff  = Math.round((today - d) / 86400000);
+    if (diff === 0) return { text: 'Today', cls: 'today' };
+    if (diff === 1) return { text: 'Yesterday', cls: '' };
+    return {
+      text: d.toLocaleDateString('en-IN', {weekday:'short', day:'numeric', month:'short'}),
+      cls: ''
+    };
+  }
+
+  container.innerHTML = sortedDates.map(dateStr => {
+    const signals = byDate[dateStr].sort(ckTierSort);
+    const lbl     = dayLabel(dateStr);
+    const cards   = signals.map((s, i) => {
+      const tierClass  = `tier-${s.tier}`;
+      const badgeCls   = s.tier_star ? 't1star' : `t${s.tier}`;
+      const badgeLabel = s.tier_star ? 'T1 🌟' : `T${s.tier}`;
+      const rsCls      = (s.rs || '').toLowerCase();
+      const cap        = (s.cap || '').replace(' Cap','').toUpperCase();
+      const scannerTags = (s.scanners || []).map(sc => {
+        const cls = sc === 'VCP' ? 'tag-scanner-vcp'
+                  : sc === 'Mark' ? 'tag-scanner-mark'
+                  : 'tag-scanner-jadhav';
+        return `<span class="tag ${cls}">${sc}</span>`;
+      }).join('');
+
+      return `<div class="ck-card ${tierClass} animate-in" style="animation-delay:${i*0.04}s">
+        <div class="ck-tier-stripe"></div>
+        <div class="ck-tier-badge ${badgeCls}">${badgeLabel}</div>
+        <div class="ck-body">
+          <div class="ck-symbol">${s.symbol}</div>
+          <div class="ck-tags">
+            ${s.rs ? `<span class="tag tag-rs-${rsCls}">${s.rs} RS</span>` : ''}
+            ${cap   ? `<span class="tag tag-cap">${cap}</span>` : ''}
+          </div>
+        </div>
+        <div class="ck-right">
+          <div class="ck-time">${s.time || '—'}</div>
+          <div class="ck-scanners">${scannerTags}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `<div class="ck-day-section">
+      <div class="ck-day-label ${lbl.cls}">${lbl.text} <span style="opacity:0.5;font-size:10px">${dateStr}</span></div>
+      <div class="ck-grid">${cards}</div>
+    </div>`;
+  }).join('');
+}
+
 // ─── RS UNIVERSE ──────────────────────────────────────
 async function loadRS() {
   const grid = document.getElementById('rsGrid');
@@ -1000,33 +1252,16 @@ async function loadRS() {
     document.getElementById('rsLowCount').textContent  = low;
     document.getElementById('rsTotal').textContent     = allRsData.length;
 
-    renderRS();
+    renderRS(allRsData.filter(s => (s.rs_tier||s.rs||'').toUpperCase() === 'HIGH'));
 
   } catch(e) {
     grid.innerHTML = `<div class="error-state" style="grid-column:1/-1">⚠️ ${e.message}</div>`;
   }
 }
 
-function renderRS() {
+function renderRS(data) {
   const grid = document.getElementById('rsGrid');
-  const tierLabels = {HIGH:'🟢 HIGH RS', MID:'🟡 MID RS', LOW:'🔴 LOW RS'};
-
-  // Update section title
-  document.getElementById('rsSectionTitle').innerHTML =
-    `<span class="icon">📈</span>${tierLabels[currentRsTier] || currentRsTier} Stocks`;
-
-  // Filter by tier first
-  let data = allRsData.filter(s => (s.rs_tier||s.rs||'').toUpperCase() === currentRsTier);
-
-  // Then by cap if set
-  if (currentRsCap !== 'all') {
-    data = data.filter(s => (s.cap_category||s.cap||'').toUpperCase().includes(currentRsCap));
-  }
-
-  if (!data.length) {
-    grid.innerHTML = `<div class="empty-state">No ${currentRsTier} RS stocks found${currentRsCap !== 'all' ? ' for selected cap' : ''}</div>`;
-    return;
-  }
+  if (!data.length) { grid.innerHTML = '<div class="empty-state">No HIGH RS stocks found</div>'; return; }
 
   const sorted = [...data].sort((a,b) => {
     const sa = parseFloat(a.rs_score||a.rs_value||0);
@@ -1034,7 +1269,7 @@ function renderRS() {
     return sb - sa;
   });
 
-  grid.innerHTML = sorted.slice(0, 150).map((s,i) => {
+  grid.innerHTML = sorted.slice(0, 100).map((s,i) => {
     const name   = s.symbol || s.name || s.stock || 'Unknown';
     const sector = s.sector || '—';
     const cap    = (s.cap_category || s.cap || '—').toUpperCase();
@@ -1054,26 +1289,13 @@ function renderRS() {
   }).join('');
 }
 
-function filterRSTier(tier, btn) {
-  document.querySelectorAll('#rsTierFilter .filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  currentRsTier = tier;
-  // Reset cap filter to 'all' when switching tier
-  currentRsCap = 'all';
-  document.querySelectorAll('#rsFilter .filter-btn').forEach(b => b.classList.remove('active'));
-  document.querySelector('#rsFilter .filter-btn').classList.add('active');
-  renderRS();
-}
-
-function filterRSCap(cap, btn) {
+function filterRS(filter, btn) {
   document.querySelectorAll('#rsFilter .filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  currentRsCap = cap;
-  renderRS();
+  let data = allRsData.filter(s => (s.rs_tier||s.rs||'').toUpperCase() === 'HIGH');
+  if (filter !== 'all') data = data.filter(s => (s.cap_category||s.cap||'').toUpperCase() === filter);
+  renderRS(data);
 }
-
-// Keep old name as alias for any stale calls
-function filterRS(filter, btn) { filterRSCap(filter, btn); }
 
 // ─── CONFIG ───────────────────────────────────────────
 function showConfig() {
@@ -1152,10 +1374,13 @@ if (cfg.user && cfg.repo) {
   });
   document.getElementById('portfolioGrid').innerHTML =
     '<div class="empty-state" style="grid-column:1/-1">Configure GitHub repo in ⚙️ Config tab to load data</div>';
+  document.getElementById('chartinkDays').innerHTML =
+    '<div class="empty-state">Configure GitHub repo in ⚙️ Config tab to load data</div>';
   document.getElementById('rsGrid').innerHTML =
     '<div class="empty-state" style="grid-column:1/-1">Configure GitHub repo in ⚙️ Config tab to load data</div>';
   ['countAction','countWatchlist','countRadar','countTotal',
    'activeSlots','freeSlots','phase2Count','t1Count',
+   'ckT1Count','ckT2Count','ckT3Count','ckTotalCount',
    'rsHighCount','rsMidCount','rsLowCount','rsTotal'].forEach(id => {
     document.getElementById(id).textContent = '0';
   });

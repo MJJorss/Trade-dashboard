@@ -281,7 +281,7 @@
   .portfolio-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 12px; margin-bottom: 20px;
+    gap: 10px; margin-bottom: 20px;
   }
   @media(min-width:600px)  { .portfolio-grid { grid-template-columns: repeat(2,1fr); } }
   @media(min-width:1000px) { .portfolio-grid { grid-template-columns: repeat(3,1fr); } }
@@ -290,79 +290,36 @@
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    padding: 0;
+    padding: 16px;
     transition: all 0.2s;
     position: relative; overflow: hidden;
   }
   .position-card:hover { border-color: var(--border2); box-shadow: var(--shadow); }
-
-  /* top accent stripe — colour driven by pnl class on card */
-  .position-card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  .position-card.empty {
+    border-style: dashed; opacity: 0.5;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 130px;
+    flex-direction: column; gap: 6px;
   }
-  .position-card.pos-up::before    { background: var(--green); }
-  .position-card.pos-down::before  { background: var(--red); }
-  .position-card.pos-flat::before  { background: var(--muted); }
-  .position-card.pos-load::before  { background: var(--border2); }
-
-  .pos-inner { padding: 14px 16px; }
-
-  /* header row */
-  .pos-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
-  .pos-name   { font-family: var(--font-head); font-weight: 800; font-size: 17px; color: #fff; letter-spacing: -0.3px; }
-  .pos-meta   { font-size: 10px; color: var(--muted); margin-top: 1px; }
-
-  /* big price + pnl block */
-  .pos-price-row {
-    display: flex; align-items: baseline; gap: 10px;
-    margin: 10px 0 6px;
-  }
-  .pos-cur-price {
-    font-family: var(--font-head); font-weight: 800; font-size: 22px; color: #fff;
-  }
-  .pos-pnl-pct {
-    font-family: var(--font-head); font-weight: 700; font-size: 16px;
-  }
-  .pos-pnl-pct.up   { color: var(--green); }
-  .pos-pnl-pct.down { color: var(--red); }
-  .pos-pnl-pct.flat { color: var(--muted); }
-  .pos-price-loading { font-size: 11px; color: var(--muted); font-style: italic; }
-
-  /* 4-stat grid */
-  .pos-stats {
-    display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
-    gap: 6px; margin: 10px 0 10px;
-  }
+  .position-card.empty .slot-label { font-size: 11px; color: var(--muted); }
+  .pos-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .pos-name { font-family: var(--font-head); font-weight: 800; font-size: 16px; color: #fff; }
+  .pos-slot { font-size: 10px; color: var(--muted); }
+  .pos-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+  .pos-stat { }
   .pos-stat-label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-  .pos-stat-val   { font-size: 12px; color: var(--text); font-weight: 700; margin-top: 2px; }
-  .pos-stat-val.red { color: var(--red); }
-
-  /* tags row */
-  .pos-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px; }
+  .pos-stat-val   { font-size: 13px; color: var(--text); font-weight: 700; margin-top: 1px; }
+  .pos-tags { display: flex; gap: 5px; flex-wrap: wrap; }
   .phase-badge {
     font-size: 9px; font-weight: 700; padding: 2px 7px;
     border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;
   }
-  .phase-1 { background: rgba(0,212,255,0.1);  color: var(--accent); border: 1px solid rgba(0,212,255,0.2); }
-  .phase-2 { background: rgba(0,230,118,0.1);  color: var(--green);  border: 1px solid rgba(0,230,118,0.2); }
-  .merged-badge { background: rgba(255,171,0,0.1); color: var(--amber); border: 1px solid rgba(255,171,0,0.25); }
-
-  /* progress bar — shows how far price is between entry and stop */
-  .pos-bar-wrap { padding: 0 16px 14px; }
-  .pos-bar-labels { display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); margin-bottom: 4px; }
-  .pos-bar-track  { height: 5px; background: var(--border); border-radius: 3px; position: relative; }
-  .pos-bar-stop   { height: 5px; background: var(--red);    border-radius: 3px; position: absolute; left: 0; top: 0; transition: width 0.6s; }
-  .pos-bar-cur    { width: 8px; height: 8px; background: #fff; border-radius: 50%;
-                    position: absolute; top: -1.5px; transform: translateX(-50%);
-                    box-shadow: 0 0 4px rgba(0,212,255,0.6); transition: left 0.6s; }
-
-  /* empty slot */
-  .position-card.empty {
-    border-style: dashed; opacity: 0.45;
-    display: flex; align-items: center; justify-content: center;
-    min-height: 120px; flex-direction: column; gap: 6px;
-  }
-  .position-card.empty .slot-label { font-size: 11px; color: var(--muted); }
+  .phase-1 { background: rgba(0,212,255,0.1); color: var(--accent); border: 1px solid rgba(0,212,255,0.2); }
+  .phase-2 { background: rgba(0,230,118,0.1); color: var(--green);  border: 1px solid rgba(0,230,118,0.2); }
+  .stop-bar-wrap { margin-top: 10px; }
+  .stop-bar-label { display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); margin-bottom: 4px; }
+  .stop-bar-track { height: 4px; background: var(--border); border-radius: 2px; }
+  .stop-bar-fill  { height: 4px; background: var(--red); border-radius: 2px; transition: width 0.6s; }
 
   /* ─── RS UNIVERSE ────────────────────────────────── */
   .rs-grid {
@@ -535,6 +492,110 @@
   }
   .notice strong { color: #fff; }
 
+  /* ─── PERFORMANCE TAB ───────────────────────────────── */
+  .perf-kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px; margin-bottom: 16px;
+  }
+  @media(min-width:600px){ .perf-kpi-strip { grid-template-columns: repeat(4,1fr); } }
+
+  /* Monthly bar chart */
+  .month-chart {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 16px; margin-bottom: 16px;
+  }
+  .month-chart-title {
+    font-family: var(--font-head); font-weight: 700; font-size: 12px;
+    color: var(--muted); text-transform: uppercase; letter-spacing: 1px;
+    margin-bottom: 14px;
+  }
+  .chart-bars {
+    display: flex; align-items: flex-end; gap: 6px;
+    height: 120px; padding-bottom: 24px; position: relative;
+  }
+  .chart-bar-wrap {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; position: relative;
+  }
+  .chart-bar {
+    width: 100%; border-radius: 4px 4px 0 0;
+    min-height: 3px; transition: height 0.5s ease;
+    position: relative;
+  }
+  .chart-bar.pos { background: var(--green); }
+  .chart-bar.neg { background: var(--red); border-radius: 0 0 4px 4px; }
+  .chart-bar-label {
+    position: absolute; bottom: -22px;
+    font-size: 9px; color: var(--muted); white-space: nowrap;
+    text-align: center; width: 100%;
+  }
+  .chart-bar-val {
+    position: absolute; top: -16px;
+    font-size: 9px; font-weight: 700; white-space: nowrap;
+  }
+  .chart-bar-val.pos { color: var(--green); }
+  .chart-bar-val.neg { color: var(--red); }
+  .chart-zero-line {
+    position: absolute; left: 0; right: 0; height: 1px;
+    background: var(--border2);
+  }
+
+  /* Trade table */
+  .trade-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 11px; margin-bottom: 6px;
+  }
+  .trade-table th {
+    text-align: left; padding: 6px 8px;
+    color: var(--muted); font-size: 9px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-head);
+  }
+  .trade-table td {
+    padding: 8px 8px; border-bottom: 1px solid var(--border);
+    color: var(--text); vertical-align: middle;
+  }
+  .trade-table tr:last-child td { border-bottom: none; }
+  .trade-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .td-symbol { font-family: var(--font-head); font-weight: 700; color: #fff; font-size: 12px; }
+  .td-pos { color: var(--green); font-weight: 700; }
+  .td-neg { color: var(--red);   font-weight: 700; }
+  .td-muted { color: var(--muted); }
+
+  /* Scanner breakdown cards */
+  .scanner-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 10px; margin-bottom: 16px;
+  }
+  .scanner-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px; text-align: center;
+  }
+  .scanner-card-name { font-family: var(--font-head); font-weight: 700; font-size: 12px; color: #fff; margin-bottom: 8px; }
+  .scanner-stat { font-size: 10px; color: var(--muted); margin-top: 3px; }
+  .scanner-stat span { font-weight: 700; }
+  .scanner-stat span.pos { color: var(--green); }
+  .scanner-stat span.neg { color: var(--red); }
+
+  /* Monthly summary table container */
+  .table-wrap {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 16px;
+    overflow-x: auto;
+  }
+
+  /* Empty perf state */
+  .perf-empty {
+    text-align: center; padding: 48px 20px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); margin-bottom: 16px;
+  }
+  .perf-empty-icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
+  .perf-empty-title { font-family: var(--font-head); font-weight: 700; font-size: 14px; color: #fff; margin-bottom: 6px; }
+  .perf-empty-sub { font-size: 11px; color: var(--muted); line-height: 1.6; }
+
 </style>
 </head>
 <body>
@@ -564,6 +625,10 @@
   </button>
   <button class="tab-btn" onclick="switchTab('portfolio',this)">
     <span class="tab-icon">💼</span>Portfolio
+  </button>
+  <button class="tab-btn" onclick="switchTab('perf',this)">
+    <span class="tab-icon">📊</span>Performance
+    <span class="tab-badge" id="perfBadge" style="display:none">NEW</span>
   </button>
   <button class="tab-btn" onclick="switchTab('chartink',this)">
     <span class="tab-icon">🎯</span>Chartink
@@ -793,6 +858,7 @@
       <div><span style="color:var(--accent)">positions.json</span> → Portfolio (7 slots, tiers, stops)</div>
       <div><span style="color:var(--accent)">signals_today.json</span> → Chartink Signals (5-day rolling window)</div>
       <div><span style="color:var(--accent)">master_universe.json</span> → RS Universe (HIGH/MID/LOW)</div>
+      <div><span style="color:var(--accent)">trade_history.json</span> → Performance Tab (closed trades, P&amp;L, monthly breakdown)</div>
     </div>
 
     <div class="divider"></div>
@@ -816,6 +882,113 @@
       <div>All data fetched from GitHub · No backend server required</div>
       <div style="margin-top:8px; color:var(--border2)">Built for NSE/BSE swing trading · Chartink → GitHub Actions → Dashboard</div>
     </div>
+  </div>
+
+  <!-- ══ PERFORMANCE TAB ══════════════════════════════ -->
+  <div class="tab-panel" id="tab-perf">
+
+    <!-- KPI strip -->
+    <div class="perf-kpi-strip">
+      <div class="stat-card green">
+        <div class="stat-label">Total P&amp;L ₹</div>
+        <div class="stat-value" id="perfTotalInr">—</div>
+        <div class="stat-sub" id="perfTotalPct">—</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="stat-label">Win Rate</div>
+        <div class="stat-value" id="perfWinRate">—</div>
+        <div class="stat-sub" id="perfWinLoss">— W / — L</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-label">Avg Hold</div>
+        <div class="stat-value" id="perfAvgHold">—</div>
+        <div class="stat-sub">days per trade</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-label">Trades Closed</div>
+        <div class="stat-value" id="perfTradeCount">—</div>
+        <div class="stat-sub" id="perfDateRange">—</div>
+      </div>
+    </div>
+
+    <!-- Monthly P&L bar chart -->
+    <div class="month-chart">
+      <div class="month-chart-title">📅 Monthly P&amp;L (₹)</div>
+      <div class="chart-bars" id="perfMonthChart">
+        <div class="loading-state" style="width:100%;justify-content:center">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scanner breakdown -->
+    <div class="section-header" style="margin-top:0">
+      <div class="section-title"><span class="icon">🔍</span>Scanner Performance</div>
+    </div>
+    <div class="scanner-grid" id="perfScannerGrid">
+      <div class="loading-state" style="grid-column:1/-1"><div class="spinner"></div></div>
+    </div>
+
+    <!-- Top & Bottom performers -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;" id="perfTopBot">
+      <div>
+        <div class="section-header" style="margin-top:0; margin-bottom:10px">
+          <div class="section-title"><span class="icon">🏆</span>Top 5</div>
+        </div>
+        <div class="table-wrap"><table class="trade-table" id="perfTop5"></table></div>
+      </div>
+      <div>
+        <div class="section-header" style="margin-top:0; margin-bottom:10px">
+          <div class="section-title"><span class="icon">💔</span>Bottom 5</div>
+        </div>
+        <div class="table-wrap"><table class="trade-table" id="perfBot5"></table></div>
+      </div>
+    </div>
+
+    <!-- Monthly summary table -->
+    <div class="section-header">
+      <div class="section-title"><span class="icon">📋</span>Monthly Summary</div>
+    </div>
+    <div class="table-wrap">
+      <table class="trade-table" id="perfMonthTable">
+        <thead>
+          <tr>
+            <th>Month</th><th>Trades</th><th>Wins</th><th>Win%</th>
+            <th>P&amp;L ₹</th><th>P&amp;L %</th><th>Best</th><th>Worst</th>
+          </tr>
+        </thead>
+        <tbody id="perfMonthBody">
+          <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Full trade log -->
+    <div class="section-header">
+      <div class="section-title"><span class="icon">📜</span>All Closed Trades</div>
+      <div class="filter-group" id="perfFilter">
+        <button class="filter-btn active" onclick="filterPerfTrades('all',this)">All</button>
+        <button class="filter-btn" onclick="filterPerfTrades('win',this)">Wins</button>
+        <button class="filter-btn" onclick="filterPerfTrades('loss',this)">Losses</button>
+        <button class="filter-btn" onclick="filterPerfTrades('VCP',this)">VCP</button>
+        <button class="filter-btn" onclick="filterPerfTrades('Mark',this)">Mark</button>
+        <button class="filter-btn" onclick="filterPerfTrades('Jadhav',this)">Jadhav</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="trade-table">
+        <thead>
+          <tr>
+            <th>Symbol</th><th>Scanner</th><th>Entry</th><th>Exit</th>
+            <th>Hold</th><th>P&amp;L%</th><th>P&amp;L ₹</th><th>Exit Reason</th><th>RS</th>
+          </tr>
+        </thead>
+        <tbody id="perfTradeLog">
+          <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
   </div>
 
 </main>
@@ -910,7 +1083,8 @@ async function loadAllData() {
     loadFCIS(),
     loadPortfolio(),
     loadChartink(),
-    loadRS()
+    loadRS(),
+    loadPerf()
   ]);
 
   const now = new Date().toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', timeZone:'Asia/Kolkata'});
@@ -1021,98 +1195,92 @@ function filterFcis(filter, btn) {
 }
 
 // ─── PORTFOLIO ────────────────────────────────────────
-
-// Fetch live price for one symbol via allorigins proxy → Yahoo Finance
-async function fetchLivePrice(symbol) {
-  // NSE symbols need .NS suffix for Yahoo Finance
-  const yfSym = symbol.includes('.') ? symbol : symbol + '.NS';
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yfSym}?interval=1d&range=2d`;
-  const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-  try {
-    const res  = await fetch(proxy, {cache: 'no-store'});
-    const json = await res.json();
-    const data = JSON.parse(json.contents);
-    const meta = data?.chart?.result?.[0]?.meta;
-    if (!meta) return null;
-    const cur  = meta.regularMarketPrice ?? meta.previousClose ?? null;
-    const prev = meta.previousClose ?? null;
-    return { price: cur, prev };
-  } catch {
-    return null;
-  }
-}
-
 async function loadPortfolio() {
   const grid = document.getElementById('portfolioGrid');
   try {
     const text = await ghFetch('positions.json');
     const data = JSON.parse(text);
-    const raw  = Array.isArray(data) ? data : (data.positions || []);
+    // Support both array and object formats
+    const positions = Array.isArray(data) ? data : (data.positions || []);
 
-    // ── Deduplication: merge same symbol into one card ──
-    const bySymbol = {};
-    raw.forEach(p => {
-      const sym = (p.symbol || p.stock || p.name || 'Unknown').toUpperCase();
-      if (!bySymbol[sym]) {
-        bySymbol[sym] = { ...p, _slots: [], _merged: false };
-      } else {
-        // Already seen — merge: keep earliest entry, collect all slots
-        bySymbol[sym]._merged = true;
-        // Average entry price weighted equally
-        const existing = bySymbol[sym];
-        const e1 = parseFloat(existing.entry_price || existing.entry || 0);
-        const e2 = parseFloat(p.entry_price || p.entry || 0);
-        if (e1 && e2) {
-          existing.entry_price = ((e1 + e2) / 2).toFixed(2);
-        }
-        // Keep the lower stop (more conservative)
-        const s1 = parseFloat(existing.stop_price || existing.stop || 0);
-        const s2 = parseFloat(p.stop_price || p.stop || 0);
-        if (s1 && s2) existing.stop_price = Math.min(s1, s2).toFixed(2);
-        // Keep highest phase
-        existing.phase = Math.max(existing.phase || 1, p.phase || 1);
-        // Keep best tier
-        const t1 = parseInt((existing.conviction_tier || existing.tier || '4').toString().replace('T',''));
-        const t2 = parseInt((p.conviction_tier || p.tier || '4').toString().replace('T',''));
-        if (t2 < t1) { existing.conviction_tier = p.conviction_tier || p.tier; }
-        // Collect slot index
-        existing._slots.push(p.entry_date || p.date || '');
-      }
-      const slot = p.entry_date || p.date || '';
-      if (!bySymbol[sym]._slots.includes(slot)) bySymbol[sym]._slots.push(slot);
-    });
+    // Fill to 7 slots
+    const slots = Array(7).fill(null);
+    positions.forEach((p,i) => { if(i<7) slots[i] = p; });
 
-    const positions = Object.values(bySymbol);
-    const active = raw.length;
-    const free   = Math.max(0, 7 - active);
-    const phase2 = positions.filter(p => (p.phase || 1) >= 2).length;
-    const t1     = positions.filter(p => (p.conviction_tier || p.tier || '4').toString().replace('T','') === '1').length;
+    const active  = positions.length;
+    const free    = 7 - active;
+    const phase2  = positions.filter(p => (p.phase||p.Phase||1) === 2 || p.phase2 === true).length;
+    const t1      = positions.filter(p => (p.tier||p.conviction_tier||'').toString().includes('1')).length;
 
     document.getElementById('activeSlots').textContent = active;
     document.getElementById('freeSlots').textContent   = free;
     document.getElementById('phase2Count').textContent  = phase2;
     document.getElementById('t1Count').textContent      = t1;
 
-    // ── Render skeleton cards immediately ──
-    const emptySlots = Math.max(0, 7 - active);
-    grid.innerHTML =
-      positions.map((pos, i) => renderPositionCard(pos, i, null)).join('') +
-      Array(emptySlots).fill(0).map((_,i) =>
-        `<div class="position-card empty animate-in" style="animation-delay:${(positions.length+i)*0.05}s">
-           <div style="font-size:22px;opacity:0.25">○</div>
-           <div class="slot-label">Slot available</div>
-         </div>`
-      ).join('');
+    grid.innerHTML = slots.map((pos, i) => {
+      if (!pos) return `
+        <div class="position-card empty">
+          <div style="font-size:24px; opacity:0.3">○</div>
+          <div class="slot-label">Slot ${i+1} — Available</div>
+        </div>`;
 
-    // ── Fetch live prices in parallel, update cards as they arrive ──
-    positions.forEach((pos, i) => {
-      const sym = (pos.symbol || pos.stock || pos.name || '').toUpperCase();
-      fetchLivePrice(sym).then(live => {
-        const card = document.getElementById(`poscard-${i}`);
-        if (!card) return;
-        card.outerHTML = renderPositionCard(pos, i, live);
-      });
-    });
+      const name   = pos.symbol || pos.stock || pos.name || 'Unknown';
+      const entry  = pos.entry_price || pos.entry || '—';
+      const stop   = pos.stop_price || pos.stop || '—';
+      const qty    = pos.quantity || pos.qty || '—';
+      const rs     = (pos.rs_tier || pos.rs || '').toUpperCase();
+      const tier   = (pos.conviction_tier || pos.tier || '4').toString().replace('T','');
+      const phase  = (pos.phase || 1);
+      const date   = pos.entry_date || pos.date || '';
+
+      // Stop distance as percentage
+      let stopPct = 0;
+      if (entry !== '—' && stop !== '—') {
+        stopPct = Math.max(0, Math.min(100, ((entry-stop)/entry)*100*10));
+      }
+
+      const tierLabel = ['T1 🌟','T1','T2 🚀🚀🚀','T3 🚀','T4 📊'][parseInt(tier)||4];
+
+      return `<div class="position-card animate-in" style="animation-delay:${i*0.06}s">
+        <div class="pos-header">
+          <div>
+            <div class="pos-name">${name}</div>
+            <div class="pos-slot">Slot ${i+1} · ${date}</div>
+          </div>
+          <span class="tier-badge tier-${Math.min(4,parseInt(tier)||4)}">T${tier}</span>
+        </div>
+        <div class="pos-stats">
+          <div class="pos-stat">
+            <div class="pos-stat-label">Entry</div>
+            <div class="pos-stat-val">₹${entry}</div>
+          </div>
+          <div class="pos-stat">
+            <div class="pos-stat-label">Stop</div>
+            <div class="pos-stat-val" style="color:var(--red)">₹${stop}</div>
+          </div>
+          <div class="pos-stat">
+            <div class="pos-stat-label">Qty</div>
+            <div class="pos-stat-val">${qty}</div>
+          </div>
+          <div class="pos-stat">
+            <div class="pos-stat-label">RS Tier</div>
+            <div class="pos-stat-val">${rs||'—'}</div>
+          </div>
+        </div>
+        <div class="pos-tags">
+          ${rs ? `<span class="tag tag-rs-${rs.toLowerCase()}">${rs} RS</span>` : ''}
+          <span class="phase-badge phase-${phase}">Phase ${phase}</span>
+        </div>
+        <div class="stop-bar-wrap">
+          <div class="stop-bar-label">
+            <span>Entry</span><span style="color:var(--red)">7% Stop</span>
+          </div>
+          <div class="stop-bar-track">
+            <div class="stop-bar-fill" style="width:${stopPct}%"></div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
 
   } catch(e) {
     grid.innerHTML = `<div class="error-state" style="grid-column:1/-1">⚠️ ${e.message}</div>`;
@@ -1120,133 +1288,6 @@ async function loadPortfolio() {
       document.getElementById(id).textContent = '—';
     });
   }
-}
-
-function renderPositionCard(pos, idx, live) {
-  const sym    = (pos.symbol || pos.stock || pos.name || 'Unknown').toUpperCase();
-  const entry  = parseFloat(pos.entry_price || pos.entry || 0);
-  const stop   = parseFloat(pos.stop_price  || pos.stop  || 0);
-  const rs     = (pos.rs_tier || pos.rs || '').toUpperCase();
-  const tier   = (pos.conviction_tier || pos.tier || '4').toString().replace('T','');
-  const phase  = parseInt(pos.phase || 1);
-  const date   = pos.entry_date || pos.date || '—';
-  const merged = pos._merged || false;
-
-  // Live price data
-  const cur    = live?.price  ?? null;
-  const prev   = live?.prev   ?? null;
-  const loading = live === null;  // null = still loading, object = done
-
-  // % move from entry
-  let pnlPct = null, pnlCls = 'flat', pnlLabel = '—';
-  if (cur && entry) {
-    pnlPct   = ((cur - entry) / entry) * 100;
-    pnlCls   = pnlPct > 0.05 ? 'up' : pnlPct < -0.05 ? 'down' : 'flat';
-    pnlLabel = (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(2) + '%';
-  }
-
-  // % move from prev close (day change)
-  let dayCls = 'flat', dayLabel = '—';
-  if (cur && prev && prev !== cur) {
-    const d = ((cur - prev) / prev) * 100;
-    dayCls   = d > 0.05 ? 'up' : d < -0.05 ? 'down' : 'flat';
-    dayLabel = (d >= 0 ? '+' : '') + d.toFixed(2) + '%';
-  }
-
-  // Distance to stop %
-  const stopPct = (entry && stop && entry > stop)
-    ? ((entry - stop) / entry * 100).toFixed(1)
-    : '—';
-
-  // Progress bar: where is current price between stop and entry+30%
-  let stopBarW = 0, curDotL = 0;
-  if (cur && entry && stop) {
-    const range = entry * 1.30 - stop;        // stop → +30% above entry
-    const toStop = Math.max(0, entry - stop);
-    stopBarW = Math.min(100, (toStop / range) * 100);
-    curDotL  = Math.min(98, Math.max(2, ((cur - stop) / range) * 100));
-  }
-
-  // Phase 2 trigger line — at +10% above entry
-  const phase2Price = entry ? (entry * 1.10).toFixed(2) : null;
-
-  // Card colour class
-  const cardCls = loading ? 'pos-load' : pnlCls === 'up' ? 'pos-up' : pnlCls === 'down' ? 'pos-down' : 'pos-flat';
-
-  // Tier badge colours map
-  const tierMap = { '1': 'tier-1', '2': 'tier-2', '3': 'tier-3', '4': 'tier-4' };
-  const tierLabel = { '1': 'T1 🌟', '2': 'T2 🚀', '3': 'T3', '4': 'T4' }[tier] || `T${tier}`;
-
-  // Slot info
-  const slotInfo = merged
-    ? `${pos._slots.length} slots · avg entry`
-    : `Entry ${date}`;
-
-  return `<div class="position-card ${cardCls} animate-in" id="poscard-${idx}" style="animation-delay:${idx*0.05}s">
-    <div class="pos-inner">
-
-      <div class="pos-header">
-        <div>
-          <div class="pos-name">${sym}</div>
-          <div class="pos-meta">${slotInfo}</div>
-        </div>
-        <span class="tier-badge ${tierMap[tier] || 'tier-4'}">${tierLabel}</span>
-      </div>
-
-      <!-- Live price + PnL from entry -->
-      <div class="pos-price-row">
-        ${loading
-          ? `<span class="pos-price-loading">Fetching price…</span>`
-          : cur
-            ? `<span class="pos-cur-price">₹${cur.toFixed(2)}</span>
-               <span class="pos-pnl-pct ${pnlCls}">${pnlLabel} from entry</span>`
-            : `<span class="pos-price-loading">Price unavailable</span>`
-        }
-      </div>
-
-      <!-- 4 stats: Entry / Stop / Day% / Stop dist -->
-      <div class="pos-stats">
-        <div>
-          <div class="pos-stat-label">Entry</div>
-          <div class="pos-stat-val">₹${entry || '—'}</div>
-        </div>
-        <div>
-          <div class="pos-stat-label">Stop</div>
-          <div class="pos-stat-val red">₹${stop || '—'}</div>
-        </div>
-        <div>
-          <div class="pos-stat-label">Day chg</div>
-          <div class="pos-stat-val" style="color:var(--${dayCls === 'up' ? 'green' : dayCls === 'down' ? 'red' : 'muted'})">${loading ? '…' : dayLabel}</div>
-        </div>
-        <div>
-          <div class="pos-stat-label">Stop dist</div>
-          <div class="pos-stat-val">${stopPct !== '—' ? stopPct + '%' : '—'}</div>
-        </div>
-      </div>
-
-      <!-- Tags -->
-      <div class="pos-tags">
-        ${rs ? `<span class="tag tag-rs-${rs.toLowerCase()}">${rs} RS</span>` : ''}
-        <span class="phase-badge phase-${phase}">Phase ${phase}</span>
-        ${merged ? `<span class="tag merged-badge">×${pos._slots.length} slots</span>` : ''}
-        ${phase2Price && phase < 2 ? `<span class="tag" style="background:rgba(0,230,118,0.07);color:var(--muted);border:1px solid rgba(0,230,118,0.15)">P2 @ ₹${phase2Price}</span>` : ''}
-      </div>
-
-    </div>
-
-    <!-- Progress bar -->
-    <div class="pos-bar-wrap">
-      <div class="pos-bar-labels">
-        <span>Stop ₹${stop || '—'}</span>
-        <span style="color:var(--muted)">+10% ₹${phase2Price || '—'}</span>
-        <span>+30% ₹${entry ? (entry*1.3).toFixed(0) : '—'}</span>
-      </div>
-      <div class="pos-bar-track">
-        <div class="pos-bar-stop" style="width:${stopBarW.toFixed(1)}%"></div>
-        ${cur && entry && stop ? `<div class="pos-bar-cur" style="left:${curDotL.toFixed(1)}%"></div>` : ''}
-      </div>
-    </div>
-  </div>`;
 }
 
 // ─── CHARTINK SIGNALS ─────────────────────────────────────────────────────────
@@ -1535,7 +1576,225 @@ function showToast(msg, type='') {
   toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-// ─── INIT ─────────────────────────────────────────────
+// ─── PERFORMANCE ──────────────────────────────────────
+let allPerfTrades = [];
+
+async function loadPerf() {
+  try {
+    const text = await ghFetch('trade_history.json');
+    const data = JSON.parse(text);
+    allPerfTrades = (data.trades || []).slice().reverse(); // newest first
+    renderPerf(allPerfTrades);
+  } catch(e) {
+    // trade_history.json doesn't exist yet — show empty state
+    const emptyHTML = `
+      <div class="perf-empty">
+        <div class="perf-empty-icon">📭</div>
+        <div class="perf-empty-title">No closed trades yet</div>
+        <div class="perf-empty-sub">
+          Performance history will appear here automatically<br>
+          after your first trade exit is recorded by the tracker.
+        </div>
+      </div>`;
+    document.getElementById('perfMonthChart').innerHTML = emptyHTML;
+    document.getElementById('perfScannerGrid').innerHTML = emptyHTML;
+    document.getElementById('perfMonthBody').innerHTML =
+      '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">No data yet</td></tr>';
+    document.getElementById('perfTradeLog').innerHTML =
+      '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">No closed trades</td></tr>';
+    ['perfTotalInr','perfTotalPct','perfWinRate','perfWinLoss',
+     'perfAvgHold','perfTradeCount','perfDateRange'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = id === 'perfWinLoss' ? '0 W / 0 L' : id === 'perfDateRange' ? 'No trades yet' : '—';
+    });
+  }
+}
+
+function renderPerf(trades) {
+  const SLOT_CAPITAL = 1_000_000 / 7;
+
+  if (!trades.length) { loadPerf(); return; }
+
+  // ── KPIs ──────────────────────────────────────────────
+  const wins      = trades.filter(t => t.pnl_pct >= 0);
+  const losses    = trades.filter(t => t.pnl_pct < 0);
+  const totalInr  = trades.reduce((s, t) => s + (t.pnl_inr || Math.round(t.pnl_pct / 100 * SLOT_CAPITAL)), 0);
+  const totalPct  = (totalInr / 1_000_000 * 100).toFixed(2);
+  const winRate   = trades.length ? ((wins.length / trades.length) * 100).toFixed(1) : 0;
+  const avgHold   = trades.length ? Math.round(trades.reduce((s,t) => s + (t.hold_days||0), 0) / trades.length) : 0;
+  const dates     = trades.map(t => t.exit_date).filter(Boolean).sort();
+
+  document.getElementById('perfTotalInr').textContent  = (totalInr >= 0 ? '+' : '') + '₹' + Math.abs(totalInr).toLocaleString('en-IN');
+  document.getElementById('perfTotalInr').style.color  = totalInr >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('perfTotalPct').textContent  = (totalPct >= 0 ? '+' : '') + totalPct + '% on ₹10L';
+  document.getElementById('perfWinRate').textContent   = winRate + '%';
+  document.getElementById('perfWinLoss').textContent   = `${wins.length} W / ${losses.length} L`;
+  document.getElementById('perfAvgHold').textContent   = avgHold || '—';
+  document.getElementById('perfTradeCount').textContent = trades.length;
+  document.getElementById('perfDateRange').textContent  = dates.length
+    ? dates[0] + ' → ' + dates[dates.length - 1]
+    : 'No exits yet';
+
+  // ── Monthly chart ──────────────────────────────────────
+  const byMonth = {};
+  trades.forEach(t => {
+    const m = t.month || (t.exit_date || '').slice(0, 7);
+    if (!m) return;
+    if (!byMonth[m]) byMonth[m] = { inr: 0, count: 0, wins: 0 };
+    const inr = t.pnl_inr || Math.round(t.pnl_pct / 100 * SLOT_CAPITAL);
+    byMonth[m].inr   += inr;
+    byMonth[m].count += 1;
+    if (t.pnl_pct >= 0) byMonth[m].wins += 1;
+  });
+  const months    = Object.keys(byMonth).sort();
+  const monthInrs = months.map(m => byMonth[m].inr);
+  const maxAbs    = Math.max(...monthInrs.map(Math.abs), 1);
+
+  const chartEl = document.getElementById('perfMonthChart');
+  if (!months.length) {
+    chartEl.innerHTML = '<div class="empty-state" style="width:100%">No monthly data yet</div>';
+  } else {
+    const zeroLinePos = 70; // % from top where zero line sits (gives room for pos bars above)
+    chartEl.style.alignItems = 'flex-end';
+    chartEl.innerHTML = months.map(m => {
+      const inr   = byMonth[m].inr;
+      const isPos = inr >= 0;
+      const hPct  = Math.max(3, (Math.abs(inr) / maxAbs) * 65); // max 65% of container height
+      const label = m.slice(5); // "MM"
+      const valStr = (inr >= 0 ? '+' : '-') + '₹' + Math.abs(inr).toLocaleString('en-IN');
+      return `<div class="chart-bar-wrap">
+        <div class="chart-bar-val ${isPos ? 'pos' : 'neg'}">${valStr}</div>
+        <div class="chart-bar ${isPos ? 'pos' : 'neg'}" style="height:${hPct}px"></div>
+        <div class="chart-bar-label">${label}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Scanner breakdown ──────────────────────────────────
+  const scanners = {};
+  trades.forEach(t => {
+    // Extract short scanner name: "VCP Breakout" → "VCP", etc.
+    const sc = t.scanner && t.scanner.includes('VCP') ? 'VCP'
+             : t.scanner && t.scanner.includes('Mark') ? 'Mark'
+             : t.scanner && t.scanner.includes('Jadhav') ? 'Jadhav'
+             : (t.scanner || 'Other');
+    if (!scanners[sc]) scanners[sc] = { inr: 0, count: 0, wins: 0, pcts: [] };
+    const inr = t.pnl_inr || Math.round(t.pnl_pct / 100 * SLOT_CAPITAL);
+    scanners[sc].inr   += inr;
+    scanners[sc].count += 1;
+    scanners[sc].pcts.push(t.pnl_pct);
+    if (t.pnl_pct >= 0) scanners[sc].wins += 1;
+  });
+  const scannerEl = document.getElementById('perfScannerGrid');
+  const scanNames = ['VCP','Mark','Jadhav'].filter(s => scanners[s]);
+  Object.keys(scanners).forEach(s => { if (!['VCP','Mark','Jadhav'].includes(s)) scanNames.push(s); });
+  if (!scanNames.length) {
+    scannerEl.innerHTML = '<div class="empty-state" style="grid-column:1/-1">No scanner data</div>';
+  } else {
+    scannerEl.innerHTML = scanNames.map(sc => {
+      const d    = scanners[sc];
+      const avg  = d.pcts.length ? (d.pcts.reduce((a,b)=>a+b,0)/d.pcts.length).toFixed(1) : 0;
+      const wr   = d.count ? ((d.wins/d.count)*100).toFixed(0) : 0;
+      const cls  = d.inr >= 0 ? 'pos' : 'neg';
+      return `<div class="scanner-card">
+        <div class="scanner-card-name">${sc}</div>
+        <div class="scanner-stat">Trades: <span>${d.count}</span></div>
+        <div class="scanner-stat">Win Rate: <span class="${cls}">${wr}%</span></div>
+        <div class="scanner-stat">Avg Return: <span class="${cls}">${avg >= 0 ? '+' : ''}${avg}%</span></div>
+        <div class="scanner-stat">Total P&amp;L: <span class="${cls}">${d.inr >= 0 ? '+' : ''}₹${Math.abs(d.inr).toLocaleString('en-IN')}</span></div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Top 5 / Bottom 5 ──────────────────────────────────
+  const sorted    = [...trades].sort((a,b) => b.pnl_pct - a.pnl_pct);
+  const top5      = sorted.slice(0, 5);
+  const bot5      = sorted.slice(-5).reverse();
+  const miniRow   = t => {
+    const inr = t.pnl_inr || Math.round(t.pnl_pct / 100 * SLOT_CAPITAL);
+    const cls = t.pnl_pct >= 0 ? 'td-pos' : 'td-neg';
+    return `<tr>
+      <td class="td-symbol">${t.symbol}</td>
+      <td class="td-muted">${t.scanner?.split(' ')[0] || '—'}</td>
+      <td class="${cls}">${t.pnl_pct >= 0 ? '+' : ''}${t.pnl_pct?.toFixed(1)}%</td>
+      <td class="${cls}">${inr >= 0 ? '+' : ''}₹${Math.abs(inr).toLocaleString('en-IN')}</td>
+    </tr>`;
+  };
+  const miniHead = '<thead><tr><th>Symbol</th><th>Scanner</th><th>P&L%</th><th>P&L ₹</th></tr></thead>';
+  document.getElementById('perfTop5').innerHTML = miniHead + '<tbody>' + top5.map(miniRow).join('') + '</tbody>';
+  document.getElementById('perfBot5').innerHTML = miniHead + '<tbody>' + bot5.map(miniRow).join('') + '</tbody>';
+
+  // ── Monthly table ──────────────────────────────────────
+  const monthBody = document.getElementById('perfMonthBody');
+  if (!months.length) {
+    monthBody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">No closed trades yet</td></tr>';
+  } else {
+    monthBody.innerHTML = months.slice().reverse().map(m => {
+      const d   = byMonth[m];
+      const wr  = d.count ? ((d.wins/d.count)*100).toFixed(0) : 0;
+      const pct = (d.inr / 1_000_000 * 100).toFixed(2);
+      const cls = d.inr >= 0 ? 'td-pos' : 'td-neg';
+      // Best and worst trade this month
+      const mTrades = trades.filter(t => (t.month || (t.exit_date||'').slice(0,7)) === m);
+      const best  = mTrades.reduce((a,b) => b.pnl_pct > (a?.pnl_pct??-Infinity) ? b : a, null);
+      const worst = mTrades.reduce((a,b) => b.pnl_pct < (a?.pnl_pct??Infinity)  ? b : a, null);
+      return `<tr>
+        <td style="color:#fff;font-family:var(--font-head);font-weight:700">${m}</td>
+        <td>${d.count}</td>
+        <td>${d.wins}</td>
+        <td class="${cls}">${wr}%</td>
+        <td class="${cls}">${d.inr >= 0 ? '+' : ''}₹${Math.abs(d.inr).toLocaleString('en-IN')}</td>
+        <td class="${cls}">${pct >= 0 ? '+' : ''}${pct}%</td>
+        <td class="td-pos" style="font-size:10px">${best?.symbol || '—'} <span style="opacity:0.6">${best ? '+'+best.pnl_pct.toFixed(1)+'%' : ''}</span></td>
+        <td class="td-neg" style="font-size:10px">${worst?.symbol || '—'} <span style="opacity:0.6">${worst && worst.pnl_pct < 0 ? worst.pnl_pct.toFixed(1)+'%' : ''}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Full trade log ─────────────────────────────────────
+  renderPerfTradeLog(trades);
+}
+
+function renderPerfTradeLog(trades) {
+  const SLOT_CAPITAL = 1_000_000 / 7;
+  const tbody = document.getElementById('perfTradeLog');
+  if (!trades.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">No trades match filter</td></tr>';
+    return;
+  }
+  tbody.innerHTML = trades.map(t => {
+    const inr  = t.pnl_inr || Math.round((t.pnl_pct || 0) / 100 * SLOT_CAPITAL);
+    const cls  = (t.pnl_pct || 0) >= 0 ? 'td-pos' : 'td-neg';
+    const sc   = t.scanner?.includes('VCP') ? 'VCP' : t.scanner?.includes('Mark') ? 'Mark' : t.scanner?.includes('Jadhav') ? 'Jadhav' : (t.scanner || '—');
+    const rsTag = t.rs_tier ? `<span class="tag tag-rs-${t.rs_tier.toLowerCase()}" style="font-size:8px">${t.rs_tier}</span>` : '—';
+    const reason = (t.exit_reason || '').replace(' 🔴','').replace(' 🔵','').replace(' ','');
+    return `<tr>
+      <td class="td-symbol">${t.symbol}</td>
+      <td class="td-muted">${sc}</td>
+      <td>₹${t.entry_price}</td>
+      <td>₹${t.exit_price}</td>
+      <td class="td-muted">${t.hold_days ?? '—'}d</td>
+      <td class="${cls}">${(t.pnl_pct||0) >= 0 ? '+' : ''}${(t.pnl_pct||0).toFixed(2)}%</td>
+      <td class="${cls}">${inr >= 0 ? '+' : '-'}₹${Math.abs(inr).toLocaleString('en-IN')}</td>
+      <td class="td-muted" style="font-size:10px">${reason}</td>
+      <td>${rsTag}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filterPerfTrades(filter, btn) {
+  document.querySelectorAll('#perfFilter .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  let filtered = allPerfTrades;
+  if      (filter === 'win')    filtered = allPerfTrades.filter(t => t.pnl_pct >= 0);
+  else if (filter === 'loss')   filtered = allPerfTrades.filter(t => t.pnl_pct < 0);
+  else if (filter === 'VCP')    filtered = allPerfTrades.filter(t => t.scanner?.includes('VCP'));
+  else if (filter === 'Mark')   filtered = allPerfTrades.filter(t => t.scanner?.includes('Mark'));
+  else if (filter === 'Jadhav') filtered = allPerfTrades.filter(t => t.scanner?.includes('Jadhav'));
+  renderPerfTradeLog(filtered);
+}
+
+
 populateConfigInputs();
 updateMarketStatus();
 setInterval(updateMarketStatus, 60000);
@@ -1554,6 +1813,10 @@ if (cfg.user && cfg.repo) {
     '<div class="empty-state">Configure GitHub repo in ⚙️ Config tab to load data</div>';
   document.getElementById('rsGrid').innerHTML =
     '<div class="empty-state" style="grid-column:1/-1">Configure GitHub repo in ⚙️ Config tab to load data</div>';
+  document.getElementById('perfTradeLog').innerHTML =
+    '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">Configure GitHub repo in ⚙️ Config tab to load data</td></tr>';
+  document.getElementById('perfMonthBody').innerHTML =
+    '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Configure GitHub repo in ⚙️ Config tab</td></tr>';
   ['countAction','countWatchlist','countRadar','countTotal',
    'activeSlots','freeSlots','phase2Count','t1Count',
    'ckT1Count','ckT2Count','ckT3Count','ckTotalCount',

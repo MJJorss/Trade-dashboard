@@ -1421,73 +1421,55 @@ function filterFcis(filter, btn) {
 
 // ─── PORTFOLIO ────────────────────────────────────────
 async function fetchLivePrice(symbol) {
-  // Strip .NS/.BO suffix to get base NSE symbol
-  var base = symbol.replace(/\.(NS|BO)$/i, '');
-
-  // ── Strategy 1: Stooq CSV — no auth, no proxy, browser-friendly ──────────
-  // Stooq serves NSE India stocks as <sym>.in  e.g. mtartech.in
-  // CSV columns: Date,Open,High,Low,Close,Volume  (oldest→newest, last row = today)
+  var base = symbol.replace(/\.(NS|BO)$/i, "");
   try {
-    var stooqSym = base.toLowerCase() + '.in';
-    var stooqUrl = 'https://stooq.com/q/d/l/?s=' + stooqSym + '&i=d';
-    var ctrl1 = new AbortController();
-    var t1 = setTimeout(function(c){ return function(){ c.abort(); }; }(ctrl1), 8000);
-    var r1 = await fetch(stooqUrl, { cache: 'no-store', signal: ctrl1.signal });
-    clearTimeout(t1);
+    var sq = base.toLowerCase() + ".in";
+    var su = "https://stooq.com/q/d/l/?s=" + sq + "&i=d";
+    var c1 = new AbortController();
+    var tm = setTimeout(function(c){return function(){c.abort();};}(c1),8000);
+    var r1 = await fetch(su, {cache:"no-store", signal:c1.signal});
+    clearTimeout(tm);
     if (r1.ok) {
       var csv = await r1.text();
-      // Skip "No data" responses
-      if (csv && csv.indexOf('No data') === -1 && csv.indexOf('<') === -1) {
-        var lines = csv.trim().split('\n');
-        if (lines.length >= 3) {
-          var todayRow  = lines[lines.length - 1].split(',');
-          var prevRow   = lines[lines.length - 2].split(',');
-          var price     = parseFloat(todayRow[4]);   // Close price
-          var prevClose = parseFloat(prevRow[4]);
+      if (csv && csv.indexOf("No data")===-1 && csv.indexOf("<")===-1) {
+        var ln = csv.trim().split("\n");
+        if (ln.length >= 3) {
+          var tr = ln[ln.length-1].split(",");
+          var pr = ln[ln.length-2].split(",");
+          var price = parseFloat(tr[4]);
+          var prev  = parseFloat(pr[4]);
           if (!isNaN(price) && price > 0) {
-            var changePct = (!isNaN(prevClose) && prevClose > 0)
-              ? ((price - prevClose) / prevClose * 100) : null;
-            return { price: price, changePct: changePct };
+            var chg = (!isNaN(prev) && prev > 0) ? ((price-prev)/prev*100) : null;
+            return {price:price, changePct:chg};
           }
         }
       }
     }
-  } catch(e1) { /* fall through to Yahoo */ }
-
-  // ── Strategy 2: Yahoo Finance via proxy fallbacks ─────────────────────────
-  var sym     = base + '.NS';
-  var yUrl    = 'https://query1.finance.yahoo.com/v8/finance/chart/' + sym + '?interval=1d&range=5d';
-  var proxies = [
-    'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(yUrl),
-    'https://api.allorigins.win/raw?url='        + encodeURIComponent(yUrl),
-    'https://corsproxy.io/?' + yUrl
+  } catch(e1) {}
+  var sym = base + ".NS";
+  var yu = "https://query1.finance.yahoo.com/v8/finance/chart/" + sym + "?interval=1d&range=5d";
+  var px = [
+    "https://api.codetabs.com/v1/proxy/?quest=" + encodeURIComponent(yu),
+    "https://api.allorigins.win/raw?url=" + encodeURIComponent(yu),
+    "https://corsproxy.io/?" + yu
   ];
-
-  for (var pi = 0; pi < proxies.length; pi++) {
+  for (var i=0; i<px.length; i++) {
     try {
-      var ctrl2 = new AbortController();
-      var t2 = setTimeout(function(c){ return function(){ c.abort(); }; }(ctrl2), 7000);
-      var r2 = await fetch(proxies[pi], { cache: 'no-store', signal: ctrl2.signal });
+      var c2 = new AbortController();
+      var t2 = setTimeout(function(c){return function(){c.abort();};}(c2),7000);
+      var r2 = await fetch(px[i], {cache:"no-store", signal:c2.signal});
       clearTimeout(t2);
       if (!r2.ok) continue;
-      var raw;
-      try { raw = await r2.json(); } catch(pe) { continue; }
-      // allorigins /raw returns unwrapped JSON; /get wraps in {contents:"..."}
-      if (raw && typeof raw.contents === 'string') {
-        try { raw = JSON.parse(raw.contents); } catch(pe2) { continue; }
+      var raw; try { raw = await r2.json(); } catch(e) { continue; }
+      if (raw && typeof raw.contents==="string") { try { raw=JSON.parse(raw.contents); } catch(e){continue;} }
+      if (raw&&raw.chart&&raw.chart.result&&raw.chart.result[0]) {
+        var m=raw.chart.result[0].meta; if(!m) continue;
+        var p=m.regularMarketPrice||m.previousClose||null; if(!p) continue;
+        var pv=m.previousClose||m.chartPreviousClose||null;
+        var cp=m.regularMarketChangePercent!=null?m.regularMarketChangePercent:(pv&&pv>0?((p-pv)/pv*100):null);
+        return {price:p, changePct:cp};
       }
-      if (raw && raw.chart && raw.chart.result && raw.chart.result[0]) {
-        var meta = raw.chart.result[0].meta;
-        if (!meta) continue;
-        var p = meta.regularMarketPrice || meta.previousClose || null;
-        if (!p) continue;
-        var prev2 = meta.previousClose || meta.chartPreviousClose || null;
-        var c2 = meta.regularMarketChangePercent != null
-          ? meta.regularMarketChangePercent
-          : (prev2 && prev2 > 0 ? ((p - prev2) / prev2 * 100) : null);
-        return { price: p, changePct: c2 };
-      }
-    } catch(e2) { /* try next proxy */ }
+    } catch(e2) {}
   }
   return null;
 }

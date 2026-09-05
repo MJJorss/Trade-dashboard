@@ -1,0 +1,175 @@
+/**
+ * mj-trading — static asset server plus a small price proxy.
+ *
+ * WHY THIS EXISTS
+ * The dashboard fetched quotes straight from the browser: stooq.com first,
+ * then three public CORS proxies. Every one of them fails from the deployed
+ * origin — Stooq sends no Access-Control-Allow-Origin, and the public proxies
+ * answer 403. So every price on every card has always rendered as "—", and a
+ * single page load fired 400+ doomed requests (the console dropped over 10,000
+ * error lines).
+ *
+ * A Worker has no same-origin policy, so it can fetch upstream directly. The
+ * page now calls its own origin and the browser is never involved in a
+ * cross-origin request.
+ *
+ * Endpoints:
+ *   GET /api/prices?symbols=RELIANCE,TCS   -> { "RELIANCE": {...}, ... }
+ *   GET /api/price?symbol=RELIANCE         -> { price, changePct, source }
+ * Anything else falls through to the static assets.
+ */
+
+const MAX_SYMBOLS = 60;        // one screenful of cards, generously
+const UPSTREAM_TIMEOUT_MS = 6000;
+const EDGE_TTL = 120;          // seconds; quotes are informational, not execution
+const CONCURRENCY = 8;         // be a polite client to the upstreams
+
+// NSE tickers are letters, digits, & and - (e.g. M&M, BAJAJ-AUTO).
+const SYMBOL_RE = /^[A-Za-z0-9&\-]{1,20}$/;
+
+function json(body, status = 200, extraHeaders = {}) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": `public, max-age=${EDGE_TTL}`,
+      ...extraHeaders,
+    },
+  });
+}
+
+async function withTimeout(promise, ms) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await promise(ctrl.signal);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** Yahoo first: better coverage of Indian listings and it returns the previous
+ *  close alongside the last price, so the day change needs no second call. */
+async function fromYahoo(symbol) {
+  for (const suffix of [".NS", ".BO"]) {
+    try {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}${suffix}` +
+                  `?interval=1d&range=5d`;
+      const res = await withTimeout(
+        (signal) => fetch(url, { signal, headers: { "User-Agent": "Mozilla/5.0" } }),
+        UPSTREAM_TIMEOUT_MS
+      );
+      if (!res.ok) continue;
+      const data = await res.json();
+      const meta = data?.chart?.result?.[0]?.meta;
+      if (!meta) continue;
+      const price = meta.regularMarketPrice ?? meta.previousClose;
+      const prev = meta.chartPreviousClose ?? meta.previousClose;
+      if (typeof price !== "number" || !(price > 0)) continue;
+      const changePct = (typeof prev === "number" && prev > 0)
+        ? ((price - prev) / prev) * 100
+        : null;
+      return { price, changePct, source: `yahoo${suffix}` };
+    } catch (_) { /* try the next suffix */ }
+  }
+  return null;
+}
+
+/** Stooq fallback. Daily CSV, oldest to newest, close is column 5. */
+async function fromStooq(symbol) {
+  try {
+    const url = `https://stooq.com/q/d/l/?s=${symbol.toLowerCase()}.in&i=d`;
+    const res = await withTimeout((signal) => fetch(url, { signal }), UPSTREAM_TIMEOUT_MS);
+    if (!res.ok) return null;
+    const csv = await res.text();
+    if (!csv || csv.includes("No data") || csv.includes("<")) return null;
+    const rows = csv.trim().split("\n");
+    if (rows.length < 3) return null;
+    const price = parseFloat(rows[rows.length - 1].split(",")[4]);
+    const prev = parseFloat(rows[rows.length - 2].split(",")[4]);
+    if (!(price > 0)) return null;
+    const changePct = prev > 0 ? ((price - prev) / prev) * 100 : null;
+    return { price, changePct, source: "stooq" };
+  } catch (_) {
+    return null;
+  }
+}
+
+/** Per-symbol edge cache, so one popular symbol is fetched once per TTL across
+ *  every visitor rather than once per card render. */
+async function quoteFor(symbol, ctx) {
+  const cacheKey = new Request(`https://cache.local/quote/${symbol}`);
+  const cache = caches.default;
+
+  const hit = await cache.match(cacheKey);
+  if (hit) return await hit.json();
+
+  const quote = (await fromYahoo(symbol)) || (await fromStooq(symbol));
+  const payload = quote || { price: null, changePct: null, source: null };
+
+  // Cache misses too, briefly, so an unknown ticker cannot be retried on every
+  // single render by every visitor.
+  const toCache = new Response(JSON.stringify(payload), {
+    headers: { "content-type": "application/json",
+               "cache-control": `public, max-age=${quote ? EDGE_TTL : 60}` },
+  });
+  ctx.waitUntil(cache.put(cacheKey, toCache.clone()));
+  return payload;
+}
+
+/** Resolve with a bounded number of upstream requests in flight. */
+async function mapLimited(items, limit, fn) {
+  const results = {};
+  let i = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (i < items.length) {
+      const idx = i++;
+      const key = items[idx];
+      results[key] = await fn(key);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+function parseSymbols(raw) {
+  return [...new Set(
+    (raw || "")
+      .split(",")
+      .map((s) => s.trim().toUpperCase().replace(/\.(NS|BO)$/i, ""))
+      .filter((s) => s && SYMBOL_RE.test(s))
+  )].slice(0, MAX_SYMBOLS);
+}
+
+export default {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+
+    if (url.pathname === "/api/price" || url.pathname === "/api/prices") {
+      if (request.method !== "GET") {
+        return json({ error: "method not allowed" }, 405);
+      }
+
+      const symbols = url.pathname === "/api/price"
+        ? parseSymbols(url.searchParams.get("symbol"))
+        : parseSymbols(url.searchParams.get("symbols"));
+
+      if (!symbols.length) {
+        return json({ error: "no valid symbols" }, 400);
+      }
+
+      const quotes = await mapLimited(symbols, CONCURRENCY, (s) => quoteFor(s, ctx));
+
+      if (url.pathname === "/api/price") {
+        const only = quotes[symbols[0]];
+        return only && only.price != null
+          ? json(only)
+          : json({ error: "not found", symbol: symbols[0] }, 404);
+      }
+      return json(quotes);
+    }
+
+    // Everything else is the static site.
+    return env.ASSETS.fetch(request);
+  },
+};

@@ -2044,77 +2044,75 @@ function filterFcis(filter, btn) {
 }
 
 // ─── PORTFOLIO ────────────────────────────────────────
-async function fetchLivePrice(symbol) {
-  // Strip .NS/.BO suffix to get base NSE symbol
-  var base = symbol.replace(/\.(NS|BO)$/i, '');
+/* ─── LIVE PRICES ──────────────────────────────────────────────────────────
+   Previously this tried stooq.com directly and then three public CORS
+   proxies. All four fail from the deployed origin: Stooq sends no
+   Access-Control-Allow-Origin and the proxies answer 403. Every price on
+   every card rendered as "—", and one page load fired 400+ doomed requests
+   (the console dropped 10,000+ error lines), which is a large part of why
+   the page felt slow on a phone.
 
-  // ── Strategy 1: Stooq CSV — no auth, no proxy, browser-friendly ──────────
-  // Stooq serves NSE India stocks as <sym>.in  e.g. mtartech.in
-  // CSV columns: Date,Open,High,Low,Close,Volume  (oldest→newest, last row = today)
-  try {
-    var stooqSym = base.toLowerCase() + '.in';
-    var stooqUrl = 'https://stooq.com/q/d/l/?s=' + stooqSym + '&i=d';
-    var ctrl1 = new AbortController();
-    var t1 = setTimeout(function(c){ return function(){ c.abort(); }; }(ctrl1), 8000);
-    var r1 = await fetch(stooqUrl, { cache: 'no-store', signal: ctrl1.signal });
-    clearTimeout(t1);
-    if (r1.ok) {
-      var csv = await r1.text();
-      // Skip "No data" responses
-      if (csv && csv.indexOf('No data') === -1 && csv.indexOf('<') === -1) {
-        var lines = csv.trim().split('\n');
-        if (lines.length >= 3) {
-          var todayRow  = lines[lines.length - 1].split(',');
-          var prevRow   = lines[lines.length - 2].split(',');
-          var price     = parseFloat(todayRow[4]);   // Close price
-          var prevClose = parseFloat(prevRow[4]);
-          if (!isNaN(price) && price > 0) {
-            var changePct = (!isNaN(prevClose) && prevClose > 0)
-              ? ((price - prevClose) / prevClose * 100) : null;
-            return { price: price, changePct: changePct };
-          }
-        }
-      }
-    }
-  } catch(e1) { /* fall through to Yahoo */ }
+   Quotes now come from this site's own /api/prices endpoint, served by the
+   Worker in worker.js. A Worker has no same-origin policy, so it fetches
+   upstream itself and the browser never makes a cross-origin request.
 
-  // ── Strategy 2: Yahoo Finance via proxy fallbacks ─────────────────────────
-  var sym     = base + '.NS';
-  var yUrl    = 'https://query1.finance.yahoo.com/v8/finance/chart/' + sym + '?interval=1d&range=5d';
-  var proxies = [
-    'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(yUrl),
-    'https://api.allorigins.win/raw?url='        + encodeURIComponent(yUrl),
-    'https://corsproxy.io/?' + yUrl
-  ];
+   Calls are also coalesced. Each card used to fetch independently, so ~100
+   cards meant ~100 requests; the queue below gathers everything requested
+   within one tick and sends a single batched call instead. Call sites are
+   unchanged — fetchLivePrice(symbol) still resolves to {price, changePct}. */
+/* One promise per symbol, memoised for the life of the page. Several panels
+   render the same tickers, so without this the same symbol is requested once
+   per card. Handing every caller the SAME promise means each symbol is
+   fetched exactly once no matter how many places ask for it. */
+const _pricePromises  = new Map();   // symbol -> Promise<quote|null>
+const _priceResolvers = new Map();   // symbol -> resolve, queued but not yet sent
+let   _priceTimer     = null;
 
-  for (var pi = 0; pi < proxies.length; pi++) {
+const PRICE_BATCH_MS  = 40;   // long enough to gather a render's worth
+const PRICE_BATCH_MAX = 60;   // must not exceed the Worker's MAX_SYMBOLS
+
+async function _flushPriceQueue() {
+  _priceTimer = null;
+  if (!_priceResolvers.size) return;
+
+  /* Claim the queue up front. Leaving symbols queued while their request is
+     in the air let the next flush ask for them all over again — an early
+     version of this produced 62 requests, the same batch repeated up to 18
+     times, for what should have been a handful. */
+  const claimed = new Map(_priceResolvers);
+  _priceResolvers.clear();
+  const pending = [...claimed.keys()];
+
+  for (let i = 0; i < pending.length; i += PRICE_BATCH_MAX) {
+    const batch = pending.slice(i, i + PRICE_BATCH_MAX);
+    let quotes = {};
     try {
-      var ctrl2 = new AbortController();
-      var t2 = setTimeout(function(c){ return function(){ c.abort(); }; }(ctrl2), 7000);
-      var r2 = await fetch(proxies[pi], { cache: 'no-store', signal: ctrl2.signal });
-      clearTimeout(t2);
-      if (!r2.ok) continue;
-      var raw;
-      try { raw = await r2.json(); } catch(pe) { continue; }
-      // allorigins /raw returns unwrapped JSON; /get wraps in {contents:"..."}
-      if (raw && typeof raw.contents === 'string') {
-        try { raw = JSON.parse(raw.contents); } catch(pe2) { continue; }
-      }
-      if (raw && raw.chart && raw.chart.result && raw.chart.result[0]) {
-        var meta = raw.chart.result[0].meta;
-        if (!meta) continue;
-        var p = meta.regularMarketPrice || meta.previousClose || null;
-        if (!p) continue;
-        var prev2 = meta.previousClose || meta.chartPreviousClose || null;
-        var c2 = meta.regularMarketChangePercent != null
-          ? meta.regularMarketChangePercent
-          : (prev2 && prev2 > 0 ? ((p - prev2) / prev2 * 100) : null);
-        return { price: p, changePct: c2 };
-      }
-    } catch(e2) { /* try next proxy */ }
+      const res = await fetch('/api/prices?symbols=' + encodeURIComponent(batch.join(',')),
+                              { cache: 'no-store' });
+      if (res.ok) quotes = await res.json();
+    } catch (e) {
+      // Leave quotes empty: every waiter resolves null and the card keeps its
+      // placeholder. A quote failing must never break a render.
+    }
+    batch.forEach(sym => {
+      const q = quotes[sym];
+      const resolve = claimed.get(sym);
+      if (resolve) resolve((q && typeof q.price === 'number') ? q : null);
+    });
   }
-  return null;
 }
+
+function fetchLivePrice(symbol) {
+  const base = String(symbol || '').replace(/\.(NS|BO)$/i, '').toUpperCase().trim();
+  if (!base) return Promise.resolve(null);
+  if (_pricePromises.has(base)) return _pricePromises.get(base);
+
+  const p = new Promise(resolve => { _priceResolvers.set(base, resolve); });
+  _pricePromises.set(base, p);
+  if (!_priceTimer) _priceTimer = setTimeout(_flushPriceQueue, PRICE_BATCH_MS);
+  return p;
+}
+
 
 async function loadPortfolio() {
   const grid = document.getElementById('portfolioGrid');

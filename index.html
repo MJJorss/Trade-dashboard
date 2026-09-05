@@ -48,7 +48,15 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
   body {
-    background: var(--bg);
+    /* Was a flat fill. Two very low-opacity pools of the accent and teal give
+       the page a light source, so surfaces sitting on it read as raised
+       instead of as rectangles drawn on black. Fixed attachment keeps the
+       light still while content scrolls past it. */
+    background:
+      radial-gradient(1100px 620px at 12% -12%, rgba(232,163,61,0.075), transparent 62%),
+      radial-gradient(900px 520px at 88% -4%,  rgba(61,219,217,0.055), transparent 58%),
+      var(--bg);
+    background-attachment: fixed;
     color: var(--text);
     /* Was --font-mono. Setting monospace on BODY put every label, heading and
        sentence in JetBrains Mono, which reads as a 1990s terminal and wraps
@@ -231,6 +239,14 @@
   .breadth-signal.bearish  { color: var(--red);    background: rgba(255,61,87,0.10); }
   .breadth-signal.extreme  { color: var(--purple); background: rgba(179,136,255,0.12); }
   .breadth-updated { color: var(--muted); font-size: 10px; margin-left: auto; white-space: nowrap; }
+  /* The banner is one nowrap flex row, so on a phone the timestamp pushed past
+     the right edge and was simply cut off. The breadth reading itself is what
+     matters at a glance; the timestamp is available on the Config tab. */
+  @media (max-width: 560px) {
+    .breadth-updated { display: none; }
+    .breadth-banner  { padding: 7px 12px; gap: 9px; }
+    .breadth-bar-wrap { max-width: 92px; }
+  }
 
   /* ─── MAIN LAYOUT ────────────────────────────────── */
   .main { padding: 16px; max-width: 1200px; margin: 0 auto; }
@@ -245,39 +261,103 @@
     gap: 10px; margin-bottom: 16px;
   }
   @media(min-width:600px){ .summary-strip { grid-template-columns: repeat(4,1fr); } }
+  /* A sheen down the top-left edge catches the page's light source, so the
+     card reads as a raised surface rather than a flat panel. The tinted glow
+     behind it is what actually carries the card's colour — the old 2px hairline
+     was so thin the colour coding barely registered. */
   .stat-card {
-    background: var(--card);
+    background:
+      linear-gradient(158deg, rgba(255,255,255,0.05), rgba(255,255,255,0.012) 38%, transparent 66%),
+      var(--card);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 12px 14px;
+    border-radius: var(--radius-lg);
+    padding: 14px 16px 15px;
     position: relative; overflow: hidden;
+    transition: transform 0.28s var(--ease),
+                border-color 0.28s var(--ease),
+                box-shadow 0.28s var(--ease);
   }
+  .stat-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--border2);
+    box-shadow: var(--shadow-lift);
+  }
+  /* Top accent, now a tapered bar rather than a full-width hairline. */
   .stat-card::after {
     content: '';
     position: absolute; top: 0; left: 0; right: 0;
     height: 2px;
+    opacity: 0.9;
   }
-  .stat-card.green::after  { background: var(--green); }
-  .stat-card.amber::after  { background: var(--amber); }
-  .stat-card.blue::after   { background: var(--accent); }
-  .stat-card.purple::after { background: var(--purple); }
-  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-  .stat-value { font-family: var(--font-head); font-weight: 800; font-size: 22px; color: #fff; line-height: 1; }
-  .stat-sub   { font-size: 10px; color: var(--muted); margin-top: 3px; }
+  /* Colour bloom bleeding down from the accent. */
+  .stat-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 62px;
+    pointer-events: none;
+    opacity: 0.5;
+    transition: opacity 0.28s var(--ease);
+  }
+  .stat-card:hover::before { opacity: 0.85; }
+
+  .stat-card.green::after  { background: linear-gradient(90deg, var(--green), transparent 85%); }
+  .stat-card.amber::after  { background: linear-gradient(90deg, var(--amber), transparent 85%); }
+  .stat-card.blue::after   { background: linear-gradient(90deg, var(--accent), transparent 85%); }
+  .stat-card.purple::after { background: linear-gradient(90deg, var(--purple), transparent 85%); }
+
+  .stat-card.green::before  { background: radial-gradient(120% 100% at 0% 0%, rgba(0,230,118,0.16), transparent 70%); }
+  .stat-card.amber::before  { background: radial-gradient(120% 100% at 0% 0%, rgba(255,171,0,0.16),  transparent 70%); }
+  .stat-card.blue::before   { background: radial-gradient(120% 100% at 0% 0%, rgba(232,163,61,0.16), transparent 70%); }
+  .stat-card.purple::before { background: radial-gradient(120% 100% at 0% 0%, rgba(179,136,255,0.16), transparent 70%); }
+
+  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; position: relative; }
+  /* The figure is the point of the card, so it gets the size to say so. */
+  .stat-value { font-family: var(--font-head); font-weight: 800; font-size: 27px; color: #fff; line-height: 1.05; letter-spacing: -0.5px; position: relative; }
+  .stat-sub   { font-size: 10px; color: var(--muted); margin-top: 5px; position: relative; }
 
   /* ─── SECTION HEADER ─────────────────────────────── */
   .section-header {
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 12px; margin-top: 20px;
+    margin-bottom: 12px; margin-top: 24px;
     gap: 10px;
   }
-  .section-header:first-child { margin-top: 0; }
-  .section-title {
-    font-family: var(--font-head); font-weight: 700; font-size: 13px;
-    color: #fff; display: flex; align-items: center; gap: 8px;
-    text-transform: uppercase; letter-spacing: 1px;
+  /* On a phone the title and the filter pills fight over ~375px and the title
+     loses, so "ACTION SIGNALS" broke onto two lines. Stack them instead: the
+     heading gets its own full-width line and the filters scroll under it. */
+  @media (max-width: 560px) {
+    .section-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 9px;
+    }
+    .section-title { white-space: nowrap; }
+    .filter-group {
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 2px;
+    }
+    .filter-group::-webkit-scrollbar { display: none; }
+    .filter-btn { flex: 0 0 auto; }
   }
-  .section-title .icon { font-size: 16px; }
+  .section-header:first-child { margin-top: 0; }
+  /* Was 13px uppercase with no separation, so headings sat in the dead space
+     between sections with nothing anchoring them. A short accent rule down the
+     left edge gives each section a visible start. */
+  .section-title {
+    font-family: var(--font-head); font-weight: 700; font-size: 14px;
+    color: #fff; display: flex; align-items: center; gap: 9px;
+    text-transform: uppercase; letter-spacing: 1.1px;
+    position: relative; padding-left: 11px;
+  }
+  .section-title::before {
+    content: '';
+    position: absolute; left: 0; top: 50%;
+    transform: translateY(-50%);
+    width: 3px; height: 15px; border-radius: 2px;
+    background: linear-gradient(180deg, var(--accent), rgba(232,163,61,0.25));
+  }
+  .section-title .icon { font-size: 15px; filter: saturate(1.15); }
   .filter-group { display: flex; gap: 6px; flex-wrap: wrap; }
   .filter-btn {
     padding: 4px 10px; border-radius: 20px;
@@ -315,18 +395,41 @@
   /* ─── STOCK CARD ─────────────────────────────────── */
   .stock-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
   .stock-card {
-    background: var(--card);
+    background:
+      linear-gradient(158deg, rgba(255,255,255,0.035), rgba(255,255,255,0.008) 42%, transparent 68%),
+      var(--card);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px;
+    border-radius: var(--radius-lg);
+    padding: 14px 15px;
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 8px;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    /* Was border+shadow only, which is invisible on a dark ground. A small
+       lift and a colour wash on hover make a list of ~50 rows feel navigable
+       rather than static. */
+    transition: transform 0.22s var(--ease),
+                border-color 0.22s var(--ease),
+                box-shadow 0.22s var(--ease);
     cursor: default;
     position: relative; overflow: hidden;
   }
-  .stock-card:hover { border-color: var(--border2); box-shadow: var(--shadow); }
+  .stock-card:hover {
+    transform: translateY(-1px);
+    border-color: var(--border2);
+    box-shadow: var(--shadow-lift);
+  }
+  /* Tint bleeding in from the status bar, keyed to the card's own colour. */
+  .stock-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    pointer-events: none; opacity: 0;
+    transition: opacity 0.22s var(--ease);
+  }
+  .stock-card:hover::before { opacity: 1; }
+  .stock-card.action:hover::before    { background: linear-gradient(90deg, rgba(0,230,118,0.07), transparent 42%); }
+  .stock-card.watchlist:hover::before { background: linear-gradient(90deg, rgba(255,171,0,0.07), transparent 42%); }
+  .stock-card.radar:hover::before     { background: linear-gradient(90deg, rgba(255,255,255,0.05), transparent 42%); }
+
   .stock-card .left-bar {
     position: absolute; left: 0; top: 0; bottom: 0;
     width: 3px;
@@ -653,7 +756,29 @@
     animation: spin 0.8s linear infinite;
   }
   .loading-text { color: var(--muted); font-size: 12px; }
-  .empty-state  { text-align: center; padding: 40px 16px; color: var(--muted); font-size: 12px; }
+  /* Was bare centred text on 40px of nothing, which read as a rendering
+     failure rather than a deliberate "there is nothing here today". A dashed
+     surface gives the state an edge so the section still looks intentional
+     when it is empty — which, for Action Signals, is most days. */
+  .empty-state {
+    text-align: center;
+    padding: 26px 16px;
+    color: var(--muted);
+    font-size: 12px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.018), transparent);
+    border: 1px dashed var(--border2);
+    border-radius: var(--radius-lg);
+    margin-bottom: 20px;
+  }
+  .empty-state::before {
+    content: '';
+    display: block;
+    width: 26px; height: 26px;
+    margin: 0 auto 9px;
+    border-radius: 50%;
+    border: 1px solid var(--border2);
+    background: radial-gradient(circle at 50% 40%, rgba(232,163,61,0.16), transparent 70%);
+  }
   .error-state  {
     background: rgba(255,61,87,0.05); border: 1px solid rgba(255,61,87,0.2);
     border-radius: var(--radius); padding: 16px; color: var(--red);
@@ -1997,7 +2122,9 @@ function renderStockList(containerId, items, type) {
           ${hc ? '<span class="tag tag-hc">HC</span>' : ''}
           <span id="ckprice-${cardId}" style="font-size:11px;color:var(--muted);font-family:var(--font-mono);">—</span>
         </div>
-        <div class="stock-meta">${sector} · ${cap || '—'}</div>
+        ${(sector && sector !== '—') || cap
+            ? `<div class="stock-meta">${[sector !== '—' ? sector : null, cap].filter(Boolean).join(' · ')}</div>`
+            : ''}
         <div class="stock-tags">
           ${rs ? `<span class="tag tag-rs-${rs.toLowerCase()}">${rs} RS</span>` : ''}
           ${r.scanner ? `<span class="tag tag-scanner">${r.scanner}</span>` : ''}

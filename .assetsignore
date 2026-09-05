@@ -1,9 +1,15 @@
 # The assets directory is the repo root, so without this the Worker source,
 # its config and the git metadata are all published as public static files —
 # and Wrangler's dev watcher reload-loops on .git churn.
+#
+# .wrangler matters as much as the rest: the deploy writes its own build
+# output there (including worker.js.map) BEFORE collecting assets, so leaving
+# it out published the Worker's source map at
+# /.wrangler/tmp/deploy-*/worker.js.map — confirmed live with a 200.
 .git
 .gitignore
 .assetsignore
+.wrangler
 node_modules
 worker.js
 wrangler.jsonc

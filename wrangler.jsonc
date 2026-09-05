@@ -2,11 +2,17 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "mj-trading",
   "compatibility_date": "2026-05-15",
+  // Was assets-only. A Worker script is needed so /api/prices can fetch quotes
+  // server-side: the browser cannot reach Stooq or Yahoo cross-origin, so every
+  // price on the dashboard rendered as "—". Static files still come from the
+  // ASSETS binding; the script only intercepts /api/*.
+  "main": "worker.js",
   "observability": {
     "enabled": true
   },
   "assets": {
-    "directory": "."
+    "directory": ".",
+    "binding": "ASSETS"
   },
   "compatibility_flags": [
     "nodejs_compat"

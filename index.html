@@ -50,11 +50,25 @@
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: var(--font-mono);
-    font-size: 13px;
+    /* Was --font-mono. Setting monospace on BODY put every label, heading and
+       sentence in JetBrains Mono, which reads as a 1990s terminal and wraps
+       badly on a phone ("ACTION SIGNALS" broke onto two lines at 375px).
+       Mono is now reserved for figures, where character alignment earns it. */
+    font-family: var(--font-body);
+    font-size: 13.5px;
     line-height: 1.6;
     min-height: 100vh;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Figures line up column-to-column without forcing a monospace face on the
+     surrounding prose. */
+  .stat-value, .score-num, .pos-cur-price, .pos-pnl-pct, .pos-stat-val,
+  .rs-score-val, td, th, .mono {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
   }
 
   /* ─── NOISE TEXTURE OVERLAY ─────────────────────── */
@@ -127,16 +141,37 @@
   @media(min-width:500px){ .last-updated { display: block; } }
 
   /* ─── NAV TABS ───────────────────────────────────── */
+  /* The nav holds 9 tabs at min-width 90px = 810px, so on a phone it scrolls.
+     The scrollbar was hidden with no replacement, so five tabs (Chartink, RS
+     Universe, Investment, IPO, Config) were simply undiscoverable at 375px.
+     The mask fades the trailing edge to signal there is more to the right. */
+  .nav-wrap { position: relative; }
   .nav {
     display: flex; gap: 0;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
     overflow-x: auto;
     scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+    scroll-padding-left: 8px;
     position: sticky; top: 56px; z-index: 99;
   }
   .nav::-webkit-scrollbar { display: none; }
+  /* Fade only while the row actually overflows; .is-end is toggled in JS when
+     the user reaches the far right so the hint disappears once it is spent. */
+  .nav::after {
+    content: '';
+    position: sticky; right: 0; top: 0;
+    flex: 0 0 28px; height: 100%;
+    margin-left: -28px;
+    pointer-events: none;
+    background: linear-gradient(to right, transparent, var(--surface));
+    transition: opacity 0.25s var(--ease);
+  }
+  .nav.is-end::after { opacity: 0; }
   .tab-btn {
+    scroll-snap-align: start;
     flex: 1; min-width: 90px;
     padding: 12px 8px;
     background: none; border: none;
@@ -905,7 +940,18 @@
   .equity-headline-change { font-family: var(--font-head); font-weight: 700; font-size: 13px; }
   .equity-period-group { display: flex; gap: 6px; }
   .equity-chart-wrap { position: relative; }
-  #equityCanvas { width: 100%; display: block; cursor: crosshair; }
+  /* All three charts, not just the equity one. Previously only #equityCanvas
+     had a width rule, so the heat and investment canvases laid out at their
+     device-pixel width and ran off the screen on any high-DPR phone.
+     max-width is the belt-and-braces guard: even if a script sets an
+     oversized intrinsic width, the element can never exceed its container. */
+  #equityCanvas, #heatCanvas, #invEquityCanvas {
+    width: 100%;
+    max-width: 100%;
+    display: block;
+    cursor: crosshair;
+    touch-action: pan-y;   /* let the page scroll vertically over the chart */
+  }
   .equity-tooltip {
     position: absolute; pointer-events: none; z-index: 5;
     background: rgba(8,12,16,0.96); border: 1px solid var(--border2);
@@ -1998,77 +2044,75 @@ function filterFcis(filter, btn) {
 }
 
 // ─── PORTFOLIO ────────────────────────────────────────
-async function fetchLivePrice(symbol) {
-  // Strip .NS/.BO suffix to get base NSE symbol
-  var base = symbol.replace(/\.(NS|BO)$/i, '');
+/* ─── LIVE PRICES ──────────────────────────────────────────────────────────
+   Previously this tried stooq.com directly and then three public CORS
+   proxies. All four fail from the deployed origin: Stooq sends no
+   Access-Control-Allow-Origin and the proxies answer 403. Every price on
+   every card rendered as "—", and one page load fired 400+ doomed requests
+   (the console dropped 10,000+ error lines), which is a large part of why
+   the page felt slow on a phone.
 
-  // ── Strategy 1: Stooq CSV — no auth, no proxy, browser-friendly ──────────
-  // Stooq serves NSE India stocks as <sym>.in  e.g. mtartech.in
-  // CSV columns: Date,Open,High,Low,Close,Volume  (oldest→newest, last row = today)
-  try {
-    var stooqSym = base.toLowerCase() + '.in';
-    var stooqUrl = 'https://stooq.com/q/d/l/?s=' + stooqSym + '&i=d';
-    var ctrl1 = new AbortController();
-    var t1 = setTimeout(function(c){ return function(){ c.abort(); }; }(ctrl1), 8000);
-    var r1 = await fetch(stooqUrl, { cache: 'no-store', signal: ctrl1.signal });
-    clearTimeout(t1);
-    if (r1.ok) {
-      var csv = await r1.text();
-      // Skip "No data" responses
-      if (csv && csv.indexOf('No data') === -1 && csv.indexOf('<') === -1) {
-        var lines = csv.trim().split('\n');
-        if (lines.length >= 3) {
-          var todayRow  = lines[lines.length - 1].split(',');
-          var prevRow   = lines[lines.length - 2].split(',');
-          var price     = parseFloat(todayRow[4]);   // Close price
-          var prevClose = parseFloat(prevRow[4]);
-          if (!isNaN(price) && price > 0) {
-            var changePct = (!isNaN(prevClose) && prevClose > 0)
-              ? ((price - prevClose) / prevClose * 100) : null;
-            return { price: price, changePct: changePct };
-          }
-        }
-      }
-    }
-  } catch(e1) { /* fall through to Yahoo */ }
+   Quotes now come from this site's own /api/prices endpoint, served by the
+   Worker in worker.js. A Worker has no same-origin policy, so it fetches
+   upstream itself and the browser never makes a cross-origin request.
 
-  // ── Strategy 2: Yahoo Finance via proxy fallbacks ─────────────────────────
-  var sym     = base + '.NS';
-  var yUrl    = 'https://query1.finance.yahoo.com/v8/finance/chart/' + sym + '?interval=1d&range=5d';
-  var proxies = [
-    'https://api.codetabs.com/v1/proxy/?quest=' + encodeURIComponent(yUrl),
-    'https://api.allorigins.win/raw?url='        + encodeURIComponent(yUrl),
-    'https://corsproxy.io/?' + yUrl
-  ];
+   Calls are also coalesced. Each card used to fetch independently, so ~100
+   cards meant ~100 requests; the queue below gathers everything requested
+   within one tick and sends a single batched call instead. Call sites are
+   unchanged — fetchLivePrice(symbol) still resolves to {price, changePct}. */
+/* One promise per symbol, memoised for the life of the page. Several panels
+   render the same tickers, so without this the same symbol is requested once
+   per card. Handing every caller the SAME promise means each symbol is
+   fetched exactly once no matter how many places ask for it. */
+const _pricePromises  = new Map();   // symbol -> Promise<quote|null>
+const _priceResolvers = new Map();   // symbol -> resolve, queued but not yet sent
+let   _priceTimer     = null;
 
-  for (var pi = 0; pi < proxies.length; pi++) {
+const PRICE_BATCH_MS  = 40;   // long enough to gather a render's worth
+const PRICE_BATCH_MAX = 60;   // must not exceed the Worker's MAX_SYMBOLS
+
+async function _flushPriceQueue() {
+  _priceTimer = null;
+  if (!_priceResolvers.size) return;
+
+  /* Claim the queue up front. Leaving symbols queued while their request is
+     in the air let the next flush ask for them all over again — an early
+     version of this produced 62 requests, the same batch repeated up to 18
+     times, for what should have been a handful. */
+  const claimed = new Map(_priceResolvers);
+  _priceResolvers.clear();
+  const pending = [...claimed.keys()];
+
+  for (let i = 0; i < pending.length; i += PRICE_BATCH_MAX) {
+    const batch = pending.slice(i, i + PRICE_BATCH_MAX);
+    let quotes = {};
     try {
-      var ctrl2 = new AbortController();
-      var t2 = setTimeout(function(c){ return function(){ c.abort(); }; }(ctrl2), 7000);
-      var r2 = await fetch(proxies[pi], { cache: 'no-store', signal: ctrl2.signal });
-      clearTimeout(t2);
-      if (!r2.ok) continue;
-      var raw;
-      try { raw = await r2.json(); } catch(pe) { continue; }
-      // allorigins /raw returns unwrapped JSON; /get wraps in {contents:"..."}
-      if (raw && typeof raw.contents === 'string') {
-        try { raw = JSON.parse(raw.contents); } catch(pe2) { continue; }
-      }
-      if (raw && raw.chart && raw.chart.result && raw.chart.result[0]) {
-        var meta = raw.chart.result[0].meta;
-        if (!meta) continue;
-        var p = meta.regularMarketPrice || meta.previousClose || null;
-        if (!p) continue;
-        var prev2 = meta.previousClose || meta.chartPreviousClose || null;
-        var c2 = meta.regularMarketChangePercent != null
-          ? meta.regularMarketChangePercent
-          : (prev2 && prev2 > 0 ? ((p - prev2) / prev2 * 100) : null);
-        return { price: p, changePct: c2 };
-      }
-    } catch(e2) { /* try next proxy */ }
+      const res = await fetch('/api/prices?symbols=' + encodeURIComponent(batch.join(',')),
+                              { cache: 'no-store' });
+      if (res.ok) quotes = await res.json();
+    } catch (e) {
+      // Leave quotes empty: every waiter resolves null and the card keeps its
+      // placeholder. A quote failing must never break a render.
+    }
+    batch.forEach(sym => {
+      const q = quotes[sym];
+      const resolve = claimed.get(sym);
+      if (resolve) resolve((q && typeof q.price === 'number') ? q : null);
+    });
   }
-  return null;
 }
+
+function fetchLivePrice(symbol) {
+  const base = String(symbol || '').replace(/\.(NS|BO)$/i, '').toUpperCase().trim();
+  if (!base) return Promise.resolve(null);
+  if (_pricePromises.has(base)) return _pricePromises.get(base);
+
+  const p = new Promise(resolve => { _priceResolvers.set(base, resolve); });
+  _pricePromises.set(base, p);
+  if (!_priceTimer) _priceTimer = setTimeout(_flushPriceQueue, PRICE_BATCH_MS);
+  return p;
+}
+
 
 async function loadPortfolio() {
   const grid = document.getElementById('portfolioGrid');
@@ -2861,6 +2905,105 @@ function switchTab(name, btn) {
   btn.classList.add('active');
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-' + name).classList.add('active');
+
+  // On a phone the nav scrolls, so the tab you just tapped can sit half off
+  // the edge. Pull it fully into view.
+  if (btn.scrollIntoView) {
+    btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+
+  // A canvas sized while its panel was display:none measures 0 wide, so any
+  // chart on a tab that was hidden at load time has to be redrawn once it is
+  // actually visible. setTimeout rather than requestAnimationFrame: rAF is
+  // paused entirely while a tab is backgrounded, so the redraw would never
+  // land for someone who switches tabs and comes back.
+  setTimeout(redrawVisibleCharts, 0);
+}
+
+/* ─── Chart redraw plumbing ────────────────────────────────────────────────
+   Charts are drawn to a canvas sized from its rendered width, so they need to
+   be redrawn whenever that width can have changed: tab switch, window resize,
+   and phone rotation. */
+function redrawVisibleCharts() {
+  try {
+    if (typeof _eqSnapshots !== 'undefined' && _eqSnapshots && _eqSnapshots.length
+        && document.getElementById('equityCanvas')?.offsetParent !== null) {
+      drawEquityChart(_eqSnapshots, typeof _eqPeriod !== 'undefined' ? _eqPeriod : '1M');
+      if (typeof drawHeatChart === 'function') {
+        drawHeatChart(_eqSnapshots, typeof _eqPeriod !== 'undefined' ? _eqPeriod : '1M');
+      }
+    }
+    if (typeof _invEqSnapshots !== 'undefined' && _invEqSnapshots && _invEqSnapshots.length
+        && document.getElementById('invEquityCanvas')?.offsetParent !== null) {
+      drawInvEquityChart(_invEqSnapshots, typeof _invEqPeriod !== 'undefined' ? _invEqPeriod : '1M');
+    }
+  } catch (e) {
+    console.warn('[charts] redraw skipped:', e);
+  }
+}
+
+let _resizeTimer = null;
+function onViewportChange() {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(redrawVisibleCharts, 150);
+}
+window.addEventListener('resize', onViewportChange);
+window.addEventListener('orientationchange', onViewportChange);
+
+/* A canvas inside a display:none panel measures 0 wide, so the first draw
+   falls back to a 600px assumption and the chart ends up drawn for the wrong
+   width. Firing a redraw from the tab handler is unreliable — the data may
+   not have arrived yet, and then nothing re-runs it.
+
+   A ResizeObserver removes the guesswork: it fires whenever the element's box
+   actually changes, which covers hidden -> visible, rotation, and resize with
+   one mechanism. Setting the intrinsic width does not alter the layout box,
+   so this cannot feed back on itself, and the width check makes that certain. */
+const _lastCanvasW = new Map();
+function initChartObserver() {
+  if (typeof ResizeObserver === 'undefined') return;   // very old browsers
+  const ro = new ResizeObserver(entries => {
+    let changed = false;
+    for (const e of entries) {
+      const w = Math.round(e.contentRect.width);
+      if (w > 0 && _lastCanvasW.get(e.target.id) !== w) {
+        _lastCanvasW.set(e.target.id, w);
+        changed = true;
+      }
+    }
+    if (changed) setTimeout(redrawVisibleCharts, 0);
+  });
+  ['equityCanvas', 'heatCanvas', 'invEquityCanvas'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) ro.observe(el);
+  });
+}
+
+/* This script tag sits at the END of <body>, so DOMContentLoaded has normally
+   already fired by the time it executes — a listener for it would never run.
+   Check readyState instead of assuming. */
+function initUiEnhancements() {
+  initNavScrollHint();
+  initChartObserver();
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initUiEnhancements);
+} else {
+  initUiEnhancements();
+}
+
+// Hide the nav's scroll hint once the row is scrolled to its end.
+function initNavScrollHint() {
+  const nav = document.querySelector('.nav');
+  if (!nav) return;
+  const update = () => {
+    const atEnd = nav.scrollLeft + nav.clientWidth >= nav.scrollWidth - 4;
+    const noOverflow = nav.scrollWidth <= nav.clientWidth + 1;
+    nav.classList.toggle('is-end', atEnd || noOverflow);
+  };
+  nav.addEventListener('scroll', update, { passive: true });
+  window.addEventListener('resize', update);
+  update();
 }
 
 // ─── AUTO-REFRESH ─────────────────────────────────────
@@ -3225,18 +3368,35 @@ function setEqPeriod(period, btn) {
   drawHeatChart(_eqSnapshots, period);
 }
 
+/* Size a canvas for a high-DPR screen without letting its DEVICE-pixel size
+   become its LAYOUT size.
+
+   Setting canvas.width sets the intrinsic size. With no CSS width, the element
+   then lays out at that many CSS pixels, so on a phone at dpr 3 a 375px chart
+   renders 1125px wide and runs off the screen.
+
+   Worse, it compounded: the next redraw measured the inflated element and
+   multiplied again, so the canvases doubled on every redraw (300 -> 600 ->
+   1200). Hence: constrain the layout box FIRST, then measure, then scale. */
+function sizeCanvas(canvas, cssHeight) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.style.width  = '100%';
+  canvas.style.height = cssHeight + 'px';
+  const W = canvas.getBoundingClientRect().width || canvas.offsetWidth || 600;
+  canvas.width  = Math.max(1, Math.round(W * dpr));
+  canvas.height = Math.max(1, Math.round(cssHeight * dpr));
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, cssHeight);
+  return { ctx, W, H: cssHeight };
+}
+
 function drawEquityChart(snapshots, period) {
   const canvas = document.getElementById('equityCanvas');
   if (!canvas || !snapshots.length) return;
   const filtered = filterEqByPeriod(snapshots, period);
-  const dpr = window.devicePixelRatio || 1;
-  const W = canvas.getBoundingClientRect().width || canvas.offsetWidth || 600;
-  const H = 200;
-  canvas.width = W * dpr; canvas.height = H * dpr;
-  const ctx = canvas.getContext('2d');
-  ctx.setTransform(1,0,0,1,0,0);
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0,0,W,H);
+  const { ctx, W, H } = sizeCanvas(canvas, 200);
 
   const PAD = {top:16, right:10, bottom:6, left:56};
   const cW = W - PAD.left - PAD.right;
@@ -3346,12 +3506,7 @@ function drawHeatChart(snapshots, period) {
   }
   canvas.style.display = 'block'; emptyEl.style.display = 'none';
 
-  const dpr = window.devicePixelRatio || 1;
-  const W = canvas.getBoundingClientRect().width || canvas.offsetWidth || 600;
-  const H = 140;
-  canvas.width = W * dpr; canvas.height = H * dpr;
-  const ctx = canvas.getContext('2d');
-  ctx.setTransform(1,0,0,1,0,0); ctx.scale(dpr, dpr); ctx.clearRect(0,0,W,H);
+  const { ctx, W, H } = sizeCanvas(canvas, 140);
 
   const PAD = {top:14, right:10, bottom:6, left:44};
   const cW = W - PAD.left - PAD.right, cH = H - PAD.top - PAD.bottom;
@@ -3754,14 +3909,7 @@ function drawInvEquityChart(snapshots, period) {
   const canvas = document.getElementById('invEquityCanvas');
   if (!canvas || !snapshots.length) return;
   const filtered = filterInvEqByPeriod(snapshots, period);
-  const dpr = window.devicePixelRatio || 1;
-  const W = canvas.getBoundingClientRect().width || canvas.offsetWidth || 600;
-  const H = 200;
-  canvas.width = W * dpr; canvas.height = H * dpr;
-  const ctx = canvas.getContext('2d');
-  ctx.setTransform(1,0,0,1,0,0);
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0,0,W,H);
+  const { ctx, W, H } = sizeCanvas(canvas, 200);
 
   const PAD = {top:16, right:10, bottom:6, left:56};
   const cW = W - PAD.left - PAD.right;

@@ -19,10 +19,25 @@
  * Anything else falls through to the static assets.
  */
 
-const MAX_SYMBOLS = 60;        // one screenful of cards, generously
+/* Cloudflare caps SUBREQUESTS per Worker invocation — 50 on the free plan.
+   Each symbol can cost up to three (Yahoo .NS, Yahoo .BO, then Stooq), so a
+   batch of 60 can demand 180 and the whole invocation dies. Measured against
+   the deployed Worker:
+
+       10 symbols -> 200, all priced
+       25 symbols -> 200, 24 priced
+       40 symbols -> 200, 37 priced
+       60 symbols -> 500, Cloudflare error page
+
+   15 x 3 = 45 stays under the cap even in the worst case where every symbol
+   needs every fallback. SUBREQUEST_BUDGET is a second line of defence: if the
+   plan's limit is ever lower than assumed, symbols degrade to null instead of
+   the entire batch failing. */
+const MAX_SYMBOLS = 15;
+const SUBREQUEST_BUDGET = 45;
 const UPSTREAM_TIMEOUT_MS = 6000;
 const EDGE_TTL = 120;          // seconds; quotes are informational, not execution
-const CONCURRENCY = 8;         // be a polite client to the upstreams
+const CONCURRENCY = 6;         // be a polite client to the upstreams
 
 // NSE tickers are letters, digits, & and - (e.g. M&M, BAJAJ-AUTO).
 const SYMBOL_RE = /^[A-Za-z0-9&\-]{1,20}$/;
@@ -50,8 +65,9 @@ async function withTimeout(promise, ms) {
 
 /** Yahoo first: better coverage of Indian listings and it returns the previous
  *  close alongside the last price, so the day change needs no second call. */
-async function fromYahoo(symbol) {
+async function fromYahoo(symbol, budget) {
   for (const suffix of [".NS", ".BO"]) {
+    if (!budget.take()) return null;
     try {
       const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}${suffix}` +
                   `?interval=1d&range=5d`;
@@ -76,7 +92,8 @@ async function fromYahoo(symbol) {
 }
 
 /** Stooq fallback. Daily CSV, oldest to newest, close is column 5. */
-async function fromStooq(symbol) {
+async function fromStooq(symbol, budget) {
+  if (!budget.take()) return null;
   try {
     const url = `https://stooq.com/q/d/l/?s=${symbol.toLowerCase()}.in&i=d`;
     const res = await withTimeout((signal) => fetch(url, { signal }), UPSTREAM_TIMEOUT_MS);
@@ -97,14 +114,14 @@ async function fromStooq(symbol) {
 
 /** Per-symbol edge cache, so one popular symbol is fetched once per TTL across
  *  every visitor rather than once per card render. */
-async function quoteFor(symbol, ctx) {
+async function quoteFor(symbol, ctx, budget) {
   const cacheKey = new Request(`https://cache.local/quote/${symbol}`);
   const cache = caches.default;
 
   const hit = await cache.match(cacheKey);
   if (hit) return await hit.json();
 
-  const quote = (await fromYahoo(symbol)) || (await fromStooq(symbol));
+  const quote = (await fromYahoo(symbol, budget)) || (await fromStooq(symbol, budget));
   const payload = quote || { price: null, changePct: null, source: null };
 
   // Cache misses too, briefly, so an unknown ticker cannot be retried on every
@@ -158,7 +175,12 @@ export default {
         return json({ error: "no valid symbols" }, 400);
       }
 
-      const quotes = await mapLimited(symbols, CONCURRENCY, (s) => quoteFor(s, ctx));
+      // One budget shared by the whole invocation. A symbol that cannot be
+      // funded returns null rather than taking the batch down with it.
+      let spent = 0;
+      const budget = { take: () => (spent < SUBREQUEST_BUDGET ? (spent++, true) : false) };
+
+      const quotes = await mapLimited(symbols, CONCURRENCY, (s) => quoteFor(s, ctx, budget));
 
       if (url.pathname === "/api/price") {
         const only = quotes[symbols[0]];

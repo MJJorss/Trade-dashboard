@@ -2069,7 +2069,11 @@ const _priceResolvers = new Map();   // symbol -> resolve, queued but not yet se
 let   _priceTimer     = null;
 
 const PRICE_BATCH_MS  = 40;   // long enough to gather a render's worth
-const PRICE_BATCH_MAX = 60;   // must not exceed the Worker's MAX_SYMBOLS
+/* Must not exceed the Worker's MAX_SYMBOLS. Cloudflare caps subrequests per
+   invocation at 50 on the free plan and each symbol can cost up to three
+   (Yahoo .NS, Yahoo .BO, Stooq), so a 60-symbol batch returned a 500 and every
+   card in it stayed blank. 15 keeps the worst case at 45. */
+const PRICE_BATCH_MAX = 15;
 
 async function _flushPriceQueue() {
   _priceTimer = null;

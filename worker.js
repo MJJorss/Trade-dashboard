@@ -191,7 +191,12 @@ export default {
       return json(quotes);
     }
 
-    // Everything else is the static site.
+    /* Everything else is the static site.
+       Note this handler is NOT what serves index.html in practice: Cloudflare
+       serves matching static assets directly from the edge without invoking
+       the Worker. That is why the HTML cache policy lives in the _headers
+       file rather than being set here — headers set on this response would
+       never reach a request the Worker never sees. */
     return env.ASSETS.fetch(request);
   },
 };

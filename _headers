@@ -1,0 +1,20 @@
+# Cloudflare static-asset header rules.
+#
+# The whole dashboard is one 220KB index.html, so a stale copy of it means a
+# stale ENTIRE app: after a deploy the site kept serving the previous version
+# until the browser cache was cleared by hand.
+#
+# "no-cache" is not "no-store" — the browser may still store the file, it just
+# has to revalidate before reusing it, and an unchanged file comes back as a
+# 304 with no body. Cost is one conditional request per load, not a 220KB
+# re-download.
+#
+# This lives in a _headers file rather than in worker.js because Cloudflare
+# serves matching static assets straight from the edge without invoking the
+# Worker at all, so a header set in the script never applies to them.
+
+/
+  Cache-Control: no-cache, must-revalidate
+
+/index.html
+  Cache-Control: no-cache, must-revalidate

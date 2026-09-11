@@ -48,7 +48,15 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
   body {
-    background: var(--bg);
+    /* Was a flat fill. Two very low-opacity pools of the accent and teal give
+       the page a light source, so surfaces sitting on it read as raised
+       instead of as rectangles drawn on black. Fixed attachment keeps the
+       light still while content scrolls past it. */
+    background:
+      radial-gradient(1100px 620px at 12% -12%, rgba(232,163,61,0.075), transparent 62%),
+      radial-gradient(900px 520px at 88% -4%,  rgba(61,219,217,0.055), transparent 58%),
+      var(--bg);
+    background-attachment: fixed;
     color: var(--text);
     /* Was --font-mono. Setting monospace on BODY put every label, heading and
        sentence in JetBrains Mono, which reads as a 1990s terminal and wraps
@@ -231,6 +239,14 @@
   .breadth-signal.bearish  { color: var(--red);    background: rgba(255,61,87,0.10); }
   .breadth-signal.extreme  { color: var(--purple); background: rgba(179,136,255,0.12); }
   .breadth-updated { color: var(--muted); font-size: 10px; margin-left: auto; white-space: nowrap; }
+  /* The banner is one nowrap flex row, so on a phone the timestamp pushed past
+     the right edge and was simply cut off. The breadth reading itself is what
+     matters at a glance; the timestamp is available on the Config tab. */
+  @media (max-width: 560px) {
+    .breadth-updated { display: none; }
+    .breadth-banner  { padding: 7px 12px; gap: 9px; }
+    .breadth-bar-wrap { max-width: 92px; }
+  }
 
   /* ─── MAIN LAYOUT ────────────────────────────────── */
   .main { padding: 16px; max-width: 1200px; margin: 0 auto; }
@@ -245,39 +261,103 @@
     gap: 10px; margin-bottom: 16px;
   }
   @media(min-width:600px){ .summary-strip { grid-template-columns: repeat(4,1fr); } }
+  /* A sheen down the top-left edge catches the page's light source, so the
+     card reads as a raised surface rather than a flat panel. The tinted glow
+     behind it is what actually carries the card's colour — the old 2px hairline
+     was so thin the colour coding barely registered. */
   .stat-card {
-    background: var(--card);
+    background:
+      linear-gradient(158deg, rgba(255,255,255,0.05), rgba(255,255,255,0.012) 38%, transparent 66%),
+      var(--card);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 12px 14px;
+    border-radius: var(--radius-lg);
+    padding: 14px 16px 15px;
     position: relative; overflow: hidden;
+    transition: transform 0.28s var(--ease),
+                border-color 0.28s var(--ease),
+                box-shadow 0.28s var(--ease);
   }
+  .stat-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--border2);
+    box-shadow: var(--shadow-lift);
+  }
+  /* Top accent, now a tapered bar rather than a full-width hairline. */
   .stat-card::after {
     content: '';
     position: absolute; top: 0; left: 0; right: 0;
     height: 2px;
+    opacity: 0.9;
   }
-  .stat-card.green::after  { background: var(--green); }
-  .stat-card.amber::after  { background: var(--amber); }
-  .stat-card.blue::after   { background: var(--accent); }
-  .stat-card.purple::after { background: var(--purple); }
-  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-  .stat-value { font-family: var(--font-head); font-weight: 800; font-size: 22px; color: #fff; line-height: 1; }
-  .stat-sub   { font-size: 10px; color: var(--muted); margin-top: 3px; }
+  /* Colour bloom bleeding down from the accent. */
+  .stat-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 62px;
+    pointer-events: none;
+    opacity: 0.5;
+    transition: opacity 0.28s var(--ease);
+  }
+  .stat-card:hover::before { opacity: 0.85; }
+
+  .stat-card.green::after  { background: linear-gradient(90deg, var(--green), transparent 85%); }
+  .stat-card.amber::after  { background: linear-gradient(90deg, var(--amber), transparent 85%); }
+  .stat-card.blue::after   { background: linear-gradient(90deg, var(--accent), transparent 85%); }
+  .stat-card.purple::after { background: linear-gradient(90deg, var(--purple), transparent 85%); }
+
+  .stat-card.green::before  { background: radial-gradient(120% 100% at 0% 0%, rgba(0,230,118,0.16), transparent 70%); }
+  .stat-card.amber::before  { background: radial-gradient(120% 100% at 0% 0%, rgba(255,171,0,0.16),  transparent 70%); }
+  .stat-card.blue::before   { background: radial-gradient(120% 100% at 0% 0%, rgba(232,163,61,0.16), transparent 70%); }
+  .stat-card.purple::before { background: radial-gradient(120% 100% at 0% 0%, rgba(179,136,255,0.16), transparent 70%); }
+
+  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 6px; position: relative; }
+  /* The figure is the point of the card, so it gets the size to say so. */
+  .stat-value { font-family: var(--font-head); font-weight: 800; font-size: 27px; color: #fff; line-height: 1.05; letter-spacing: -0.5px; position: relative; }
+  .stat-sub   { font-size: 10px; color: var(--muted); margin-top: 5px; position: relative; }
 
   /* ─── SECTION HEADER ─────────────────────────────── */
   .section-header {
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 12px; margin-top: 20px;
+    margin-bottom: 12px; margin-top: 24px;
     gap: 10px;
   }
-  .section-header:first-child { margin-top: 0; }
-  .section-title {
-    font-family: var(--font-head); font-weight: 700; font-size: 13px;
-    color: #fff; display: flex; align-items: center; gap: 8px;
-    text-transform: uppercase; letter-spacing: 1px;
+  /* On a phone the title and the filter pills fight over ~375px and the title
+     loses, so "ACTION SIGNALS" broke onto two lines. Stack them instead: the
+     heading gets its own full-width line and the filters scroll under it. */
+  @media (max-width: 560px) {
+    .section-header {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 9px;
+    }
+    .section-title { white-space: nowrap; }
+    .filter-group {
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 2px;
+    }
+    .filter-group::-webkit-scrollbar { display: none; }
+    .filter-btn { flex: 0 0 auto; }
   }
-  .section-title .icon { font-size: 16px; }
+  .section-header:first-child { margin-top: 0; }
+  /* Was 13px uppercase with no separation, so headings sat in the dead space
+     between sections with nothing anchoring them. A short accent rule down the
+     left edge gives each section a visible start. */
+  .section-title {
+    font-family: var(--font-head); font-weight: 700; font-size: 14px;
+    color: #fff; display: flex; align-items: center; gap: 9px;
+    text-transform: uppercase; letter-spacing: 1.1px;
+    position: relative; padding-left: 11px;
+  }
+  .section-title::before {
+    content: '';
+    position: absolute; left: 0; top: 50%;
+    transform: translateY(-50%);
+    width: 3px; height: 15px; border-radius: 2px;
+    background: linear-gradient(180deg, var(--accent), rgba(232,163,61,0.25));
+  }
+  .section-title .icon { font-size: 15px; filter: saturate(1.15); }
   .filter-group { display: flex; gap: 6px; flex-wrap: wrap; }
   .filter-btn {
     padding: 4px 10px; border-radius: 20px;
@@ -315,18 +395,41 @@
   /* ─── STOCK CARD ─────────────────────────────────── */
   .stock-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
   .stock-card {
-    background: var(--card);
+    background:
+      linear-gradient(158deg, rgba(255,255,255,0.035), rgba(255,255,255,0.008) 42%, transparent 68%),
+      var(--card);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px;
+    border-radius: var(--radius-lg);
+    padding: 14px 15px;
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 8px;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    /* Was border+shadow only, which is invisible on a dark ground. A small
+       lift and a colour wash on hover make a list of ~50 rows feel navigable
+       rather than static. */
+    transition: transform 0.22s var(--ease),
+                border-color 0.22s var(--ease),
+                box-shadow 0.22s var(--ease);
     cursor: default;
     position: relative; overflow: hidden;
   }
-  .stock-card:hover { border-color: var(--border2); box-shadow: var(--shadow); }
+  .stock-card:hover {
+    transform: translateY(-1px);
+    border-color: var(--border2);
+    box-shadow: var(--shadow-lift);
+  }
+  /* Tint bleeding in from the status bar, keyed to the card's own colour. */
+  .stock-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    pointer-events: none; opacity: 0;
+    transition: opacity 0.22s var(--ease);
+  }
+  .stock-card:hover::before { opacity: 1; }
+  .stock-card.action:hover::before    { background: linear-gradient(90deg, rgba(0,230,118,0.07), transparent 42%); }
+  .stock-card.watchlist:hover::before { background: linear-gradient(90deg, rgba(255,171,0,0.07), transparent 42%); }
+  .stock-card.radar:hover::before     { background: linear-gradient(90deg, rgba(255,255,255,0.05), transparent 42%); }
+
   .stock-card .left-bar {
     position: absolute; left: 0; top: 0; bottom: 0;
     width: 3px;
@@ -653,7 +756,29 @@
     animation: spin 0.8s linear infinite;
   }
   .loading-text { color: var(--muted); font-size: 12px; }
-  .empty-state  { text-align: center; padding: 40px 16px; color: var(--muted); font-size: 12px; }
+  /* Was bare centred text on 40px of nothing, which read as a rendering
+     failure rather than a deliberate "there is nothing here today". A dashed
+     surface gives the state an edge so the section still looks intentional
+     when it is empty — which, for Action Signals, is most days. */
+  .empty-state {
+    text-align: center;
+    padding: 26px 16px;
+    color: var(--muted);
+    font-size: 12px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.018), transparent);
+    border: 1px dashed var(--border2);
+    border-radius: var(--radius-lg);
+    margin-bottom: 20px;
+  }
+  .empty-state::before {
+    content: '';
+    display: block;
+    width: 26px; height: 26px;
+    margin: 0 auto 9px;
+    border-radius: 50%;
+    border: 1px solid var(--border2);
+    background: radial-gradient(circle at 50% 40%, rgba(232,163,61,0.16), transparent 70%);
+  }
   .error-state  {
     background: rgba(255,61,87,0.05); border: 1px solid rgba(255,61,87,0.2);
     border-radius: var(--radius); padding: 16px; color: var(--red);
@@ -888,6 +1013,11 @@
   .td-symbol { font-family: var(--font-head); font-weight: 700; color: #fff; font-size: 12px; }
   .td-pos { color: var(--green); font-weight: 700; }
   .td-neg { color: var(--red);   font-weight: 700; }
+  /* `.trade-table td` sets color: var(--text) and outranks the two classes
+     above on specificity, so every P&L cell in every table rendered grey.
+     Scoping the classes to the table restores the win/loss colouring. */
+  .trade-table td.td-pos { color: var(--green); }
+  .trade-table td.td-neg { color: var(--red); }
   .td-muted { color: var(--muted); }
 
   /* Scanner breakdown cards */
@@ -1120,6 +1250,15 @@
   .freshness-badge .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
   .freshness-badge.fresh .dot { animation: pulse-dot 2s ease-in-out infinite; }
 
+  /* ── Shadow tab ─────────────────────────────────────── */
+  .sh-notice { border-color: rgba(179,136,255,0.35); }
+  .sh-meta { margin-top: 6px; font-size: 10px; color: var(--muted); }
+  .sh-restated { border-color: rgba(255,171,0,0.45); color: var(--amber); }
+  .sh-gate-strip {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px; margin-bottom: 16px;
+  }
+  .sh-gate-strip .stat-value { font-size: 16px; }
 </style>
 </head>
 <body>
@@ -1156,6 +1295,9 @@
   </button>
   <button class="tab-btn" onclick="switchTab('sizing',this)">
     <span class="tab-icon">⚖️</span>Sizing
+  </button>
+  <button class="tab-btn" onclick="switchTab('shadow',this)">
+    <span class="tab-icon">🧪</span>Shadow
   </button>
   <button class="tab-btn" onclick="switchTab('chartink',this)">
     <span class="tab-icon">🎯</span>Chartink
@@ -1675,6 +1817,151 @@
     </div>
   </div>
 
+  <!-- ══ SHADOW BOOK TAB ═══════════════════════════════ -->
+  <div class="tab-panel" id="tab-shadow">
+    <div class="notice sh-notice">
+      <strong>🧪 Shadow book — paper only.</strong> What the Regime-Gated Swing System would have
+      done: MA21 gate on MC150 with full liquidation, EMA13 Phase 2 exit, ATR(14)×2.0 stop at 1.40%
+      risk, ₹13.5L. No real orders and no real capital — replayed once a day after the close
+      (3:45 PM IST) by the research engine itself.
+      <div class="sh-meta" id="shMeta">Loading…</div>
+    </div>
+    <div class="notice sh-restated" id="shRestated" style="display:none"></div>
+
+    <div class="sh-gate-strip" id="shGateStrip">
+      <div class="loading-state" style="grid-column:1/-1"><div class="spinner"></div></div>
+    </div>
+
+    <!-- Performance -->
+    <div class="section-header" style="margin-top:0">
+      <div class="section-title"><span class="icon">📊</span>Shadow Performance</div>
+      <span class="freshness-badge" id="shFreshBadge" style="display:none"></span>
+    </div>
+    <div class="perf-kpi-strip">
+      <div class="stat-card green">
+        <div class="stat-label">Realised P&amp;L ₹</div>
+        <div class="stat-value" id="shTotalInr">—</div>
+        <div class="stat-sub" id="shTotalPct">—</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="stat-label">Win Rate</div>
+        <div class="stat-value" id="shWinRate">—</div>
+        <div class="stat-sub" id="shWinLoss">— W / — L</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-label">Avg R / Trade</div>
+        <div class="stat-value" id="shAvgR">—</div>
+        <div class="stat-sub" id="shAvgHold">avg hold —</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-label">Trades Closed</div>
+        <div class="stat-value" id="shTradeCount">—</div>
+        <div class="stat-sub" id="shDateRange">—</div>
+      </div>
+    </div>
+
+    <div class="equity-card">
+      <div class="equity-card-head">
+        <div>
+          <div class="equity-card-title">📈 Shadow Equity — Mark to Market</div>
+          <div class="equity-headline">
+            <div class="equity-headline-value" id="shEqVal">—</div>
+            <div class="equity-headline-change" id="shEqChange"></div>
+          </div>
+        </div>
+        <div class="equity-period-group" id="shEqPeriodGroup">
+          <button class="inv-period-btn" onclick="setShEqPeriod('1M',this)">1M</button>
+          <button class="inv-period-btn" onclick="setShEqPeriod('3M',this)">3M</button>
+          <button class="inv-period-btn active" onclick="setShEqPeriod('ALL',this)">ALL</button>
+        </div>
+      </div>
+      <div class="equity-chart-wrap">
+        <canvas id="shEquityCanvas" height="200"></canvas>
+        <div class="equity-tooltip" id="shEqTooltip"></div>
+        <div class="empty-state" id="shEqEmpty" style="display:none">
+          The shadow equity curve starts with the first 3:45 PM shadow run.
+        </div>
+      </div>
+      <div class="equity-x-labels" id="shEqXLabels"></div>
+    </div>
+
+    <div class="dd-kpi-strip">
+      <div class="stat-card red">
+        <div class="stat-label">Current Drawdown</div>
+        <div class="stat-value" id="shDdCurInr">—</div>
+        <div class="stat-sub" id="shDdCurPct">—</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="stat-label">Max Drawdown</div>
+        <div class="stat-value" id="shDdMaxInr">—</div>
+        <div class="stat-sub" id="shDdMaxPct">—</div>
+      </div>
+    </div>
+
+    <div class="equity-card">
+      <div class="equity-card-head">
+        <div>
+          <div class="equity-card-title">🔥 Shadow Heat — Open Stop Risk vs 7% Cap</div>
+          <div class="equity-headline">
+            <div class="equity-headline-value" id="shHeatVal" style="font-size:20px">—</div>
+            <div class="equity-headline-change" id="shHeatSub" style="color:var(--muted);font-weight:600"></div>
+          </div>
+        </div>
+      </div>
+      <div class="equity-chart-wrap">
+        <canvas id="shHeatCanvas" height="140"></canvas>
+        <div class="empty-state" id="shHeatEmpty" style="display:none">Heat history builds up alongside the equity curve.</div>
+      </div>
+      <div class="equity-x-labels" id="shHeatXLabels"></div>
+    </div>
+
+    <div class="month-chart">
+      <div class="month-chart-title">📅 Shadow Monthly P&amp;L (₹)</div>
+      <div class="chart-bars" id="shMonthChart"></div>
+    </div>
+
+    <div class="section-header">
+      <div class="section-title"><span class="icon">📜</span>Shadow Closed Trades</div>
+    </div>
+    <div class="table-wrap">
+      <table class="trade-table">
+        <thead>
+          <tr>
+            <th>Symbol</th><th>Entry</th><th>Entry Date</th><th>Exit</th><th>Exit Date</th><th>Hold</th>
+            <th>Qty</th><th>P&amp;L%</th><th>P&amp;L ₹</th><th>R</th><th>Exit Reason</th><th>RS</th>
+          </tr>
+        </thead>
+        <tbody id="shTradeLog">
+          <tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Sizing -->
+    <div class="section-header">
+      <div class="section-title"><span class="icon">⚖️</span>Shadow Sizing</div>
+    </div>
+    <div class="sizing-summary-bar" id="shRiskStrip"></div>
+    <div class="sizing-summary-bar" id="shSizingSummary"></div>
+    <div class="sizing-legend" id="shSizingLegend"></div>
+    <div id="shSizingList">
+      <div class="loading-state"><div class="spinner"></div></div>
+    </div>
+
+    <!-- Gate history -->
+    <div class="section-header">
+      <div class="section-title"><span class="icon">🛡️</span>Regime Gate — Last 15 Sessions</div>
+    </div>
+    <div class="table-wrap">
+      <table class="trade-table">
+        <thead><tr><th>Date</th><th>MC150 vs MA21</th><th>SI Gate</th><th>New Entries</th><th>Book</th></tr></thead>
+        <tbody id="shGateBody">
+          <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- ══ INVESTMENT INDEX TAB ══════════════════════════ -->
   <div class="tab-panel" id="tab-investment">
 
@@ -1909,6 +2196,7 @@ async function loadAllData() {
     loadPerf(),
     loadEquity(),
     loadSizing(),
+    loadShadow(),
     loadInvestment(),
     loadIpo()
   ]);
@@ -1997,7 +2285,9 @@ function renderStockList(containerId, items, type) {
           ${hc ? '<span class="tag tag-hc">HC</span>' : ''}
           <span id="ckprice-${cardId}" style="font-size:11px;color:var(--muted);font-family:var(--font-mono);">—</span>
         </div>
-        <div class="stock-meta">${sector} · ${cap || '—'}</div>
+        ${(sector && sector !== '—') || cap
+            ? `<div class="stock-meta">${[sector !== '—' ? sector : null, cap].filter(Boolean).join(' · ')}</div>`
+            : ''}
         <div class="stock-tags">
           ${rs ? `<span class="tag tag-rs-${rs.toLowerCase()}">${rs} RS</span>` : ''}
           ${r.scanner ? `<span class="tag tag-scanner">${r.scanner}</span>` : ''}
@@ -2941,6 +3231,11 @@ function redrawVisibleCharts() {
         && document.getElementById('invEquityCanvas')?.offsetParent !== null) {
       drawInvEquityChart(_invEqSnapshots, typeof _invEqPeriod !== 'undefined' ? _invEqPeriod : '1M');
     }
+    if (typeof _shSnapshots !== 'undefined' && _shSnapshots && _shSnapshots.length
+        && document.getElementById('shEquityCanvas')?.offsetParent !== null) {
+      drawShEquityChart(_shPeriod);
+      drawShHeatChart(_shPeriod);
+    }
   } catch (e) {
     console.warn('[charts] redraw skipped:', e);
   }
@@ -3793,6 +4088,427 @@ function renderSizing(data, sectorMap) {
 populateConfigInputs();
 updateMarketStatus();
 setInterval(updateMarketStatus, 60000);
+
+// ─── SHADOW BOOK (paper — published by trade-alerts shadow.yml) ──────────────
+// The Regime-Gated Swing System's paper book, written once a day after the
+// close to trade-dashboard-data/shadow/ in the same shapes as the live
+// trade_history / equity_curve / position_sizing files. Rendered by its own
+// functions and element IDs — the pattern the Investment equity curve set —
+// so nothing on the live Performance or Sizing tabs is touched. Only the pure
+// helpers (computeDrawdownStats, filterEqByPeriod, sizeCanvas) are shared.
+let _shSnapshots = [];
+let _shPeriod    = 'ALL';
+let _shCapital   = 1350000;
+
+function shEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"]/g,
+    c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;'}[c]));
+}
+function shInr(n, signed) {
+  if (n == null || isNaN(n)) return '—';
+  const s = '₹' + Math.round(Math.abs(n)).toLocaleString('en-IN');
+  if (signed) return (n >= 0 ? '+' : '-') + s;
+  return n < 0 ? '-' + s : s;
+}
+function shSet(id, text, color) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  if (color !== undefined) el.style.color = color;
+}
+async function shGet(name) {
+  return JSON.parse(await ghFetch('shadow/' + name));
+}
+
+async function loadShadow() {
+  const names = ['state.json', 'equity_curve.json', 'trade_history.json',
+                 'position_sizing.json', 'gate_log.json'];
+  const got = await Promise.allSettled(names.map(shGet));
+  const [state, eq, hist, siz, gates] = got.map(r => r.status === 'fulfilled' ? r.value : null);
+  if (!eq || !siz) { renderShadowEmpty(); return; }
+  _shCapital = siz.starting_capital || (hist && hist.capital) || 1350000;
+  _shSnapshots = (eq.snapshots || []).slice()
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  renderShadowHeader(state || {}, siz);
+  renderShadowPerf(hist ? (hist.trades || []) : []);
+  renderShadowEquity();
+  renderShadowSizing(siz, _shSnapshots[_shSnapshots.length - 1]);
+  renderShadowGates(gates ? (gates.days || []) : []);
+}
+
+function renderShadowEmpty() {
+  shSet('shMeta', 'Not started yet — the shadow book publishes here after its first 3:45 PM run on a trading day.');
+  document.getElementById('shGateStrip').innerHTML =
+    '<div class="empty-state" style="grid-column:1/-1">Waiting for the first shadow run…</div>';
+  document.getElementById('shEquityCanvas').style.display = 'none';
+  document.getElementById('shEqEmpty').style.display = 'block';
+  document.getElementById('shHeatCanvas').style.display = 'none';
+  document.getElementById('shHeatEmpty').style.display = 'block';
+  document.getElementById('shMonthChart').innerHTML =
+    '<div class="empty-state" style="width:100%">No shadow trades yet</div>';
+  document.getElementById('shTradeLog').innerHTML =
+    '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">No shadow trades yet</td></tr>';
+  document.getElementById('shSizingList').innerHTML =
+    '<div class="empty-state">The shadow book is empty until the first run.</div>';
+  document.getElementById('shGateBody').innerHTML =
+    '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No gate history yet</td></tr>';
+}
+
+function renderShadowHeader(state, siz) {
+  const g = siz.gate || {};
+  shSet('shMeta', `Started ${state.start_date || '—'} · book as of ${siz.as_of || '—'} · ` +
+    `last run ${state.last_run_ist || '—'} IST · config ${state.config_cell || '—'}`);
+
+  const badge = document.getElementById('shFreshBadge');
+  const asOf = siz.as_of ? new Date(siz.as_of + 'T15:30:00+05:30') : null;
+  const fresh = asOf && (Date.now() - asOf.getTime()) / 864e5 < 4;   // covers a long weekend
+  badge.style.display = 'inline-flex';
+  badge.className = 'freshness-badge ' + (fresh ? 'fresh' : 'stale');
+  badge.innerHTML = `<span class="dot"></span>${fresh ? 'Fresh' : 'Stale'} · as of ${shEsc(siz.as_of || '—')}`;
+
+  const G = 'var(--green)', R = 'var(--red)', A = 'var(--amber)', W = '#fff';
+  const ma = String(g.ma_status || '—');
+  const si = String(g.si_status || '—').split(' —')[0];
+  const dec = state.decay || {};
+  const eqv = state.equivalence || {};
+  const card = (label, val, sub, color) =>
+    `<div class="stat-card"><div class="stat-label">${label}</div>` +
+    `<div class="stat-value" style="color:${color}">${shEsc(val)}</div>` +
+    `<div class="stat-sub">${shEsc(sub)}</div></div>`;
+  const eqVal = eqv.match === true ? 'Match ✅' : eqv.match === false ? 'Mismatch ⚠️' : 'Not compared';
+  const eqSub = eqv.match == null
+    ? (eqv.error || 'live logs no comparable gate')
+    : `live SI ${eqv.live_si || '—'} · shadow ${eqv.shadow_si || '—'}`;
+  document.getElementById('shGateStrip').innerHTML =
+    card('MC150 vs MA21', ma, g.liquidates ? 'breach → book sold at the close' : 'regime gate',
+         ma.startsWith('ABOVE') ? G : R) +
+    card('SI Gate', si, 'must also allow new entries', si.startsWith('BULLISH') ? G : R) +
+    card('New Entries', g.entries_allowed ? 'Open' : 'Blocked',
+         `${siz.slots_used || 0}/${siz.max_slots || 7} slots used`, g.entries_allowed ? G : A) +
+    card('Decay Monitor', dec.state || '—', dec.note || '',
+         dec.state && dec.state !== 'NORMAL' ? A : W) +
+    card('Live Gate Check', eqVal, eqSub, eqv.match === false ? A : eqv.match ? G : W);
+
+  const restated = state.restated || [];
+  const rs = document.getElementById('shRestated');
+  rs.style.display = restated.length ? 'block' : 'none';
+  if (restated.length) {
+    rs.innerHTML = `<strong>⚠️ Restated:</strong> the latest replay changed ${restated.length} ` +
+      `past decision(s) — ${restated.slice(0, 3).map(shEsc).join('; ')}`;
+  }
+}
+
+function renderShadowPerf(trades) {
+  const T = trades.slice().sort((a, b) => (b.exit_date || '').localeCompare(a.exit_date || ''));
+  const wins = T.filter(t => (t.pnl_inr || 0) >= 0);
+  const total = T.reduce((s, t) => s + (t.pnl_inr || 0), 0);
+  const avgR = T.length ? T.reduce((s, t) => s + (t.r_multiple || 0), 0) / T.length : null;
+  const avgHold = T.length ? Math.round(T.reduce((s, t) => s + (t.hold_days || 0), 0) / T.length) : null;
+  const dates = T.map(t => t.exit_date).filter(Boolean).sort();
+  const capL = (_shCapital / 1e5).toFixed(1).replace(/\.0$/, '');
+
+  shSet('shTotalInr', T.length ? shInr(total, true) : '—',
+        total >= 0 ? 'var(--green)' : 'var(--red)');
+  shSet('shTotalPct', T.length
+    ? `${total >= 0 ? '+' : ''}${(total / _shCapital * 100).toFixed(2)}% on ₹${capL}L` : 'No exits yet');
+  shSet('shWinRate', T.length ? (wins.length / T.length * 100).toFixed(1) + '%' : '—');
+  shSet('shWinLoss', `${wins.length} W / ${T.length - wins.length} L`);
+  shSet('shAvgR', avgR == null ? '—' : `${avgR >= 0 ? '+' : ''}${avgR.toFixed(2)}R`,
+        avgR == null ? undefined : avgR >= 0 ? 'var(--green)' : 'var(--red)');
+  shSet('shAvgHold', avgHold == null ? 'avg hold —' : `avg hold ${avgHold}d`);
+  shSet('shTradeCount', String(T.length));
+  shSet('shDateRange', dates.length ? dates[0] + ' → ' + dates[dates.length - 1] : 'No exits yet');
+
+  // Monthly bars — same markup as the live Performance tab.
+  const byMonth = {};
+  T.forEach(t => {
+    const m = t.month || (t.exit_date || '').slice(0, 7);
+    if (m) byMonth[m] = (byMonth[m] || 0) + (t.pnl_inr || 0);
+  });
+  const months = Object.keys(byMonth).sort();
+  const maxAbs = Math.max(...months.map(m => Math.abs(byMonth[m])), 1);
+  const chartEl = document.getElementById('shMonthChart');
+  chartEl.style.alignItems = 'flex-end';
+  chartEl.innerHTML = months.length ? months.map(m => {
+    const v = byMonth[m], pos = v >= 0;
+    return `<div class="chart-bar-wrap">
+      <div class="chart-bar-val ${pos ? 'pos' : 'neg'}">${shInr(v, true)}</div>
+      <div class="chart-bar ${pos ? 'pos' : 'neg'}" style="height:${Math.max(3, Math.abs(v) / maxAbs * 65)}px"></div>
+      <div class="chart-bar-label">${m.slice(5)}</div>
+    </div>`;
+  }).join('') : '<div class="empty-state" style="width:100%">No shadow trades yet</div>';
+
+  document.getElementById('shTradeLog').innerHTML = T.length ? T.map(t => {
+    const cls = (t.pnl_inr || 0) >= 0 ? 'td-pos' : 'td-neg';
+    const rs = t.rs_tier
+      ? `<span class="tag tag-rs-${String(t.rs_tier).toLowerCase()}" style="font-size:8px">${shEsc(t.rs_tier)}</span>` : '—';
+    return `<tr>
+      <td class="td-symbol">${shEsc(t.symbol)}</td>
+      <td>₹${t.entry_price}</td>
+      <td class="td-muted" style="font-size:10px">${fmtPerfDate(t.entry_date)}</td>
+      <td>₹${t.exit_price}</td>
+      <td class="td-muted" style="font-size:10px">${fmtPerfDate(t.exit_date)}</td>
+      <td class="td-muted">${t.hold_days != null ? t.hold_days : '—'}d</td>
+      <td class="td-muted">${t.shares != null ? t.shares : '—'}</td>
+      <td class="${cls}">${(t.pnl_pct || 0) >= 0 ? '+' : ''}${(t.pnl_pct || 0).toFixed(2)}%</td>
+      <td class="${cls}">${shInr(t.pnl_inr, true)}</td>
+      <td class="${cls}">${(t.r_multiple || 0) >= 0 ? '+' : ''}${(t.r_multiple || 0).toFixed(2)}R</td>
+      <td class="td-muted" style="font-size:10px">${shEsc(t.exit_reason)}</td>
+      <td>${rs}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">No shadow trades closed yet</td></tr>';
+}
+
+function renderShadowEquity() {
+  const canvas = document.getElementById('shEquityCanvas');
+  const empty = document.getElementById('shEqEmpty');
+  if (!_shSnapshots.length) {
+    canvas.style.display = 'none'; empty.style.display = 'block';
+    document.getElementById('shHeatCanvas').style.display = 'none';
+    document.getElementById('shHeatEmpty').style.display = 'block';
+    return;
+  }
+  canvas.style.display = 'block'; empty.style.display = 'none';
+  const latest = _shSnapshots[_shSnapshots.length - 1];
+  const chg = latest.total_equity - _shCapital;
+  shSet('shEqVal', shInr(latest.total_equity));
+  shSet('shEqChange', `${shInr(chg, true)} (${chg >= 0 ? '+' : ''}${(chg / _shCapital * 100).toFixed(2)}%) since start`,
+        chg >= 0 ? 'var(--green)' : 'var(--red)');
+  const dd = computeDrawdownStats(_shSnapshots);
+  shSet('shDdCurInr', shInr(dd.curDD_inr));
+  shSet('shDdCurPct', dd.curDD_pct.toFixed(2) + '% from peak');
+  shSet('shDdMaxInr', shInr(dd.maxDD_inr));
+  shSet('shDdMaxPct', dd.maxDD_pct.toFixed(2) + '%' + (dd.maxDD_date
+    ? ' on ' + new Date(dd.maxDD_date).toLocaleDateString('en-IN', {day: 'numeric', month: 'short'}) : ''));
+  drawShEquityChart(_shPeriod);
+  drawShHeatChart(_shPeriod);
+}
+
+function setShEqPeriod(period, btn) {
+  _shPeriod = period;
+  document.querySelectorAll('#shEqPeriodGroup .inv-period-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  drawShEquityChart(period);
+  drawShHeatChart(period);
+}
+
+function shXLabels(elId, rows) {
+  const step = Math.max(1, Math.floor(rows.length / 5));
+  const idxs = [];
+  for (let i = 0; i < rows.length; i += step) idxs.push(i);
+  if (idxs[idxs.length - 1] !== rows.length - 1) idxs.push(rows.length - 1);
+  document.getElementById(elId).innerHTML = idxs.map(i =>
+    `<span>${new Date(rows[i].timestamp).toLocaleDateString('en-IN', {day: 'numeric', month: 'short'})}</span>`).join('');
+}
+
+function drawShEquityChart(period) {
+  const canvas = document.getElementById('shEquityCanvas');
+  if (!canvas || !_shSnapshots.length) return;
+  const rows = filterEqByPeriod(_shSnapshots, period);
+  const { ctx, W, H } = sizeCanvas(canvas, 200);
+  const PAD = {top: 16, right: 10, bottom: 6, left: 56};
+  const cW = W - PAD.left - PAD.right, cH = H - PAD.top - PAD.bottom;
+  const vals = rows.map(s => s.total_equity);
+  let run = -Infinity;
+  const peaks = rows.map(s => (run = Math.max(run, s.total_equity)));
+  const minV = Math.min(...vals, _shCapital), maxV = Math.max(...vals, ...peaks, _shCapital);
+  const rng = Math.max(maxV - minV, 1), lo = minV - rng * 0.08, hi = maxV + rng * 0.08;
+  const xOf = i => PAD.left + (rows.length > 1 ? (i / (rows.length - 1)) * cW : cW / 2);
+  const yOf = v => PAD.top + (1 - (v - lo) / (hi - lo)) * cH;
+
+  for (let g = 0; g <= 4; g++) {
+    const y = PAD.top + (g / 4) * cH, val = hi - (g / 4) * (hi - lo);
+    ctx.strokeStyle = '#22262e'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(W - PAD.right, y); ctx.stroke();
+    ctx.fillStyle = '#6b7280'; ctx.font = '9px monospace'; ctx.textAlign = 'right';
+    ctx.fillText('₹' + (val / 100000).toFixed(1) + 'L', PAD.left - 6, y + 3);
+  }
+  // Starting capital reference.
+  ctx.setLineDash([2, 4]); ctx.strokeStyle = 'rgba(179,136,255,0.5)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(PAD.left, yOf(_shCapital)); ctx.lineTo(W - PAD.right, yOf(_shCapital)); ctx.stroke();
+  ctx.setLineDash([]);
+
+  const up = vals[vals.length - 1] >= _shCapital;
+  const col = up ? '#00e676' : '#ff3d57';
+  // Drawdown shading between the running peak and equity.
+  ctx.beginPath();
+  rows.forEach((s, i) => i ? ctx.lineTo(xOf(i), yOf(peaks[i])) : ctx.moveTo(xOf(i), yOf(peaks[i])));
+  for (let i = rows.length - 1; i >= 0; i--) ctx.lineTo(xOf(i), yOf(vals[i]));
+  ctx.closePath(); ctx.fillStyle = 'rgba(255,61,87,0.08)'; ctx.fill();
+
+  const grad = ctx.createLinearGradient(0, PAD.top, 0, PAD.top + cH);
+  grad.addColorStop(0, up ? 'rgba(0,230,118,0.18)' : 'rgba(255,61,87,0.18)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.beginPath(); ctx.moveTo(xOf(0), yOf(vals[0]));
+  rows.forEach((s, i) => { if (i) ctx.lineTo(xOf(i), yOf(vals[i])); });
+  ctx.lineTo(xOf(rows.length - 1), PAD.top + cH); ctx.lineTo(xOf(0), PAD.top + cH);
+  ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
+
+  ctx.beginPath(); ctx.strokeStyle = col; ctx.lineWidth = 2.25; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  ctx.moveTo(xOf(0), yOf(vals[0]));
+  rows.forEach((s, i) => { if (i) ctx.lineTo(xOf(i), yOf(vals[i])); });
+  ctx.stroke();
+  const lx = xOf(rows.length - 1), ly = yOf(vals[vals.length - 1]);
+  ctx.beginPath(); ctx.arc(lx, ly, 7, 0, Math.PI * 2); ctx.fillStyle = col + '33'; ctx.fill();
+  ctx.beginPath(); ctx.arc(lx, ly, 3.5, 0, Math.PI * 2); ctx.fillStyle = col; ctx.fill();
+
+  shXLabels('shEqXLabels', rows);
+
+  const tip = document.getElementById('shEqTooltip');
+  function showAt(clientX) {
+    const relX = clientX - canvas.getBoundingClientRect().left;
+    let n = 0, best = Infinity;
+    rows.forEach((s, i) => { const d = Math.abs(xOf(i) - relX); if (d < best) { best = d; n = i; } });
+    const s = rows[n];
+    tip.innerHTML = `<div class="tt-date">${new Date(s.timestamp).toLocaleDateString('en-IN', {day: 'numeric', month: 'short', year: 'numeric'})}</div>
+      <div class="tt-val">${shInr(s.total_equity)}</div>
+      <div style="color:var(--muted);margin-top:2px">${s.open_positions} open · realised ${shInr(s.realized_pnl, true)} · open ${shInr(s.unrealized_pnl, true)}</div>`;
+    tip.style.left = Math.min(Math.max(xOf(n) - 60, 4), W - 190) + 'px';
+    tip.style.top = (yOf(vals[n]) - 58) + 'px';
+    tip.classList.add('show');
+  }
+  canvas.onmousemove = e => showAt(e.clientX);
+  canvas.onmouseleave = () => tip.classList.remove('show');
+  canvas.ontouchstart = canvas.ontouchmove = e => showAt(e.touches[0].clientX);
+  canvas.ontouchend = () => setTimeout(() => tip.classList.remove('show'), 1200);
+}
+
+function drawShHeatChart(period) {
+  const canvas = document.getElementById('shHeatCanvas');
+  const empty = document.getElementById('shHeatEmpty');
+  if (!canvas) return;
+  const rows = filterEqByPeriod(_shSnapshots, period).filter(s => typeof s.actual_heat_pct === 'number');
+  if (!rows.length) { canvas.style.display = 'none'; empty.style.display = 'block'; return; }
+  canvas.style.display = 'block'; empty.style.display = 'none';
+  const { ctx, W, H } = sizeCanvas(canvas, 140);
+  const PAD = {top: 14, right: 10, bottom: 6, left: 44};
+  const cW = W - PAD.left - PAD.right, cH = H - PAD.top - PAD.bottom;
+  const vals = rows.map(s => s.actual_heat_pct || 0);
+  const cap = rows[rows.length - 1].heat_cap_pct || 7;
+  const hi = Math.max(...vals, cap, 1) * 1.2;
+  const xOf = i => PAD.left + (rows.length > 1 ? (i / (rows.length - 1)) * cW : cW / 2);
+  const yOf = v => PAD.top + (1 - v / hi) * cH;
+  for (let g = 0; g <= 3; g++) {
+    const y = PAD.top + (g / 3) * cH;
+    ctx.strokeStyle = '#22262e'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(W - PAD.right, y); ctx.stroke();
+    ctx.fillStyle = '#6b7280'; ctx.font = '9px monospace'; ctx.textAlign = 'right';
+    ctx.fillText((hi - (g / 3) * hi).toFixed(1) + '%', PAD.left - 6, y + 3);
+  }
+  ctx.setLineDash([2, 3]); ctx.strokeStyle = '#ff3d57'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(PAD.left, yOf(cap)); ctx.lineTo(W - PAD.right, yOf(cap)); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#ff3d57'; ctx.font = '8.5px monospace'; ctx.textAlign = 'left';
+  ctx.fillText('cap ' + cap.toFixed(0) + '%', PAD.left + 4, yOf(cap) - 4);
+  const grad = ctx.createLinearGradient(0, PAD.top, 0, PAD.top + cH);
+  grad.addColorStop(0, 'rgba(255,171,0,0.22)'); grad.addColorStop(1, 'rgba(255,171,0,0)');
+  ctx.beginPath(); ctx.moveTo(xOf(0), yOf(vals[0]));
+  rows.forEach((s, i) => { if (i) ctx.lineTo(xOf(i), yOf(vals[i])); });
+  ctx.lineTo(xOf(rows.length - 1), PAD.top + cH); ctx.lineTo(xOf(0), PAD.top + cH);
+  ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
+  ctx.beginPath(); ctx.strokeStyle = '#ffab00'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+  ctx.moveTo(xOf(0), yOf(vals[0]));
+  rows.forEach((s, i) => { if (i) ctx.lineTo(xOf(i), yOf(vals[i])); });
+  ctx.stroke();
+  shXLabels('shHeatXLabels', rows);
+  const last = rows[rows.length - 1];
+  shSet('shHeatVal', `${shInr(last.actual_heat_inr || 0)} (${(last.actual_heat_pct || 0).toFixed(1)}%)`);
+  shSet('shHeatSub', `cap ${cap.toFixed(0)}% · ${last.open_positions} open`);
+}
+
+function renderShadowSizing(siz, snap) {
+  const fmt = n => shInr(n);
+  const badge = (m) => `<span class="mult-badge ${m >= 1 ? 'normal' : 'throttled'}">${m}x</span>`;
+  const s = snap || {};
+  const ec = siz.equity_curve_multiplier != null ? siz.equity_curve_multiplier : 1;
+  const ddm = siz.drawdown_multiplier != null ? siz.drawdown_multiplier : 1;
+  const item = (label, val, style) =>
+    `<div class="sizing-summary-item"><div class="sizing-summary-label">${label}</div>` +
+    `<div class="sizing-summary-val" style="font-size:15px;${style || ''}">${val}</div></div>`;
+  document.getElementById('shRiskStrip').innerHTML =
+    item('NAV (Capital Base)', fmt(siz.capital_base)) +
+    item('20d Equity MA', `${s.equity_curve_ma20 != null ? fmt(s.equity_curve_ma20) : '—'} ${badge(ec)}`) +
+    item('High-Water Mark', `${s.high_water_mark != null ? fmt(s.high_water_mark) : '—'} ${badge(ddm)}`) +
+    item('Drawdown from Peak', s.drawdown_pct_from_peak != null ? s.drawdown_pct_from_peak.toFixed(1) + '%' : '—',
+         ddm < 1 ? 'color:var(--amber)' : '') +
+    item('5-Day Circuit Breaker', siz.fast_trigger_breached ? 'ON ⚡' : 'off',
+         siz.fast_trigger_breached ? 'color:var(--amber)' : '') +
+    item('Effective Risk / Trade', `${(siz.effective_risk_pct || 0).toFixed(2)}% <span style="font-size:10px;color:var(--muted)">of ${siz.base_risk_pct}%</span>`) +
+    item('Next Entry Would Risk', fmt(siz.next_trade_risk_inr));
+
+  const P = siz.positions || [];
+  const deployed = P.reduce((a, p) => a + (p.value_at_entry || 0), 0);
+  const unreal = P.reduce((a, p) => a + (p.unrealized_pnl || 0), 0);
+  const heatPct = siz.heat_pct || 0, cap = siz.heat_cap_pct || 7;
+  document.getElementById('shSizingSummary').innerHTML =
+    item('Capital Deployed', fmt(deployed)) +
+    item('Portfolio Heat', `${fmt(siz.heat_inr || 0)} <span style="font-size:11px;color:var(--muted)">(${heatPct.toFixed(1)}% of ${cap}% cap)</span>`,
+         heatPct > cap * 0.85 ? 'color:var(--amber)' : '') +
+    item('Slots Used', `${siz.slots_used || 0} / ${siz.max_slots || 7}`) +
+    item('Open Unrealised P&amp;L', shInr(unreal, true), `color:${unreal >= 0 ? 'var(--green)' : 'var(--red)'}`);
+
+  document.getElementById('shSizingLegend').innerHTML =
+    `<b>How a shadow entry is sized:</b> risk = ${siz.base_risk_pct}% of NAV × equity-ladder × drawdown
+    multipliers; shares = risk ÷ the ATR(14)×2.0 stop distance (floored at 5%, capped at 20%); each
+    entry must also fit under the ${cap}% heat cap, so the last one can come out small. Phase 2
+    (after +10%) removes the stop and exits on a close below EMA13.`;
+
+  document.getElementById('shSizingList').innerHTML = P.length ? P.map(p => {
+    const up = (p.unrealized_pnl || 0) >= 0;
+    const stale = p.price_source === 'stale_fallback'
+      ? '<span class="freshness-badge stale" style="margin-left:6px"><span class="dot"></span>Stale</span>' : '';
+    const exitRule = p.phase === 2
+      ? `Close &lt; EMA13 <span style="font-size:10px;color:var(--muted)">(stop removed)</span>`
+      : `Stop ₹${p.stop_price} <span style="font-size:10px;color:var(--muted)">(-${p.stop_pct}%)</span>`;
+    const toUnlock = p.phase === 2 ? 100
+      : Math.max(0, Math.min(100, ((p.high_since_entry / p.entry_price - 1) / 0.10) * 100));
+    return `<div class="sizing-card${p.phase === 2 ? '' : ''}">
+      <div>
+        <div class="sizing-sym">${shEsc(p.symbol)}${stale}</div>
+        <div class="sizing-meta">VCP · RS ${shEsc(p.rs_tier || '—')} · ${shEsc(p.cap || '—')}${p.sector ? ' · ' + shEsc(p.sector) : ''} · entered ${fmtPerfDate(p.entry_date)} · ${p.days_held}d · Phase ${p.phase}</div>
+        <div class="sizing-compare">
+          <div class="sizing-compare-block">
+            <div class="sizing-compare-label">Position</div>
+            <div class="sizing-compare-val">${fmt(p.value_at_entry)}</div>
+            <div style="font-size:10px;color:var(--muted)">${p.shares} qty @ ₹${p.entry_price}</div>
+          </div>
+          <div class="sizing-compare-block">
+            <div class="sizing-compare-label">Exit Rule</div>
+            <div class="sizing-compare-val" style="font-size:13px">${exitRule}</div>
+          </div>
+        </div>
+        <div class="sizing-risk-row">
+          <div class="sizing-risk-block">
+            <div class="sizing-risk-label">Risk at Entry</div>
+            <div class="sizing-risk-val actual">${fmt(p.risk_inr)} <span style="font-size:10px;color:var(--muted)">(${p.risk_pct_of_nav != null ? p.risk_pct_of_nav.toFixed(2) : '—'}% NAV)</span></div>
+          </div>
+          <div class="sizing-risk-block">
+            <div class="sizing-risk-label">${p.phase === 2 ? 'Unlocked at +10%' : 'Unlocks Phase 2 at'}</div>
+            <div class="sizing-risk-val recommended">₹${p.unlock_price} <span style="font-size:10px;color:var(--muted)">high ₹${p.high_since_entry}</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="sizing-right">
+        <div class="sizing-pnl ${up ? 'up' : 'down'}">${shInr(p.unrealized_pnl, true)}</div>
+        <div class="sizing-pnl-pct">${(p.unrealized_pnl_pct || 0) >= 0 ? '+' : ''}${p.unrealized_pnl_pct}%</div>
+        <div class="sizing-cap-strip" title="progress to the +10% unlock"><div class="sizing-cap-fill" style="width:${toUnlock}%"></div></div>
+      </div>
+    </div>`;
+  }).join('') : `<div class="empty-state">Shadow book is flat${siz.gate && !siz.gate.entries_allowed ? ' — the regime gate is blocking new entries' : ''}.</div>`;
+}
+
+function renderShadowGates(days) {
+  const rows = days.slice(-15).reverse();
+  const cell = (ok, text) => `<td class="${ok ? 'td-pos' : 'td-neg'}" style="font-size:10px">${shEsc(text)}</td>`;
+  document.getElementById('shGateBody').innerHTML = rows.length ? rows.map(d => `<tr>
+      <td style="color:#fff;font-family:var(--font-head);font-weight:700">${fmtPerfDate(d.date)}</td>
+      ${cell(d.ma_allowed, d.ma_status)}
+      ${cell(d.si_allowed, String(d.si_status).split(' —')[0])}
+      ${cell(d.entries_allowed, d.entries_allowed ? 'Open' : 'Blocked')}
+      <td class="td-muted" style="font-size:10px">${d.liquidates ? 'Liquidate / stay flat' : 'Hold'}</td>
+    </tr>`).join('')
+    : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No gate history yet</td></tr>';
+}
 
 // ─── INVESTMENT EQUITY CURVE (backend-driven, investment_equity_history.json) ──
 // Retired the old client-side localStorage Base-100 NAV reconstruction (was

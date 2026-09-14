@@ -1517,6 +1517,7 @@
             <button class="filter-btn" onclick="setRsCap('LARGE',this)">Large</button>
             <button class="filter-btn" onclick="setRsCap('MID',this)">Mid</button>
             <button class="filter-btn" onclick="setRsCap('SMALL',this)">Small</button>
+            <button class="filter-btn" onclick="setRsCap('MICRO',this)" title="Liquid, but outside Nifty 100 / Midcap 150 / Smallcap 250">Micro</button>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:5px;">
@@ -2269,9 +2270,12 @@ function renderStockList(containerId, items, type) {
   el.innerHTML = items.map((r,i) => {
     const score  = parseFloat(r.final_score || r.score || 0);
     const symbol = r.symbol || r.stock || r.company || 'Unknown';
-    const sector = r.sector || '—';
+    // Rows logged before Sep 2026 carry no sector; borrow NSE's from the
+    // universe once it has loaded (loadRS re-renders this list when it has).
+    const uni    = rsUniverseBySym[String(symbol).toUpperCase()] || {};
+    const sector = r.sector || uni.nse_sector || '—';
     const rs     = (r.rs_tier || r.rs || '').toUpperCase();
-    const cap    = (r.cap_category || r.cap || '').toUpperCase();
+    const cap    = (r.cap_category || r.cap || uni.cap_class || '').toUpperCase();
     const hc     = (r.quality_tier || '').toUpperCase().includes('HC');
     const headline = r.headline || r.announcement || '';
     const pct    = Math.min(100, (score/100)*100);
@@ -2910,6 +2914,10 @@ function _rsVolPillLabel(label, ratio) {
   return ratio ? base + ' ' + ratio.toFixed(2) + '\u00d7' : base;
 }
 
+// symbol → master_universe entry, for tabs that need a stock's NSE sector or
+// size class (FCIS cards logged before Sep 2026 have none of their own)
+var rsUniverseBySym = {};
+
 async function loadRS() {
   const grid = document.getElementById('rsGrid');
   try {
@@ -2926,6 +2934,13 @@ async function loadRS() {
     } else {
       allRsData = Object.values(raw);
     }
+
+    rsUniverseBySym = {};
+    allRsData.forEach(function(s) {
+      if (s && s.symbol) rsUniverseBySym[String(s.symbol).toUpperCase()] = s;
+    });
+    // FCIS may have rendered first; redraw it if any card went without a sector
+    if (allFcisData.some(function(r) { return !r.sector; })) renderFCIS(allFcisData);
 
     const high = allRsData.filter(function(s) { return (s.rs_tier||s.rs||'').toUpperCase() === 'HIGH'; }).length;
     const mid  = allRsData.filter(function(s) { return (s.rs_tier||s.rs||'').toUpperCase() === 'MID';  }).length;
@@ -3019,7 +3034,8 @@ function renderRS(capFilter) {
     base = base.filter(function(s) {
       // Check vol enricher first (field: cap), then universe (cap_category or cap)
       var volEntry = volMap[s.symbol || s.name || s.stock || ''];
-      var rawCap = volEntry ? (volEntry.cap || '') : (s.cap_category || s.cap || '');
+      // cap_class (LARGE / MID / SMALL / MICRO) is the universe's own since Sep 2026
+      var rawCap = s.cap_class || (volEntry ? (volEntry.cap || '') : (s.cap_category || s.cap || ''));
       // Normalize: strip " Cap" suffix, uppercase
       var normCap = rawCap.replace(/\s+cap$/i, '').toUpperCase().trim();
       return normCap === capTarget || rawCap.toUpperCase().indexOf(capTarget) !== -1;
@@ -3069,9 +3085,12 @@ function renderRS(capFilter) {
     var s      = item.universe;
     var v      = item.vol;
     var name   = item.sym || 'Unknown';
-    var sector = (v ? v.sector : s.sector) || '—';
-    var capRaw = (v ? v.cap : (s.cap_category || s.cap || '—'));
-    var cap    = capRaw.replace(' Cap', '').toUpperCase();
+    // NSE's sector, industry and size class (master_universe, Sep 2026);
+    // older files fall back to what the enricher or the universe carried.
+    var sector   = s.nse_sector || (v ? v.sector : s.sector) || '—';
+    var industry = (s.nse_industry && s.nse_industry !== sector) ? s.nse_industry : '';
+    var capRaw   = s.cap_class || (v ? v.cap : (s.cap_category || s.cap || '—'));
+    var cap      = capRaw.replace(' Cap', '').toUpperCase();
 
     // RS score — use fresh from volume enricher, else show HIGH label
     var rsVal = v ? v.rs_score_fresh : null;
@@ -3155,6 +3174,7 @@ function renderRS(capFilter) {
       + '<div class="rs-card-name">' + name + '</div>'
       + '<div class="rs-card-sector" style="display:flex;align-items:center;gap:5px;margin-bottom:8px;flex-wrap:wrap">'
       + sector
+      + (industry ? '<span style="color:var(--muted);font-size:9px" title="NSE industry">· ' + industry + '</span>' : '')
       + (cap ? ' <span class="tag tag-cap" style="font-size:8px;padding:1px 5px">' + cap + '</span>' : '')
       + qtHtml
       + rsTierHtml

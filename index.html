@@ -3109,11 +3109,18 @@ function renderRS(capFilter) {
     var capRaw   = s.cap_class || (v ? v.cap : (s.cap_category || s.cap || '—'));
     var cap      = capRaw.replace(' Cap', '').toUpperCase();
 
-    // RS score — use fresh from volume enricher, else show HIGH label
-    var rsVal = v ? v.rs_score_fresh : null;
-    var rsDisplay = rsVal !== null && rsVal !== undefined
-      ? rsVal.toFixed(1) + '%'
-      : 'HIGH';
+    // RS: the enricher's fresh intraday number when it has one, else the
+    // universe's (weekly; each stock vs its size-class index, Sep 2026). The
+    // percentile is within the stock's own size class.
+    var rsVal = (v && v.rs_score_fresh != null) ? v.rs_score_fresh : s.rs_composite;
+    var rsPct = (s.rs_percentile != null) ? ' · P' + Math.round(s.rs_percentile) : '';
+    var rsDisplay = (rsVal !== null && rsVal !== undefined)
+      ? rsVal.toFixed(1) + '%' + rsPct
+      : (s.rs_tier || 'N/A');
+    var rsTitle = (s.rs_percentile != null)
+      ? 'RS vs ' + (s.rs_benchmark || 'its index') + ': ' + Math.round(s.rs_percentile)
+        + 'th percentile among ' + (s.cap_class || '') + ' stocks'
+      : '';
 
     // Price row (from volume enricher)
     var priceHtml = '';
@@ -3125,11 +3132,11 @@ function renderRS(capFilter) {
         : '';
       priceHtml = '<div class="rs-card-price-row">'
         + '<span class="rs-card-price">\u20b9' + parseFloat(v.price).toFixed(2) + '</span>' + chgStr
-        + '<span class="rs-card-rs-badge">' + rsDisplay + '</span>'
+        + '<span class="rs-card-rs-badge" title="' + rsTitle + '">' + rsDisplay + '</span>'
         + '</div>';
     } else {
       priceHtml = '<div class="rs-card-price-row"><span style="font-size:10px;color:var(--muted)">Price loading\u2026</span>'
-        + '<span class="rs-card-rs-badge">' + rsDisplay + '</span></div>';
+        + '<span class="rs-card-rs-badge" title="' + rsTitle + '">' + rsDisplay + '</span></div>';
     }
 
     // Volume pill row (from volume enricher)

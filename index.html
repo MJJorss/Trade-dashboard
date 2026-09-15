@@ -2825,7 +2825,14 @@ function renderChartink() {
         priceSlotInit = `<div style="font-size:11px;font-family:var(--font-mono);white-space:nowrap"><span style="color:var(--text);font-weight:700">₹${parseFloat(jsonPrice).toFixed(2)}</span>${chgInitHtml}</div>`;
       }
 
-      return `<div class="ck-card ${tierClass} animate-in" id="ck-card-${dateStr}-${i}" style="animation-delay:${i*0.04}s" data-spark-sym="${s.symbol}">
+      // Previous close implied by the JSON pair (price, chg_pct). A prior
+      // close does not move intraday, so pairing it with a fresher live price
+      // yields a correct day change even when the quote has no percentage.
+      const jsonPrev = (jsonPrice && jsonChgPct != null && jsonChgPct > -100)
+        ? parseFloat(jsonPrice) / (1 + jsonChgPct / 100)
+        : null;
+
+      return `<div class="ck-card ${tierClass} animate-in" id="ck-card-${dateStr}-${i}" style="animation-delay:${i*0.04}s" data-spark-sym="${s.symbol}"${jsonPrev ? ` data-json-prev="${jsonPrev.toFixed(4)}"` : ''}>
         <div class="ck-tier-stripe"></div>
         <div class="ck-tier-badge ${badgeCls}">${badgeLabel}</div>
         <div class="ck-body">
@@ -2865,14 +2872,24 @@ function renderChartink() {
         const s2 = liveCard.querySelector('.ck-price-slot');
         if (!s2) return;
         const price = live.price.toFixed(2);
-        let chgHtml = '';
-        // Prefer Yahoo's regularMarketChangePercent (live.changePct); fall back to computed
-        var ckPct = (live.changePct != null) ? live.changePct : null;
-        if (ckPct != null) {
-          const sign = ckPct >= 0 ? '▲' : '▼';
-          const col  = ckPct > 0.05 ? 'var(--green)' : ckPct < -0.05 ? 'var(--red)' : 'var(--muted)';
-          chgHtml = `<span style="color:${col};font-size:10px;font-weight:bold;margin-left:4px">${sign}${Math.abs(ckPct).toFixed(1)}%</span>`;
-        }
+        // Prefer the quote's own percentage, then its previous close, then the
+        // one implied by signals_today.json. The last step is what keeps the
+        // day change on screen: this block overwrites the slot wholesale, so
+        // without a fallback a quote that carries a price but no percentage
+        // silently erased the figure the JSON had already rendered. Every
+        // other tab already chained a fallback here; this one did not, which
+        // is why the day change went missing on the Chartink tab alone.
+        const jsonPrev = parseFloat(liveCard.dataset.jsonPrev || '');
+        var ckPct = (live.changePct != null) ? live.changePct
+          : (live.prev > 0)  ? ((live.price - live.prev) / live.prev * 100)
+          : (jsonPrev > 0)   ? ((live.price - jsonPrev) / jsonPrev * 100)
+          : null;
+        // Nothing to show and nothing to derive: leave the JSON render alone
+        // rather than replacing it with a bare price.
+        if (ckPct == null) return;
+        const sign = ckPct >= 0 ? '▲' : '▼';
+        const col  = ckPct > 0.05 ? 'var(--green)' : ckPct < -0.05 ? 'var(--red)' : 'var(--muted)';
+        const chgHtml = `<span style="color:${col};font-size:10px;font-weight:bold;margin-left:4px">${sign}${Math.abs(ckPct).toFixed(1)}%</span>`;
         s2.innerHTML =
           `<div style="font-size:11px;font-family:var(--font-mono);white-space:nowrap">` +
           `<span style="color:var(--text);font-weight:700">₹${price}</span>${chgHtml}</div>`;

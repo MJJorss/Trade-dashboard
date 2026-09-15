@@ -15,7 +15,7 @@
  *
  * Endpoints:
  *   GET /api/prices?symbols=RELIANCE,TCS   -> { "RELIANCE": {...}, ... }
- *   GET /api/price?symbol=RELIANCE         -> { price, changePct, source }
+ *   GET /api/price?symbol=RELIANCE         -> { price, changePct, prev, source }
  * Anything else falls through to the static assets.
  */
 
@@ -63,6 +63,48 @@ async function withTimeout(promise, ms) {
   }
 }
 
+/** Close of the session BEFORE the one the live price belongs to.
+ *
+ *  This used to read meta.chartPreviousClose, which is not the previous day's
+ *  close: it is the close before the START OF THE REQUESTED RANGE. With
+ *  range=5d that is roughly six sessions back, so every "day change" the
+ *  dashboard showed was really a five-day change wearing a daily label.
+ *
+ *  Deriving it from the returned series instead is exact. Walking back to the
+ *  last bar on a different exchange-day than regularMarketTime handles both
+ *  states correctly: while the market is open the final bar is today's partial
+ *  one, and after the close it is today's settled bar — either way the bar
+ *  before it is the prior session.
+ */
+function priorSessionClose(result, meta) {
+  const ts = result?.timestamp || [];
+  const closes = result?.indicators?.quote?.[0]?.close || [];
+  const n = Math.min(ts.length, closes.length);
+  if (n < 2) return null;
+
+  let fmt;
+  try {
+    fmt = new Intl.DateTimeFormat("en-CA", {
+      timeZone: meta?.exchangeTimezoneName || "Asia/Kolkata",
+      year: "numeric", month: "2-digit", day: "2-digit",
+    });
+  } catch (_) {
+    return null;   // no ICU for this zone; fall back to the meta fields
+  }
+  const dayOf = (epochSec) => fmt.format(new Date(epochSec * 1000));
+
+  const liveDay = typeof meta?.regularMarketTime === "number"
+    ? dayOf(meta.regularMarketTime)
+    : dayOf(ts[n - 1]);
+
+  for (let i = n - 1; i >= 0; i--) {
+    const c = closes[i];
+    if (typeof c !== "number" || !(c > 0)) continue;
+    if (dayOf(ts[i]) !== liveDay) return c;
+  }
+  return null;
+}
+
 /** Yahoo first: better coverage of Indian listings and it returns the previous
  *  close alongside the last price, so the day change needs no second call. */
 async function fromYahoo(symbol, budget) {
@@ -77,15 +119,26 @@ async function fromYahoo(symbol, budget) {
       );
       if (!res.ok) continue;
       const data = await res.json();
-      const meta = data?.chart?.result?.[0]?.meta;
+      const result = data?.chart?.result?.[0];
+      const meta = result?.meta;
       if (!meta) continue;
       const price = meta.regularMarketPrice ?? meta.previousClose;
-      const prev = meta.chartPreviousClose ?? meta.previousClose;
       if (typeof price !== "number" || !(price > 0)) continue;
-      const changePct = (typeof prev === "number" && prev > 0)
-        ? ((price - prev) / prev) * 100
-        : null;
-      return { price, changePct, source: `yahoo${suffix}` };
+
+      // Series first (exact), then the explicit meta field. chartPreviousClose
+      // is deliberately NOT used as a last resort: it is range-relative, so
+      // falling back to it would quietly reintroduce the multi-day number this
+      // function exists to avoid. Returning null lets the page fall back to the
+      // previous close implied by signals_today.json instead.
+      let prev = priorSessionClose(result, meta);
+      if (!(typeof prev === "number" && prev > 0) &&
+          typeof meta.previousClose === "number" && meta.previousClose > 0) {
+        prev = meta.previousClose;
+      }
+      if (!(typeof prev === "number" && prev > 0)) prev = null;
+
+      const changePct = prev != null ? ((price - prev) / prev) * 100 : null;
+      return { price, changePct, prev, source: `yahoo${suffix}` };
     } catch (_) { /* try the next suffix */ }
   }
   return null;
@@ -106,7 +159,7 @@ async function fromStooq(symbol, budget) {
     const prev = parseFloat(rows[rows.length - 2].split(",")[4]);
     if (!(price > 0)) return null;
     const changePct = prev > 0 ? ((price - prev) / prev) * 100 : null;
-    return { price, changePct, source: "stooq" };
+    return { price, changePct, prev: prev > 0 ? prev : null, source: "stooq" };
   } catch (_) {
     return null;
   }
@@ -122,7 +175,7 @@ async function quoteFor(symbol, ctx, budget) {
   if (hit) return await hit.json();
 
   const quote = (await fromYahoo(symbol, budget)) || (await fromStooq(symbol, budget));
-  const payload = quote || { price: null, changePct: null, source: null };
+  const payload = quote || { price: null, changePct: null, prev: null, source: null };
 
   // Cache misses too, briefly, so an unknown ticker cannot be retried on every
   // single render by every visitor.

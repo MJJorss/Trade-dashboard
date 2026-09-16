@@ -5437,6 +5437,13 @@ if (cfg.user && cfg.repo) {
     document.getElementById(id).innerHTML =
       '<div class="empty-state">Configure GitHub repo in ⚙️ Config tab to load data</div>';
   });
+  // The Radar is the landing tab now, so it has to say what is missing
+  // rather than sitting on "Loading the Radar" for a session with no config.
+  document.getElementById('rdRegimeDetail').textContent =
+    'Configure GitHub repo in ⚙️ Config tab to load the Radar';
+  var rdEmptyEl = document.getElementById('rdEmpty');
+  rdEmptyEl.textContent = 'Configure GitHub repo in ⚙️ Config tab to load data';
+  rdEmptyEl.style.display = 'block';
   document.getElementById('portfolioGrid').innerHTML =
     '<div class="empty-state" style="grid-column:1/-1">Configure GitHub repo in ⚙️ Config tab to load data</div>';
   document.getElementById('chartinkDays').innerHTML =

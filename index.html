@@ -1259,6 +1259,73 @@
     gap: 10px; margin-bottom: 16px;
   }
   .sh-gate-strip .stat-value { font-size: 16px; }
+
+  /* --- Radar tab (Phase 1, 16 Sep 2026) ------------------------------- */
+  .rd-regime { display:flex; flex-wrap:wrap; gap:12px; align-items:center;
+    padding:14px 16px; background:var(--card); border:1px solid var(--border);
+    border-radius:var(--radius-lg); margin-bottom:14px; }
+  .rd-verdict { font-family:var(--font-head); font-weight:700; font-size:13px;
+    padding:6px 12px; border-radius:999px; letter-spacing:0.03em; }
+  .rd-on  { background:rgba(0,230,118,0.12); color:var(--green); border:1px solid rgba(0,230,118,0.3); }
+  .rd-off { background:rgba(255,61,87,0.12);  color:var(--red);   border:1px solid rgba(255,61,87,0.3); }
+  .rd-detail { font-size:11px; color:var(--muted); }
+  .rd-breadth { display:flex; gap:16px; flex-wrap:wrap; font-size:11px; color:var(--text); }
+  .rd-bar { width:80px; height:6px; background:var(--border); border-radius:999px;
+    overflow:hidden; display:inline-block; vertical-align:middle; margin-left:6px; }
+  .rd-bar span { display:block; height:100%; background:var(--accent); }
+  .rd-sectors { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
+  .rd-sector { font-size:10px; padding:4px 9px; border-radius:999px; background:var(--surface);
+    border:1px solid var(--border); color:var(--text); font-family:var(--font-mono); }
+  .rd-sector.top { border-color:rgba(0,230,118,0.3); color:var(--green); }
+  .rd-sector.bottom { border-color:rgba(255,61,87,0.25); color:var(--red); }
+  .rd-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:10px; }
+  .rd-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+    padding:12px; cursor:pointer; transition:border-color .15s ease, transform .15s ease; }
+  .rd-card:hover { border-color:var(--border2); transform:translateY(-1px); }
+  .rd-card-top { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .rd-sym { font-family:var(--font-head); font-weight:700; font-size:14px; color:#fff; }
+  .rd-score { font-family:var(--font-mono); font-weight:700; font-size:16px; color:var(--accent); }
+  .rd-name { font-size:10px; color:var(--muted); margin:2px 0 8px; overflow:hidden;
+    text-overflow:ellipsis; white-space:nowrap; }
+  .rd-state { font-size:9px; font-weight:700; letter-spacing:0.04em; padding:3px 7px;
+    border-radius:999px; text-transform:uppercase; }
+  .rd-state-ACTIONABLE { background:rgba(0,230,118,0.14); color:var(--green); }
+  .rd-state-SETUP     { background:rgba(255,171,0,0.14);  color:var(--amber); }
+  .rd-state-LEADER    { background:rgba(179,136,255,0.14); color:var(--purple); }
+  .rd-state-EXTENDED  { background:rgba(255,213,79,0.12); color:var(--gold); }
+  .rd-state-BROKEN    { background:rgba(255,61,87,0.12);  color:var(--red); }
+  .rd-state-NEUTRAL, .rd-state-UNRATED { background:var(--surface); color:var(--muted); }
+  .rd-tags { display:flex; flex-wrap:wrap; gap:5px; align-items:center; }
+  .rd-pillars { display:flex; gap:3px; margin:9px 0 7px; }
+  .rd-pillar { flex:1; height:4px; background:var(--border); border-radius:999px; overflow:hidden; }
+  .rd-pillar span { display:block; height:100%; }
+  .rd-meta { display:flex; flex-wrap:wrap; gap:8px; font-size:10px; color:var(--muted);
+    font-family:var(--font-mono); }
+  .rd-search { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    color:var(--text); padding:7px 10px; font-size:12px; font-family:var(--font-body); width:150px; }
+  /* above the sticky site header (z-index 100), or a real tap on the close
+     button lands on the header instead of the button. */
+  .rd-drawer-back { position:fixed; top:0; right:0; bottom:0; left:0; background:rgba(0,0,0,0.6);
+    z-index:190; display:none; }
+  .rd-drawer-back.open { display:block; }
+  .rd-drawer { position:fixed; right:0; top:0; bottom:0; width:min(430px,92vw); background:var(--surface);
+    border-left:1px solid var(--border); z-index:200; padding:20px 18px; overflow-y:auto;
+    transform:translateX(102%); transition:transform .2s ease; }
+  .rd-drawer.open { transform:translateX(0); }
+  .rd-close { position:absolute; top:12px; right:14px; background:none; border:none;
+    color:var(--muted); font-size:24px; line-height:1; cursor:pointer; }
+  .rd-dossier-head { font-family:var(--font-head); font-size:19px; color:#fff; margin:0 0 2px; }
+  .rd-row { display:flex; justify-content:space-between; gap:10px; font-size:11.5px;
+    padding:7px 0; border-bottom:1px solid var(--border); }
+  .rd-row span:first-child { color:var(--muted); }
+  .rd-row span:last-child { font-family:var(--font-mono); color:var(--text); }
+  .rd-pill-row { display:flex; align-items:center; gap:8px; margin:7px 0; font-size:11px; }
+  .rd-pill-label { width:92px; color:var(--muted); }
+  .rd-pill-bar { flex:1; height:6px; background:var(--border); border-radius:999px; overflow:hidden; }
+  .rd-pill-bar span { display:block; height:100%; }
+  .rd-pill-val { width:32px; text-align:right; font-family:var(--font-mono); color:var(--text); }
+  .rd-note { font-size:10.5px; color:var(--muted); line-height:1.5; margin-top:14px;
+    padding-top:12px; border-top:1px solid var(--border); }
 </style>
 </head>
 <body>
@@ -1282,7 +1349,11 @@
 
 <!-- ─── NAV TABS ───────────────────────────────────── -->
 <nav class="nav" id="mainNav">
-  <button class="tab-btn active" onclick="switchTab('fcis',this)">
+  <button class="tab-btn active" onclick="switchTab('radar',this)">
+    <span class="tab-icon">📡</span>Radar
+    <span class="tab-badge" id="rdBadge" style="display:none">0</span>
+  </button>
+  <button class="tab-btn" onclick="switchTab('fcis',this)">
     <span class="tab-icon">⚡</span>FCIS
     <span class="tab-badge" id="actionBadge" style="display:none">0</span>
   </button>
@@ -1333,7 +1404,49 @@
 <main class="main">
 
   <!-- ══ FCIS TAB ══════════════════════════════════ -->
-  <div class="tab-panel active" id="tab-fcis">
+  <!-- ============ RADAR ============ -->
+  <div class="tab-panel active" id="tab-radar">
+
+    <div class="rd-regime">
+      <div class="rd-verdict rd-off" id="rdVerdict">—</div>
+      <div class="rd-detail" id="rdRegimeDetail">Loading the Radar…</div>
+      <div class="rd-breadth" id="rdBreadth"></div>
+    </div>
+
+    <div class="summary-strip" id="rdCounts"></div>
+
+    <div class="section-header">
+      <div class="section-title"><span class="icon">🧭</span>Sectors, by their members' RS</div>
+    </div>
+    <div class="rd-sectors" id="rdSectors"></div>
+
+    <div class="section-header">
+      <div class="section-title"><span class="icon">📡</span>Stocks</div>
+      <div class="filter-group" id="rdFilter">
+        <button class="filter-btn active" onclick="rdSetFilter('ACTIONABLE,SETUP,LEADER',this)">Worth a look</button>
+        <button class="filter-btn" onclick="rdSetFilter('ACTIONABLE',this)">Actionable</button>
+        <button class="filter-btn" onclick="rdSetFilter('SETUP',this)">Setup</button>
+        <button class="filter-btn" onclick="rdSetFilter('LEADER',this)">Leader</button>
+        <button class="filter-btn" onclick="rdSetFilter('EXTENDED',this)">Extended</button>
+        <button class="filter-btn" onclick="rdSetFilter('ALL',this)">All</button>
+      </div>
+      <input class="rd-search" id="rdSearch" placeholder="Search symbol…" oninput="rdRenderGrid()">
+    </div>
+
+    <div class="rd-grid" id="rdGrid"></div>
+    <div class="empty-state" id="rdEmpty" style="display:none">
+      No Radar data yet — the 8:45 AM IST run publishes radar.json.
+    </div>
+    <div class="rd-detail" id="rdFooter" style="margin-top:14px"></div>
+  </div>
+
+  <div class="rd-drawer-back" id="rdDrawerBack" onclick="rdCloseDossier()"></div>
+  <aside class="rd-drawer" id="rdDrawer">
+    <button class="rd-close" onclick="rdCloseDossier()">×</button>
+    <div id="rdDossier"></div>
+  </aside>
+
+  <div class="tab-panel" id="tab-fcis">
     <!-- Summary strip -->
     <div class="summary-strip" id="fcisSummary">
       <div class="stat-card green">
@@ -2141,6 +2254,244 @@ function updateMarketStatus() {
   badge.className = 'market-badge ' + (isOpen ? 'market-open' : 'market-closed');
 }
 
+
+/* ---- RADAR TAB (Phase 1, 16 Sep 2026) ------------------------------------
+   Reads radar.json, written each morning by radar/run.py in trade-alerts.
+   Own rd* names, ids and state, sharing only ghFetch - so no existing tab's
+   code changes. The Radar ranks and explains; it places no orders, and no
+   live trading rule reads it.                                              */
+
+var _rdData = null;
+var _rdStates = 'ACTIONABLE,SETUP,LEADER';
+var RD_STATE_ORDER = ['ACTIONABLE', 'SETUP', 'LEADER', 'EXTENDED', 'BROKEN', 'NEUTRAL', 'UNRATED'];
+var RD_PILLARS = [
+  ['trend_rs', 'Trend / RS'], ['volume', 'Volume'], ['sector', 'Sector'],
+  ['catalyst', 'Catalyst'], ['fundamentals', 'Fundamentals']
+];
+
+function rdEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"]/g,
+    function (c) { return {'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;'}[c]; });
+}
+function rdNum(n, digits, suffix) {
+  if (n == null || isNaN(n)) return '—';
+  return Number(n).toFixed(digits == null ? 1 : digits) + (suffix || '');
+}
+function rdSigned(n, digits, suffix) {
+  if (n == null || isNaN(n)) return '—';
+  return (n >= 0 ? '+' : '') + rdNum(n, digits, suffix);
+}
+function rdScoreColour(v) {
+  if (v == null || isNaN(v)) return 'var(--muted)';
+  if (v >= 70) return 'var(--green)';
+  if (v >= 45) return 'var(--amber)';
+  return 'var(--red)';
+}
+function rdRsTag(tier) {
+  var cls = tier === 'HIGH' ? 'tag-rs-high' : (tier === 'MID' ? 'tag-rs-mid' : 'tag-rs-low');
+  if (!tier || tier === 'UNKNOWN') return '';
+  return '<span class="tag ' + cls + '">' + rdEsc(tier) + ' RS</span>';
+}
+
+async function loadRadar() {
+  var empty = document.getElementById('rdEmpty');
+  try {
+    _rdData = JSON.parse(await ghFetch('radar.json'));
+  } catch (e) {
+    console.warn('[radar] ' + e.message);
+    if (empty) empty.style.display = 'block';
+    document.getElementById('rdRegimeDetail').textContent =
+      'radar.json has not been published yet — it appears after the 8:45 AM IST run.';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  rdRenderRegime();
+  rdRenderSectors();
+  rdRenderGrid();
+}
+
+function rdRenderRegime() {
+  var d = _rdData, r = d.regime || {};
+  var on = !!r.allows_entries;
+  var verdict = document.getElementById('rdVerdict');
+  verdict.textContent = on ? 'RISK-ON' : 'RISK-OFF';
+  verdict.className = 'rd-verdict ' + (on ? 'rd-on' : 'rd-off');
+
+  document.getElementById('rdRegimeDetail').innerHTML =
+    rdEsc(r.benchmark || '') + ' ' + rdEsc(r.status || '') +
+    ' · prices through <b>' + rdEsc(d.as_of) + '</b>';
+
+  var b50 = r.breadth_above_50, b200 = r.breadth_above_200;
+  document.getElementById('rdBreadth').innerHTML =
+    '<span>Above 50 DMA ' + rdNum(b50, 0, '%') +
+    '<span class="rd-bar"><span style="width:' + (b50 || 0) + '%"></span></span></span>' +
+    '<span>Above 200 DMA ' + rdNum(b200, 0, '%') +
+    '<span class="rd-bar"><span style="width:' + (b200 || 0) + '%"></span></span></span>';
+
+  var counts = d.counts || {};
+  var cards = [
+    ['green', 'Actionable', counts.ACTIONABLE, 'trigger fired, regime willing'],
+    ['amber', 'Setup', counts.SETUP, 'based, near the pivot'],
+    ['purple', 'Leader', counts.LEADER, 'strong trend, no base yet'],
+    ['blue', 'Extended', counts.EXTENDED, 'already run too far']
+  ];
+  document.getElementById('rdCounts').innerHTML = cards.map(function (c) {
+    return '<div class="stat-card ' + c[0] + '">' +
+           '<div class="stat-label">' + c[1] + '</div>' +
+           '<div class="stat-value">' + (c[2] == null ? '—' : c[2]) + '</div>' +
+           '<div class="stat-sub">' + c[3] + '</div></div>';
+  }).join('');
+
+  var badge = document.getElementById('rdBadge');
+  if (badge) {
+    var n = counts.ACTIONABLE || 0;
+    badge.textContent = n;
+    badge.style.display = n > 0 ? '' : 'none';
+  }
+
+  var w = d.weights || {};
+  document.getElementById('rdFooter').innerHTML =
+    'Scored ' + (d.stocks ? d.stocks.length : 0) + ' members · generated ' +
+    rdEsc(d.generated_at) + ' · weights trend ' + rdNum(w.trend_rs * 100, 0) +
+    ' / volume ' + rdNum(w.volume * 100, 0) + ' / sector ' + rdNum(w.sector * 100, 0) +
+    ' / catalyst ' + rdNum(w.catalyst * 100, 0) + ' / fundamentals ' +
+    rdNum(w.fundamentals * 100, 0) +
+    '. The Radar ranks and explains — it places no orders, and no live trading rule reads it.';
+}
+
+function rdRenderSectors() {
+  var sectors = _rdData.sectors || [];
+  var n = sectors.length;
+  document.getElementById('rdSectors').innerHTML = sectors.map(function (s, i) {
+    var cls = s.top_third ? ' top' : (i >= n - 3 ? ' bottom' : '');
+    return '<span class="rd-sector' + cls + '">' + rdEsc(s.sector) + ' ' +
+           rdSigned(s.median_rs, 1) + '</span>';
+  }).join('');
+}
+
+function rdRenderGrid() {
+  if (!_rdData) return;
+  var wanted = _rdStates === 'ALL' ? null : _rdStates.split(',');
+  var box = document.getElementById('rdSearch');
+  var q = box && box.value ? box.value.trim().toUpperCase() : '';
+  var rows = (_rdData.stocks || []).filter(function (s) {
+    if (q && s.symbol.indexOf(q) !== 0 && String(s.name || '').toUpperCase().indexOf(q) < 0) return false;
+    if (q) return true;
+    return !wanted || wanted.indexOf(s.state) >= 0;
+  });
+  rows.sort(function (a, b) {
+    var ai = RD_STATE_ORDER.indexOf(a.state), bi = RD_STATE_ORDER.indexOf(b.state);
+    if (ai !== bi) return ai - bi;
+    return b.score - a.score;
+  });
+
+  document.getElementById('rdGrid').innerHTML = rows.slice(0, 200).map(rdCard).join('');
+  var empty = document.getElementById('rdEmpty');
+  if (empty) {
+    empty.style.display = rows.length ? 'none' : 'block';
+    if (!rows.length) empty.textContent = 'Nothing matches that filter today.';
+  }
+}
+
+function rdCard(s) {
+  var bars = RD_PILLARS.map(function (p) {
+    var v = (s.pillars && s.pillars[p[0]]) || 0;
+    return '<div class="rd-pillar" title="' + p[1] + ' ' + rdNum(v, 0) + '"><span style="width:' +
+           v + '%;background:' + rdScoreColour(v) + '"></span></div>';
+  }).join('');
+  var cat = s.catalyst || {};
+  var catTag = cat.category ? '<span class="tag tag-scanner">' + rdEsc(cat.category) + '</span>' : '';
+  return '<div class="rd-card" onclick="rdOpenDossier(\'' + rdEsc(s.symbol) + '\')">' +
+    '<div class="rd-card-top"><span class="rd-sym">' + rdEsc(s.symbol) + '</span>' +
+    '<span class="rd-score">' + rdNum(s.score, 0) + '</span></div>' +
+    '<div class="rd-name">' + rdEsc(s.name || '') + '</div>' +
+    '<div class="rd-tags"><span class="rd-state rd-state-' + rdEsc(s.state) + '">' +
+    rdEsc(s.state) + '</span>' + rdRsTag(s.rs_tier) + catTag + '</div>' +
+    '<div class="rd-pillars">' + bars + '</div>' +
+    '<div class="rd-meta"><span>' + rdEsc(s.nse_sector || '') + '</span>' +
+    '<span>' + rdSigned(s.pct_from_52w_high, 1, '% vs high') + '</span>' +
+    '<span>' + rdNum(s.vol_ratio, 1, '× vol') + '</span></div></div>';
+}
+
+function rdSetFilter(states, btn) {
+  _rdStates = states;
+  var group = document.getElementById('rdFilter');
+  if (group) {
+    var buttons = group.querySelectorAll('.filter-btn');
+    for (var i = 0; i < buttons.length; i++) buttons[i].classList.remove('active');
+  }
+  if (btn) btn.classList.add('active');
+  rdRenderGrid();
+}
+
+function rdOpenDossier(symbol) {
+  if (!_rdData) return;
+  var list = _rdData.stocks || [];
+  var s = null;
+  for (var i = 0; i < list.length; i++) { if (list[i].symbol === symbol) { s = list[i]; break; } }
+  if (!s) return;
+
+  var pillars = RD_PILLARS.map(function (p) {
+    var v = (s.pillars && s.pillars[p[0]]) || 0;
+    return '<div class="rd-pill-row"><span class="rd-pill-label">' + p[1] + '</span>' +
+      '<span class="rd-pill-bar"><span style="width:' + v + '%;background:' +
+      rdScoreColour(v) + '"></span></span>' +
+      '<span class="rd-pill-val">' + rdNum(v, 0) + '</span></div>';
+  }).join('');
+
+  var rows = [
+    ['Close', '₹' + rdNum(s.close, 2)],
+    ['From 52-week high', rdSigned(s.pct_from_52w_high, 1, '%')],
+    ['To its pivot', rdSigned(s.pct_to_pivot, 1, '%')],
+    ['Base range (20 sessions)', rdNum(s.base_range_pct, 1, '%')],
+    ['Volume vs its average', rdNum(s.vol_ratio, 2, '×')],
+    ['Delivery (20 sessions)', rdNum(s.deliv_pct, 1, '%')],
+    ['ATR(14)', rdNum(s.atr_pct, 2, '%')],
+    ['RS in its class', rdEsc(s.rs_tier || '—') + ' · ' + rdNum(s.rs_percentile, 0) + 'th pct'],
+    ['Sector', rdEsc(s.nse_sector || '—') + ' · ' + rdNum(s.sector_percentile, 0) + 'th pct'],
+    ['Size class', rdEsc(s.cap_class || '—')],
+    ['Quality tier', rdEsc(s.quality_tier || '—')],
+    ['Market cap', '₹' + (s.market_cap_cr == null ? '—' :
+      Math.round(s.market_cap_cr).toLocaleString('en-IN')) + ' Cr']
+  ].map(function (r) {
+    return '<div class="rd-row"><span>' + r[0] + '</span><span>' + r[1] + '</span></div>';
+  }).join('');
+
+  var cat = s.catalyst || {};
+  var catalyst = '';
+  if (cat.category || cat.headline) {
+    catalyst = '<div class="section-header" style="margin-top:16px"><div class="section-title">' +
+      '<span class="icon">⚡</span>Catalyst</div></div>' +
+      '<div class="rd-row"><span>' + rdEsc(cat.category || 'Announcement') + '</span><span>FCIS ' +
+      rdNum(cat.raw, 0) + ' · ' + rdNum(cat.age_days, 0) + 'd ago</span></div>' +
+      (cat.headline ? '<div class="rd-detail" style="margin-top:8px">' + rdEsc(cat.headline) +
+       '</div>' : '');
+  }
+
+  document.getElementById('rdDossier').innerHTML =
+    '<div class="rd-dossier-head">' + rdEsc(s.symbol) + '</div>' +
+    '<div class="rd-name" style="white-space:normal">' + rdEsc(s.name || '') + '</div>' +
+    '<div class="rd-tags" style="margin-bottom:10px"><span class="rd-state rd-state-' +
+    rdEsc(s.state) + '">' + rdEsc(s.state) + '</span>' + rdRsTag(s.rs_tier) +
+    '<span class="rd-score">' + rdNum(s.score, 0) + '</span></div>' +
+    '<div class="rd-detail">' + rdEsc(s.reason || '') + '</div>' +
+    '<div class="section-header" style="margin-top:16px"><div class="section-title">' +
+    '<span class="icon">🧱</span>Pillars</div></div>' + pillars +
+    '<div class="section-header" style="margin-top:16px"><div class="section-title">' +
+    '<span class="icon">📈</span>The numbers</div></div>' + rows + catalyst +
+    '<div class="rd-note">State and score are read from the last settled session (' +
+    rdEsc(_rdData.as_of) + '). Thresholds are judgement, not a backtest — this is an ' +
+    'attention tool, and no live trading rule reads it.</div>';
+
+  document.getElementById('rdDrawer').classList.add('open');
+  document.getElementById('rdDrawerBack').classList.add('open');
+}
+
+function rdCloseDossier() {
+  document.getElementById('rdDrawer').classList.remove('open');
+  document.getElementById('rdDrawerBack').classList.remove('open');
+}
+
 // ─── GITHUB FETCH ─────────────────────────────────────
 async function ghFetch(filename) {
   if (!cfg.user || !cfg.repo) throw new Error('GitHub not configured. Go to Config tab.');
@@ -2199,6 +2550,7 @@ async function loadAllData() {
     loadSizing(),
     loadShadow(),
     loadInvestment(),
+    loadRadar(),
     loadIpo()
   ]);
 

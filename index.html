@@ -4566,26 +4566,50 @@ function renderShadowSleeve(sl) {
 
   const rows = (sl.legs || []).map(lg => {
     if (!lg.priced) {
-      return '<tr><td>' + lg.symbol + '</td><td colspan="4" style="color:var(--muted)">' +
+      return '<tr><td>' + lg.symbol + '</td><td colspan="6" style="color:var(--muted)">' +
              'not priced this run</td></tr>';
     }
-    const on = lg.above_ma;
-    const col = on ? 'var(--green, #4caf50)' : 'var(--muted)';
+    const held = lg.held;
+    const on   = lg.above_ma;
+    const col  = held ? 'var(--green, #4caf50)' : 'var(--muted)';
+    const pl   = lg.unrealised_inr || 0;
+    const plc  = pl > 0 ? 'var(--green, #4caf50)' : (pl < 0 ? 'var(--red, #e53935)' : 'var(--muted)');
+    // held and above_ma can disagree for one bar, between a trend flip and the
+    // next rebalance. Say so rather than showing a contradiction.
+    const note = held === on ? (held ? 'HOLD' : 'cash')
+                             : (held ? 'HOLD — exits next rebalance' : 'buying next rebalance');
     return '<tr>' +
       '<td><b>' + lg.symbol + '</b></td>' +
-      '<td>' + (lg.close != null ? lg.close : '—') + '</td>' +
-      '<td>' + (lg.ma_value != null ? lg.ma_value : '—') +
-        ' <span style="color:var(--muted)">(' + (lg.trend_ma || '') + "d)</span></td>" +
-      '<td style="color:' + col + '">' + (lg.distance_pct != null ? (lg.distance_pct > 0 ? '+' : '') + lg.distance_pct + '%' : '—') + '</td>' +
-      '<td style="color:' + col + '">' + (on ? 'HOLD' : 'cash') + '</td>' +
+      '<td style="color:' + col + '">' + (held ? (+lg.units).toFixed(2) : '—') + '</td>' +
+      '<td style="color:' + col + '">' + (held ? money(lg.value_inr) : '—') + '</td>' +
+      '<td style="color:' + plc + '">' + (held ? (pl > 0 ? '+' : '') + money(pl) +
+          (lg.unrealised_pct != null ? ' (' + (lg.unrealised_pct > 0 ? '+' : '') + lg.unrealised_pct + '%)' : '') : '—') + '</td>' +
+      '<td>' + (held && lg.pct_of_nav != null ? lg.pct_of_nav + '%' : '—') + '</td>' +
+      '<td>' + (lg.close != null ? lg.close : '—') + ' vs ' +
+        (lg.ma_value != null ? lg.ma_value : '—') +
+        ' <span style="color:' + (on ? 'var(--green, #4caf50)' : 'var(--muted)') + '">(' +
+        (lg.distance_pct != null ? (lg.distance_pct > 0 ? '+' : '') + lg.distance_pct + '%' : '—') + ')</span></td>' +
+      '<td style="color:' + col + '">' + note + '</td>' +
     '</tr>';
   }).join('');
+  // Cash is a position too — on a gate-breach day it is most of the account.
+  const cashRow =
+    '<tr style="border-top:1px solid var(--border,#333)">' +
+    '<td><b>CASH</b></td><td>—</td><td>' + money(sl.cash_inr) + '</td><td>—</td>' +
+    '<td>' + (sl.nav_inr ? (sl.cash_inr / sl.nav_inr * 100).toFixed(1) + '%' : '—') +
+    '</td><td>—</td><td style="color:var(--muted)">idle</td></tr>' +
+    '<tr><td><b>STOCK BOOK</b></td><td>—</td><td>' + money(sl.equity_deployed_inr) +
+    '</td><td>—</td><td>' + pct(sl.equity_pct_of_nav) + '</td><td>—</td>' +
+    '<td style="color:var(--muted)">' +
+    ((sl.equity_deployed_inr || 0) > 0 ? 'see Shadow Sizing' : 'flat — gate blocked') +
+    '</td></tr>';
   legs.innerHTML =
     '<table class="data-table"><thead><tr>' +
-    '<th>Leg</th><th>Close</th><th>Trend line</th><th>Distance</th><th>Action</th>' +
+    '<th>Holding</th><th>Units</th><th>Value</th><th>P&L</th><th>% NAV</th>' +
+    '<th>Close vs trend line</th><th>State</th>' +
     '</tr></thead><tbody>' + (rows ||
-      '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">' +
-      'No legs reported yet</td></tr>') + '</tbody></table>' +
+      '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">' +
+      'No legs reported yet</td></tr>') + cashRow + '</tbody></table>' +
     '<div class="sizing-legend">Each leg is held only while it trades above its own ' +
     (sl.trend_ma || 200) + '-day average. The share of an off-trend leg sits in cash rather ' +
     'than being redistributed, so the sleeve shrinks rather than concentrating. ' +

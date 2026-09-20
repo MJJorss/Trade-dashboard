@@ -1140,6 +1140,31 @@
   }
   .mult-badge.normal   { color: var(--green); background: rgba(0,230,118,0.12); }
   .mult-badge.throttled{ color: var(--amber); background: rgba(255,171,0,0.14); }
+  /* ─── Defensive sleeve ─────────────────────────────────────── */
+  .sl-alloc {
+    display: flex; height: 26px; border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--border); margin: 2px 0 14px;
+  }
+  .sl-alloc-seg {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; font-family: var(--font-head);
+    letter-spacing: 0.3px; white-space: nowrap; overflow: hidden;
+    transition: width 0.4s ease;
+  }
+  .sl-alloc-stock  { background: rgba(232,163,61,0.85); color: #1a1205; }
+  .sl-alloc-sleeve { background: rgba(255,213,79,0.85); color: #1a1502; }
+  .sl-alloc-cash   { background: rgba(107,114,128,0.30); color: var(--text); }
+  .sl-pill {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    padding: 2px 9px; border-radius: 999px; white-space: nowrap;
+  }
+  .sl-pill.hold    { color: var(--green); background: rgba(0,230,118,0.12); }
+  .sl-pill.cash    { color: var(--muted); background: rgba(107,114,128,0.14); }
+  .sl-pill.pending { color: var(--amber); background: rgba(255,171,0,0.14); }
+  .sl-sym { font-family: var(--font-head); font-weight: 700; color: #fff; }
+  .sl-dim { color: var(--muted); }
+  .sl-row-off td { opacity: 0.55; }
+
   .sizing-legend {
     background: rgba(255,255,255,0.02); border: 1px dashed var(--border2);
     border-radius: 10px; padding: 10px 12px; margin-bottom: 16px;
@@ -2052,6 +2077,12 @@
     </div>
 
     <!-- Sizing -->
+    <div class="section-header">
+      <div class="section-title"><span class="icon">🥇</span>Defensive Sleeve</div>
+    </div>
+    <div class="sizing-summary-bar" id="shSleeveStrip"></div>
+    <div id="shSleeveLegs"></div>
+
     <div class="section-header">
       <div class="section-title"><span class="icon">⚖️</span>Shadow Sizing</div>
     </div>
@@ -4518,9 +4549,9 @@ async function shGet(name) {
 
 async function loadShadow() {
   const names = ['state.json', 'equity_curve.json', 'trade_history.json',
-                 'position_sizing.json', 'gate_log.json'];
+                 'position_sizing.json', 'gate_log.json', 'sleeve.json'];
   const got = await Promise.allSettled(names.map(shGet));
-  const [state, eq, hist, siz, gates] = got.map(r => r.status === 'fulfilled' ? r.value : null);
+  const [state, eq, hist, siz, gates, sleeve] = got.map(r => r.status === 'fulfilled' ? r.value : null);
   if (!eq || !siz) { renderShadowEmpty(); return; }
   _shCapital = siz.starting_capital || (hist && hist.capital) || 1350000;
   _shSnapshots = (eq.snapshots || []).slice()
@@ -4530,6 +4561,120 @@ async function loadShadow() {
   renderShadowEquity();
   renderShadowSizing(siz, _shSnapshots[_shSnapshots.length - 1]);
   renderShadowGates(gates ? (gates.days || []) : []);
+  renderShadowSleeve(sleeve);
+}
+
+// The sleeve is the answer to "the gate is BELOW and the book is flat — so
+// where is the money?". On those days this is the only panel with anything in
+// it, so it renders its own empty and disabled states rather than going blank.
+function renderShadowSleeve(sl) {
+  const strip = document.getElementById('shSleeveStrip');
+  const legs  = document.getElementById('shSleeveLegs');
+  if (!strip || !legs) return;
+  if (!sl || !sl.enabled) {
+    strip.innerHTML = '';
+    legs.innerHTML = '<div class="empty-state">No defensive sleeve in this ' +
+      'configuration — idle cash stays in cash.</div>';
+    return;
+  }
+  const money = v => '₹' + Math.round(v || 0).toLocaleString('en-IN');
+  const pct1  = v => (v == null ? '—' : (+v).toFixed(1) + '%');
+  const nav   = +sl.nav_inr || 0;
+  const share = v => (nav ? (v || 0) / nav * 100 : 0);
+
+  const item = (label, val, style) =>
+    '<div class="sizing-summary-item">' +
+      '<div class="sizing-summary-label">' + label + '</div>' +
+      '<div class="sizing-summary-val"' + (style ? ' style="' + style + '"' : '') + '>' +
+        val + '</div>' +
+    '</div>';
+
+  strip.innerHTML =
+    item('Sleeve', money(sl.sleeve_value_inr), 'color:var(--gold)') +
+    item('% of NAV', pct1(sl.sleeve_pct_of_nav), 'color:var(--gold)') +
+    item('Stock book', money(sl.equity_deployed_inr)) +
+    item('Cash', money(sl.cash_inr)) +
+    item('NAV', money(nav)) +
+    item('Cap', pct1(sl.cap_pct_of_nav), 'font-size:15px') +
+    item('Legs held', (sl.legs_on_trend != null ? sl.legs_on_trend : '—') +
+         ' / ' + (sl.menu_size || 0), 'font-size:15px');
+
+  // Where every rupee is, in one bar. A segment under 6% keeps its colour but
+  // drops its label rather than overflowing into the neighbour.
+  const segs = [
+    ['sl-alloc-stock',  share(sl.equity_deployed_inr), 'Stock'],
+    ['sl-alloc-sleeve', share(sl.sleeve_value_inr),    'Sleeve'],
+    ['sl-alloc-cash',   share(sl.cash_inr),            'Cash'],
+  ].filter(x => x[1] > 0.05).map(([cls, w, name]) =>
+    '<div class="sl-alloc-seg ' + cls + '" style="width:' + w.toFixed(2) + '%" title="' +
+    name + ' ' + w.toFixed(1) + '%">' + (w >= 6 ? name + ' ' + w.toFixed(0) + '%' : '') +
+    '</div>').join('');
+  const alloc = segs ? '<div class="sl-alloc">' + segs + '</div>' : '';
+
+  const rows = (sl.legs || []).map(lg => {
+    if (!lg.priced) {
+      return '<tr class="sl-row-off"><td class="sl-sym">' + lg.symbol +
+             '</td><td colspan="6" class="sl-dim">not priced this run</td></tr>';
+    }
+    const held = lg.held, on = lg.above_ma;
+    const pl = lg.unrealised_inr || 0;
+    const plCol = pl > 0 ? 'var(--green)' : (pl < 0 ? 'var(--red)' : 'var(--muted)');
+    // held and above_ma can disagree for one bar, between a trend flip and the
+    // next rebalance. Say which, rather than showing a contradiction.
+    let cls = 'cash', label = 'cash';
+    if (held && on)        { cls = 'hold';    label = 'HOLD'; }
+    else if (held && !on)  { cls = 'pending'; label = 'exiting'; }
+    else if (!held && on)  { cls = 'pending'; label = 'buying'; }
+    const dcol = on ? 'var(--green)' : 'var(--muted)';
+    return '<tr' + (held ? '' : ' class="sl-row-off"') + '>' +
+      '<td class="sl-sym">' + lg.symbol + '</td>' +
+      '<td>' + (held ? (+lg.units).toFixed(2) : '<span class="sl-dim">—</span>') + '</td>' +
+      '<td><b>' + (held ? money(lg.value_inr) : '<span class="sl-dim">—</span>') + '</b></td>' +
+      '<td style="color:' + plCol + '">' +
+        (held ? (pl > 0 ? '+' : '') + money(pl) +
+          (lg.unrealised_pct != null
+            ? ' <span style="opacity:.75">(' + (lg.unrealised_pct > 0 ? '+' : '') +
+              lg.unrealised_pct + '%)</span>' : '')
+             : '<span class="sl-dim">—</span>') + '</td>' +
+      '<td>' + (held && lg.pct_of_nav != null ? lg.pct_of_nav + '%'
+                                              : '<span class="sl-dim">—</span>') + '</td>' +
+      '<td class="sl-dim">' + (lg.close != null ? lg.close : '—') +
+        ' <span style="opacity:.6">vs</span> ' + (lg.ma_value != null ? lg.ma_value : '—') +
+        ' <span style="color:' + dcol + ';font-weight:700">' +
+        (lg.distance_pct != null ? (lg.distance_pct > 0 ? '+' : '') + lg.distance_pct + '%' : '') +
+        '</span></td>' +
+      '<td><span class="sl-pill ' + cls + '">' + label + '</span></td>' +
+    '</tr>';
+  }).join('');
+
+  // Cash and the stock book are holdings too. On a gate-breach day cash IS the
+  // account, and splitting that across two panels hides the one day the sleeve
+  // exists for.
+  const foot =
+    '<tr style="border-top:2px solid var(--border2)">' +
+      '<td class="sl-sym">CASH</td><td class="sl-dim">—</td>' +
+      '<td><b>' + money(sl.cash_inr) + '</b></td><td class="sl-dim">—</td>' +
+      '<td>' + share(sl.cash_inr).toFixed(1) + '%</td><td class="sl-dim">—</td>' +
+      '<td><span class="sl-pill cash">idle</span></td></tr>' +
+    '<tr><td class="sl-sym">STOCK BOOK</td><td class="sl-dim">—</td>' +
+      '<td><b>' + money(sl.equity_deployed_inr) + '</b></td><td class="sl-dim">—</td>' +
+      '<td>' + pct1(sl.equity_pct_of_nav) + '</td><td class="sl-dim">—</td>' +
+      '<td><span class="sl-pill ' + ((sl.equity_deployed_inr || 0) > 0 ? 'hold' : 'cash') +
+      '">' + ((sl.equity_deployed_inr || 0) > 0 ? 'see Sizing' : 'gate blocked') +
+      '</span></td></tr>';
+
+  legs.innerHTML = alloc +
+    '<div class="table-wrap"><table class="trade-table"><thead><tr>' +
+    '<th>Holding</th><th>Units</th><th>Value</th><th>P&amp;L</th><th>% NAV</th>' +
+    '<th>Close vs its trend line</th><th>State</th>' +
+    '</tr></thead><tbody>' + (rows ||
+      '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">' +
+      'No legs reported yet</td></tr>') + foot + '</tbody></table></div>' +
+    '<div class="sizing-legend">Each leg is held only while it trades above its own ' +
+    (sl.trend_ma || 200) + '-day average. The share of an off-trend leg sits in cash ' +
+    'rather than being redistributed, so the sleeve shrinks rather than concentrating. ' +
+    'Scope <b>' + (sl.risk_state_scope || '—') + '</b> — sleeve profit never sizes a ' +
+    'stock position. As of <b>' + (sl.as_of || '—') + '</b>.</div>';
 }
 
 function renderShadowEmpty() {
@@ -4546,6 +4691,10 @@ function renderShadowEmpty() {
     '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">No shadow trades yet</td></tr>';
   document.getElementById('shSizingList').innerHTML =
     '<div class="empty-state">The shadow book is empty until the first run.</div>';
+  const _ss = document.getElementById('shSleeveStrip');
+  const _sl = document.getElementById('shSleeveLegs');
+  if (_ss) _ss.innerHTML = '';
+  if (_sl) _sl.innerHTML = '<div class="empty-state">Waiting for the first shadow run…</div>';
   document.getElementById('shGateBody').innerHTML =
     '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No gate history yet</td></tr>';
 }

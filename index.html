@@ -2053,6 +2053,12 @@
 
     <!-- Sizing -->
     <div class="section-header">
+      <div class="section-title"><span class="icon">🥇</span>Defensive Sleeve</div>
+    </div>
+    <div class="sizing-summary-bar" id="shSleeveStrip"></div>
+    <div id="shSleeveLegs"></div>
+
+    <div class="section-header">
       <div class="section-title"><span class="icon">⚖️</span>Shadow Sizing</div>
     </div>
     <div class="sizing-summary-bar" id="shRiskStrip"></div>
@@ -4518,9 +4524,9 @@ async function shGet(name) {
 
 async function loadShadow() {
   const names = ['state.json', 'equity_curve.json', 'trade_history.json',
-                 'position_sizing.json', 'gate_log.json'];
+                 'position_sizing.json', 'gate_log.json', 'sleeve.json'];
   const got = await Promise.allSettled(names.map(shGet));
-  const [state, eq, hist, siz, gates] = got.map(r => r.status === 'fulfilled' ? r.value : null);
+  const [state, eq, hist, siz, gates, sleeve] = got.map(r => r.status === 'fulfilled' ? r.value : null);
   if (!eq || !siz) { renderShadowEmpty(); return; }
   _shCapital = siz.starting_capital || (hist && hist.capital) || 1350000;
   _shSnapshots = (eq.snapshots || []).slice()
@@ -4530,6 +4536,61 @@ async function loadShadow() {
   renderShadowEquity();
   renderShadowSizing(siz, _shSnapshots[_shSnapshots.length - 1]);
   renderShadowGates(gates ? (gates.days || []) : []);
+  renderShadowSleeve(sleeve);
+}
+
+// The sleeve is the answer to "the gate is BELOW and the book is flat — so
+// where is the money?". On those days this is the only panel with anything in
+// it, so it renders its own empty/disabled states rather than going blank.
+function renderShadowSleeve(sl) {
+  const strip = document.getElementById('shSleeveStrip');
+  const legs  = document.getElementById('shSleeveLegs');
+  if (!strip || !legs) return;
+  if (!sl || !sl.enabled) {
+    strip.innerHTML = '';
+    legs.innerHTML = '<div class="empty-state">No defensive sleeve in this ' +
+      'configuration — idle cash stays in cash.</div>';
+    return;
+  }
+  const money = v => '₹' + Math.round(v || 0).toLocaleString('en-IN');
+  const pct   = v => (v == null ? '—' : (+v).toFixed(1) + '%');
+  strip.innerHTML = [
+    ['Sleeve', money(sl.sleeve_value_inr) + '  (' + pct(sl.sleeve_pct_of_nav) + ' of NAV)'],
+    ['Equity book', money(sl.equity_deployed_inr) + '  (' + pct(sl.equity_pct_of_nav) + ')'],
+    ['Cash', money(sl.cash_inr)],
+    ['Cap', pct(sl.cap_pct_of_nav) + ' of NAV'],
+    ['Legs on trend', (sl.legs_on_trend != null ? sl.legs_on_trend : '—') + ' / ' + (sl.menu_size || 0)],
+  ].map(([k, v]) =>
+    '<div class="sizing-summary-item"><span class="k">' + k +
+    '</span><span class="v">' + v + '</span></div>').join('');
+
+  const rows = (sl.legs || []).map(lg => {
+    if (!lg.priced) {
+      return '<tr><td>' + lg.symbol + '</td><td colspan="4" style="color:var(--muted)">' +
+             'not priced this run</td></tr>';
+    }
+    const on = lg.above_ma;
+    const col = on ? 'var(--green, #4caf50)' : 'var(--muted)';
+    return '<tr>' +
+      '<td><b>' + lg.symbol + '</b></td>' +
+      '<td>' + (lg.close != null ? lg.close : '—') + '</td>' +
+      '<td>' + (lg.ma_value != null ? lg.ma_value : '—') +
+        ' <span style="color:var(--muted)">(' + (lg.trend_ma || '') + "d)</span></td>" +
+      '<td style="color:' + col + '">' + (lg.distance_pct != null ? (lg.distance_pct > 0 ? '+' : '') + lg.distance_pct + '%' : '—') + '</td>' +
+      '<td style="color:' + col + '">' + (on ? 'HOLD' : 'cash') + '</td>' +
+    '</tr>';
+  }).join('');
+  legs.innerHTML =
+    '<table class="data-table"><thead><tr>' +
+    '<th>Leg</th><th>Close</th><th>Trend line</th><th>Distance</th><th>Action</th>' +
+    '</tr></thead><tbody>' + (rows ||
+      '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:16px">' +
+      'No legs reported yet</td></tr>') + '</tbody></table>' +
+    '<div class="sizing-legend">Each leg is held only while it trades above its own ' +
+    (sl.trend_ma || 200) + '-day average. The share of an off-trend leg sits in cash rather ' +
+    'than being redistributed, so the sleeve shrinks rather than concentrating. ' +
+    'Scope: <b>' + (sl.risk_state_scope || '—') + '</b> — sleeve profit never sizes a ' +
+    'stock position.</div>';
 }
 
 function renderShadowEmpty() {
@@ -4546,6 +4607,10 @@ function renderShadowEmpty() {
     '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">No shadow trades yet</td></tr>';
   document.getElementById('shSizingList').innerHTML =
     '<div class="empty-state">The shadow book is empty until the first run.</div>';
+  const _ss = document.getElementById('shSleeveStrip');
+  const _sl = document.getElementById('shSleeveLegs');
+  if (_ss) _ss.innerHTML = '';
+  if (_sl) _sl.innerHTML = '<div class="empty-state">Waiting for the first shadow run…</div>';
   document.getElementById('shGateBody').innerHTML =
     '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No gate history yet</td></tr>';
 }

@@ -5367,8 +5367,10 @@ function renderInvestment(data) {
 
   // ── Footer ──
   const w = data.weights || {};
+  const trigW = (w.growth_trigger && w.growth_trigger !== '0%') ? ` · Growth trigger ${w.growth_trigger}` : '';
   document.getElementById('invFooter').textContent =
-    `Weights: EPS ${w.eps_sequential || '45%'} · Sales ${w.sales_sequential || '20%'} · RS ${w.rs_composite || '20%'} · MCap ${w.market_cap || '15%'}  ·  Rebalances bi-weekly every Friday 2 PM IST`;
+    `Weights: EPS ${w.eps_sequential || '45%'} · Sales ${w.sales_sequential || '20%'} · RS ${w.rs_composite || '20%'} · MCap ${w.market_cap || '15%'}${trigW}  ·  Rebalances bi-weekly every Friday 2 PM IST`;
+  invRenderCatalyst(data.catalyst);
 }
 
 // ─── IPO BREAKOUT SCANNER ───────────────────────────────
@@ -5490,6 +5492,7 @@ function buildInvCard(c, i) {
       &nbsp;·&nbsp;${invRsTag(c.rs_tier)}
       &nbsp;·&nbsp;${dmaStr}
     </div>
+    ${invTriggerLine(c)}
     <div class="inv-score-bar-wrap"><div class="inv-score-bar" style="width:${scoreW}%"></div></div>
     <div class="inv-meta-row">
       <span>Entry ₹${fmtPrice(c.entry_price)} → <span id="${livePriceId}-entry">₹${fmtPrice(c.cmp)}</span></span>
@@ -5543,7 +5546,7 @@ function buildInvWatchCard(w) {
     <div class="inv-watch-rank">#${w.slot_rank}</div>
     <div>
       <div class="inv-watch-sym">${w.symbol}${qBadge}</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:2px;">${invRsTag(w.rs_tier)} · Score ${w.composite_score}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px;">${invRsTag(w.rs_tier)} · Score ${w.composite_score}${invTriggerShort(w)}</div>
     </div>
     <div style="text-align:right;">
       <div style="font-size:12px;color:var(--text);font-family:var(--font-head);font-weight:700">${w.cmp ? '₹'+fmtPrice(w.cmp) : '—'}</div>
@@ -5551,6 +5554,74 @@ function buildInvWatchCard(w) {
     </div>
   `;
   return div;
+}
+
+// ── Growth trigger (concall catalyst scores; investment_index.py "catalyst" block) ──
+// Cards from rebalances before the trigger existed carry no trigger_* fields:
+// every helper returns '' for those, so older JSON renders exactly as before.
+function invTriggerColor(score) {
+  if (score == null) return 'var(--muted)';
+  if (score >= 70) return 'var(--green)';
+  if (score >= 45) return 'var(--amber)';
+  return 'var(--red)';
+}
+
+function invTriggerLine(c) {
+  if (!c || c.trigger_status === undefined) return '';
+  const st = c.trigger_status;
+  let body;
+  if (c.trigger_override) {
+    body = `<span style="color:var(--red);font-weight:700">⚠ Trigger 0</span> <span style="color:var(--red)">${escHtmlInv(c.trigger_override)}</span>`;
+  } else if (st === 'scored') {
+    const bits = [`<span style="color:${invTriggerColor(c.trigger_score)};font-weight:700;font-family:var(--font-head)">🎯 Trigger ${c.trigger_score}</span>`];
+    if (c.trigger_grade) bits.push(`cred. <span style="color:var(--text)">${escHtmlInv(c.trigger_grade)}</span>`);
+    if (c.trigger_ob_to_rev != null) bits.push(`OB <span style="color:var(--text)">${c.trigger_ob_to_rev}×</span> rev`);
+    if (c.trigger_fwd_pe != null) bits.push(`fwd PE <span style="color:var(--text)">${c.trigger_fwd_pe}</span>`);
+    if (c.trigger_next && c.trigger_next.due) bits.push(`next: ${escHtmlInv(c.trigger_next.text)} (${escHtmlInv(c.trigger_next.due)})`);
+    body = bits.join(' · ');
+  } else if (st === 'no_disclosure' || st === 'stale') {
+    body = `<span style="color:var(--muted)">🎯 No recent concall or deck</span>`;
+  } else {
+    body = `<span style="color:var(--muted)">🎯 Concall not read yet</span>`;
+  }
+  const title = c.trigger_summary ? ` title="${escHtmlInv(c.trigger_summary)}"` : '';
+  const src = c.trigger_source ? ` · <a href="${escHtmlInv(c.trigger_source)}" target="_blank" rel="noopener" style="color:var(--accent)">call</a>` : '';
+  return `<div style="font-size:10px;color:var(--muted);margin-top:4px;line-height:1.5"${title}>${body}${src}</div>`;
+}
+
+function invTriggerShort(w) {
+  if (!w || w.trigger_status === undefined) return '';
+  if (w.trigger_override) return ` · <span style="color:var(--red)">⚠ trigger 0</span>`;
+  if (w.trigger_status !== 'scored') return '';
+  return ` · <span style="color:${invTriggerColor(w.trigger_score)}">🎯 ${w.trigger_score}${w.trigger_grade ? ' ' + escHtmlInv(w.trigger_grade) : ''}</span>`;
+}
+
+function invRenderCatalyst(cat) {
+  let el = document.getElementById('invCatalyst');
+  if (!cat) { if (el) el.style.display = 'none'; return; }
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'invCatalyst';
+    el.style.cssText = 'font-size:11px;color:var(--muted);text-align:center;margin-top:8px;line-height:1.6';
+    const footer = document.getElementById('invFooter');
+    footer.parentNode.insertBefore(el, footer.nextSibling);
+  }
+  el.style.display = '';
+  if (!cat.active) {
+    el.innerHTML = `🎯 Growth trigger <b style="color:var(--amber)">OFF</b> this rebalance — ${escHtmlInv(cat.reason || '')} (legacy weights)`;
+    return;
+  }
+  const step = cat.step_in_cycle ? ` (step-in ${cat.step_in_cycle})` : '';
+  const plus = (cat.in_top20_only_with_trigger || []).map(escHtmlInv).join(', ');
+  const minus = (cat.in_top20_only_without_trigger || []).map(escHtmlInv).join(', ');
+  const diff = (plus || minus)
+    ? `Top 20 vs old weights: <span style="color:var(--green)">+${plus || '—'}</span> / <span style="color:var(--red)">−${minus || '—'}</span>`
+    : 'Top 20 is the same as with the old weights';
+  el.innerHTML = `🎯 Growth trigger <b style="color:var(--green)">ON</b>${step} · concall scores as of ${escHtmlInv(cat.as_of || '—')} · ${diff}`;
+}
+
+function escHtmlInv(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 }
 
 function invRsTag(tier) {

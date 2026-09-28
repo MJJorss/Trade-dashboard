@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>MJ Trading Intelligence</title>
+<!-- Installable app: manifest + icons here, service worker registered at the
+     end of <body>. Theme colour matches --bg so the Android status bar and the
+     splash screen blend into the page. -->
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#07080a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MJ Trading">
+<link rel="icon" type="image/png" href="/icons/favicon-64.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -1285,6 +1296,98 @@
   }
   .sh-gate-strip .stat-value { font-size: 16px; }
 
+  /* Phone layout for the Shadow tab. Wide tables (12 columns of closed trades,
+     7 of sleeve legs) scrolled sideways and hid the P&L off the right edge, so
+     under 600px each row becomes a card with the number that matters on top.
+     Both views are rendered; CSS picks one, so nothing depends on the width
+     at render time and rotating the phone just works. */
+  .sh-mob { display: none; }
+  .sh-more { display: none; }
+  .sh-cards { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .sh-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 12px 14px;
+  }
+  .sh-card.off { opacity: 0.6; }
+  .sh-card-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .sh-card-sym { font-family: var(--font-head); font-weight: 700; font-size: 15px; color: #fff;
+    display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .sh-card-big { font-family: var(--font-head); font-weight: 700; font-size: 17px; white-space: nowrap; }
+  .sh-card-big small { font-size: 11px; font-weight: 600; opacity: 0.8; margin-left: 4px; }
+  .sh-card-row { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px;
+    font-size: 11px; color: var(--muted); }
+  .sh-card-row b { color: var(--text); font-weight: 600; font-family: var(--font-mono); font-size: 11px; }
+  .sh-card-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 10.5px;
+    color: var(--muted); }
+  .sh-trend { position: relative; height: 5px; background: var(--border); border-radius: 999px;
+    margin-top: 10px; overflow: hidden; }
+  .sh-trend span { position: absolute; top: 0; bottom: 0; border-radius: 999px; }
+  .sh-trend i { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px;
+    background: var(--muted); }
+  .sh-gate-row { display: grid; grid-template-columns: 62px 1fr; gap: 10px; align-items: center;
+    padding: 9px 12px; border-bottom: 1px solid var(--border); }
+  .sh-gate-row:last-child { border-bottom: none; }
+  .sh-gate-date { font-family: var(--font-head); font-weight: 700; color: #fff; font-size: 12px; }
+  .sh-gate-pills { display: flex; flex-wrap: wrap; gap: 5px; }
+  .sh-gate-list { background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); margin-bottom: 16px; overflow: hidden; }
+  .sh-pill { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+    white-space: nowrap; font-family: var(--font-head); }
+  .sh-pill.ok  { color: var(--green); background: rgba(0,230,118,0.12); }
+  .sh-pill.bad { color: var(--red);   background: rgba(255,61,87,0.12); }
+  .sh-pill.mid { color: var(--amber); background: rgba(255,171,0,0.13); }
+
+  @media (max-width: 600px) {
+    #tab-shadow .sh-desk { display: none; }
+    #tab-shadow .sh-mob  { display: block; }
+    #tab-shadow .sh-cards.sh-mob { display: flex; }
+    /* The intro is a paragraph of rules; on a phone it pushed every number
+       below the fold. Two lines, then a tap to read the rest. */
+    .sh-notice .sh-notice-body {
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .sh-notice.open .sh-notice-body { display: block; }
+    .sh-more { display: inline-block; background: none; border: none; padding: 4px 0 0;
+      color: var(--accent); font-size: 11px; font-weight: 600; cursor: pointer; }
+    /* Gate verdicts as one swipeable row instead of five stacked cards. */
+    .sh-gate-strip {
+      display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 8px;
+      margin: 0 -16px 16px; padding: 0 16px 4px; scrollbar-width: none;
+      scroll-padding-inline: 16px;
+    }
+    .sh-gate-strip::-webkit-scrollbar { display: none; }
+    .sh-gate-strip .stat-card { flex: 0 0 64%; scroll-snap-align: start; padding: 12px 14px; }
+    .sh-gate-strip .stat-card .stat-sub { font-size: 10px; }
+    #tab-shadow .perf-kpi-strip .stat-value,
+    #tab-shadow .dd-kpi-strip .stat-value { font-size: 22px; }
+    #tab-shadow .sizing-summary-bar { gap: 10px 14px; }
+  }
+
+  /* Install button — shown only when the browser offers installation. */
+  .install-btn {
+    background: rgba(232,163,61,0.12); border: 1px solid rgba(232,163,61,0.4);
+    color: var(--accent); font-family: var(--font-head); font-weight: 700; font-size: 11px;
+    padding: 6px 11px; border-radius: 999px; cursor: pointer; flex-shrink: 0;
+  }
+  /* Pull-to-refresh indicator. An installed app has no browser reload, so a
+     pull at the top of the page is the gesture people expect. */
+  .ptr {
+    position: fixed; top: 0; left: 50%; z-index: 150;
+    width: 38px; height: 38px; margin-left: -19px; border-radius: 50%;
+    background: var(--card); border: 1px solid var(--border2); box-shadow: var(--shadow);
+    display: flex; align-items: center; justify-content: center; color: var(--accent);
+    transform: translateY(-50px); opacity: 0; pointer-events: none;
+  }
+  .ptr.ready svg { color: var(--green); }
+  .ptr.busy svg  { animation: spin 0.8s linear infinite; }
+  .offline-pill {
+    font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px;
+    color: var(--amber); background: rgba(255,171,0,0.12); border: 1px solid rgba(255,171,0,0.3);
+    display: none; white-space: nowrap;
+  }
+  body.is-offline .offline-pill { display: inline-block; }
+
   /* --- Radar tab (Phase 1, 16 Sep 2026) ------------------------------- */
   .rd-regime { display:flex; flex-wrap:wrap; gap:12px; align-items:center;
     padding:14px 16px; background:var(--card); border:1px solid var(--border);
@@ -1363,7 +1466,10 @@
   </div>
   <div class="header-meta">
     <span class="last-updated" id="lastUpdated">—</span>
+    <span class="offline-pill" title="No connection — showing the last data this device loaded">Offline</span>
     <span class="market-badge" id="marketBadge">—</span>
+    <button class="install-btn" id="installBtn" onclick="installApp()" style="display:none"
+            title="Install as an app">Install</button>
     <button class="refresh-btn" id="refreshBtn" onclick="loadAllData()" title="Refresh data">
       <svg id="refreshIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/>
@@ -1959,11 +2065,13 @@
   <!-- ══ SHADOW BOOK TAB ═══════════════════════════════ -->
   <div class="tab-panel" id="tab-shadow">
     <div class="notice sh-notice">
-      <strong>🧪 Shadow book — paper only.</strong> What the Regime-Gated Swing System would have
-      done: MA21 gate on MC150 with full liquidation, EMA13 Phase 2 exit, ATR(14)×2.0 stop at 1.40%
-      risk, ₹13.5L. No real orders and no real capital — replayed once a day after the close
-      (3:45 PM IST) by the research engine itself.
-      <div class="sh-meta" id="shMeta">Loading…</div>
+      <div class="sh-notice-body"><strong>🧪 Shadow book — paper only.</strong> What the
+      Regime-Gated Swing System would have done: MA21 gate on MC150 with full liquidation, EMA13
+      Phase 2 exit, ATR(14)×2.0 stop at 1.40% risk, ₹13.5L. No real orders and no real capital —
+      replayed once a day after the close (3:45 PM IST) by the research engine itself.
+      <div class="sh-meta" id="shMeta">Loading…</div></div>
+      <button class="sh-more" onclick="this.parentNode.classList.toggle('open');
+        this.textContent = this.parentNode.classList.contains('open') ? 'Less ▴' : 'More ▾'">More ▾</button>
     </div>
     <div class="notice sh-restated" id="shRestated" style="display:none"></div>
 
@@ -2062,7 +2170,8 @@
     <div class="section-header">
       <div class="section-title"><span class="icon">📜</span>Shadow Closed Trades</div>
     </div>
-    <div class="table-wrap">
+    <div class="sh-cards sh-mob" id="shTradeCards"></div>
+    <div class="table-wrap sh-desk">
       <table class="trade-table">
         <thead>
           <tr>
@@ -2097,7 +2206,8 @@
     <div class="section-header">
       <div class="section-title"><span class="icon">🛡️</span>Regime Gate — Last 15 Sessions</div>
     </div>
-    <div class="table-wrap">
+    <div class="sh-gate-list sh-mob" id="shGateCards"></div>
+    <div class="table-wrap sh-desk">
       <table class="trade-table">
         <thead><tr><th>Date</th><th>MC150 vs MA21</th><th>SI Gate</th><th>New Entries</th><th>Book</th></tr></thead>
         <tbody id="shGateBody">
@@ -2260,14 +2370,24 @@ let allIpoData   = [];   // ipo_breakout_signals.json — recent IPO base/breako
 let refreshTimer = null;
 let refreshMins  = 60;
 
+// The whole config lives in sessionStorage, which the browser clears when the
+// tab closes — for an installed app that is every launch, so it opened on the
+// Config tab each time. The repo location (user / repo / branch) is not a
+// secret and is also kept in localStorage; the token never is.
 function loadCfg() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem('mjcfg-repo') || '{}'); } catch {}
   try {
     const s = sessionStorage.getItem('mjcfg');
-    return s ? {...DEFAULTS, ...JSON.parse(s)} : {...DEFAULTS};
-  } catch { return {...DEFAULTS}; }
+    return {...DEFAULTS, ...saved, ...(s ? JSON.parse(s) : {})};
+  } catch { return {...DEFAULTS, ...saved}; }
 }
 function saveCfgStore(c) {
   try { sessionStorage.setItem('mjcfg', JSON.stringify(c)); } catch {}
+  try {
+    localStorage.setItem('mjcfg-repo',
+      JSON.stringify({user: c.user, repo: c.repo, branch: c.branch}));
+  } catch {}
 }
 
 // ─── MARKET STATUS ────────────────────────────────────
@@ -2531,6 +2651,8 @@ async function ghFetch(filename) {
   const headers = cfg.token ? {Authorization: `token ${cfg.token}`} : {};
   const res = await fetch(url, {headers, cache:'no-store'});
   if (!res.ok) throw new Error(`${filename}: HTTP ${res.status}`);
+  // Set by sw.js when the network failed and this is the last saved copy.
+  if (res.headers.get('x-mj-offline')) document.body.classList.add('is-offline');
   return res.text();
 }
 
@@ -2561,6 +2683,7 @@ async function loadAllData() {
   const icon = document.getElementById('refreshIcon');
   btn.classList.add('spinning');
   icon.style.animation = 'spin 0.8s linear infinite';
+  document.body.classList.remove('is-offline');
 
   if (!cfg.user) {
     showConfig();
@@ -2589,7 +2712,11 @@ async function loadAllData() {
   document.getElementById('lastUpdated').textContent = `Updated ${now} IST`;
   btn.classList.remove('spinning');
   icon.style.animation = '';
-  showToast('Data refreshed', 'success');
+  if (document.body.classList.contains('is-offline')) {
+    showToast('Offline — showing last saved data', 'error');
+  } else {
+    showToast('Data refreshed', 'success');
+  }
   scheduleRefresh();
 }
 
@@ -3711,6 +3838,84 @@ function initChartObserver() {
 function initUiEnhancements() {
   initNavScrollHint();
   initChartObserver();
+  initPullToRefresh();
+  initAppInstall();
+}
+
+// ─── INSTALLABLE APP ──────────────────────────────────
+// The service worker makes the site installable and lets it open offline with
+// the last data it loaded (see sw.js). The Install button appears only when
+// Chrome offers installation, and hides itself once the app is installed.
+let _installPrompt = null;
+function initAppInstall() {
+  if ('serviceWorker' in navigator &&
+      (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+  const btn = document.getElementById('installBtn');
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    _installPrompt = e;
+    if (btn) btn.style.display = 'inline-block';
+  });
+  window.addEventListener('appinstalled', () => {
+    _installPrompt = null;
+    if (btn) btn.style.display = 'none';
+    showToast('Installed — open MJ Trading from your home screen', 'success');
+  });
+}
+async function installApp() {
+  if (!_installPrompt) return;
+  _installPrompt.prompt();
+  await _installPrompt.userChoice.catch(() => null);
+  _installPrompt = null;
+  document.getElementById('installBtn').style.display = 'none';
+}
+
+// ─── PULL TO REFRESH ──────────────────────────────────
+// An installed app has no reload button, so pulling down at the very top of
+// the page refreshes the data. Only a vertical pull that starts at scroll 0
+// counts, so it never fights the horizontal nav or chart touch handlers.
+function initPullToRefresh() {
+  const el = document.createElement('div');
+  el.className = 'ptr';
+  el.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    'stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/>' +
+    '<path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>';
+  document.body.appendChild(el);
+  const TRIGGER = 70;
+  let y0 = null, x0 = 0, dy = 0, busy = false;
+  const place = (d, animate) => {
+    el.style.transition = animate ? 'transform .25s ease, opacity .25s ease' : 'none';
+    const t = Math.min(d, 110);
+    el.style.transform = `translateY(${t - 50}px) rotate(${t * 3}deg)`;
+    el.style.opacity = Math.min(1, t / TRIGGER);
+    el.classList.toggle('ready', d >= TRIGGER);
+  };
+  window.addEventListener('touchstart', e => {
+    if (busy || window.scrollY > 0 || e.touches.length !== 1) { y0 = null; return; }
+    y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; dy = 0;
+  }, { passive: true });
+  window.addEventListener('touchmove', e => {
+    if (y0 == null) return;
+    const ddy = e.touches[0].clientY - y0, ddx = Math.abs(e.touches[0].clientX - x0);
+    if (ddy <= 0 || ddx > ddy) { y0 = null; place(0, true); return; }
+    dy = ddy * 0.5;
+    place(dy, false);
+  }, { passive: true });
+  window.addEventListener('touchend', async () => {
+    if (y0 == null) return;
+    y0 = null;
+    if (dy < TRIGGER) { place(0, true); return; }
+    busy = true;
+    el.classList.add('busy');
+    place(TRIGGER, true);
+    try { await loadAllData(); } finally {
+      busy = false;
+      el.classList.remove('busy', 'ready');
+      place(0, true);
+    }
+  });
 }
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initUiEnhancements);
@@ -4663,8 +4868,51 @@ function renderShadowSleeve(sl) {
       '">' + ((sl.equity_deployed_inr || 0) > 0 ? 'see Sizing' : 'gate blocked') +
       '</span></td></tr>';
 
+  // Phone view: a card per holding, with a bar showing how far the close sits
+  // from its trend line — the one thing that decides whether a leg is held.
+  const bar = d => {
+    if (d == null) return '';
+    const w = Math.min(50, Math.abs(d) * 5);       // ±10% fills half the bar
+    const c = d >= 0 ? 'var(--green)' : 'var(--red)';
+    return '<div class="sh-trend"><i></i><span style="background:' + c + ';' +
+      (d >= 0 ? 'left:50%' : 'right:50%') + ';width:' + w + '%"></span></div>';
+  };
+  const cards = (sl.legs || []).map(lg => {
+    if (!lg.priced) {
+      return '<div class="sh-card off"><div class="sh-card-top"><div class="sh-card-sym">' +
+        lg.symbol + '</div><span class="sl-dim">not priced</span></div></div>';
+    }
+    const held = lg.held, on = lg.above_ma, pl = lg.unrealised_inr || 0;
+    const plCol = pl > 0 ? 'var(--green)' : (pl < 0 ? 'var(--red)' : 'var(--muted)');
+    let cls = 'cash', label = 'cash';
+    if (held && on)        { cls = 'hold';    label = 'HOLD'; }
+    else if (held && !on)  { cls = 'pending'; label = 'exiting'; }
+    else if (!held && on)  { cls = 'pending'; label = 'buying'; }
+    const dist = lg.distance_pct;
+    return '<div class="sh-card' + (held ? '' : ' off') + '">' +
+      '<div class="sh-card-top"><div class="sh-card-sym">' + lg.symbol +
+        ' <span class="sl-pill ' + cls + '">' + label + '</span></div>' +
+        (held ? '<div class="sh-card-big">' + money(lg.value_inr) + '</div>'
+              : '<div class="sh-card-big sl-dim" style="font-size:13px">not held</div>') + '</div>' +
+      (held ? '<div class="sh-card-row"><span>P&amp;L <b style="color:' + plCol + '">' +
+          (pl > 0 ? '+' : '') + money(pl) + (lg.unrealised_pct != null ? ' (' +
+          (lg.unrealised_pct > 0 ? '+' : '') + lg.unrealised_pct + '%)' : '') + '</b></span>' +
+          '<span>Units <b>' + (+lg.units).toFixed(2) + '</b></span>' +
+          '<span><b>' + (lg.pct_of_nav != null ? lg.pct_of_nav + '%' : '—') + '</b> of NAV</span></div>'
+        : '') +
+      '<div class="sh-card-row"><span>Close <b>' + (lg.close != null ? lg.close : '—') +
+        '</b> vs ' + (sl.trend_ma || 200) + '-DMA <b>' + (lg.ma_value != null ? lg.ma_value : '—') +
+        '</b></span><span style="color:' + (on ? 'var(--green)' : 'var(--red)') + ';font-weight:700">' +
+        (dist != null ? (dist > 0 ? '+' : '') + dist + '%' : '') + '</span></div>' +
+      bar(dist) + '</div>';
+  }).join('') +
+    '<div class="sh-card"><div class="sh-card-top"><div class="sh-card-sym">CASH ' +
+      '<span class="sl-pill cash">idle</span></div><div class="sh-card-big">' + money(sl.cash_inr) +
+      '<small>' + share(sl.cash_inr).toFixed(1) + '%</small></div></div></div>';
+
   legs.innerHTML = alloc +
-    '<div class="table-wrap"><table class="trade-table"><thead><tr>' +
+    '<div class="sh-cards sh-mob">' + cards + '</div>' +
+    '<div class="table-wrap sh-desk"><table class="trade-table"><thead><tr>' +
     '<th>Holding</th><th>Units</th><th>Value</th><th>P&amp;L</th><th>% NAV</th>' +
     '<th>Close vs its trend line</th><th>State</th>' +
     '</tr></thead><tbody>' + (rows ||
@@ -4689,6 +4937,10 @@ function renderShadowEmpty() {
     '<div class="empty-state" style="width:100%">No shadow trades yet</div>';
   document.getElementById('shTradeLog').innerHTML =
     '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">No shadow trades yet</td></tr>';
+  const _tc = document.getElementById('shTradeCards');
+  if (_tc) _tc.innerHTML = '<div class="empty-state">No shadow trades yet</div>';
+  const _gc = document.getElementById('shGateCards');
+  if (_gc) _gc.innerHTML = '<div class="empty-state">No gate history yet</div>';
   document.getElementById('shSizingList').innerHTML =
     '<div class="empty-state">The shadow book is empty until the first run.</div>';
   const _ss = document.getElementById('shSleeveStrip');
@@ -4808,6 +5060,33 @@ function renderShadowPerf(trades) {
       <td>${rs}</td>
     </tr>`;
   }).join('') : '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">No shadow trades closed yet</td></tr>';
+
+  // Phone view: one card per exit, P&L on top where the eye lands first.
+  const cards = document.getElementById('shTradeCards');
+  if (cards) cards.innerHTML = T.length ? T.map(t => {
+    const pos = (t.pnl_inr || 0) >= 0, col = pos ? 'var(--green)' : 'var(--red)';
+    const pct = t.pnl_pct != null ? `${t.pnl_pct >= 0 ? '+' : ''}${(+t.pnl_pct).toFixed(2)}%` : '';
+    const qty = t.shares != null ? (Number.isInteger(t.shares) ? t.shares : (+t.shares).toFixed(2)) : '—';
+    const tag = t.book === 'sleeve'
+      ? '<span class="sl-pill hold">sleeve</span>'
+      : t.rs_tier ? `<span class="tag tag-rs-${String(t.rs_tier).toLowerCase()}" style="font-size:8px">${shEsc(t.rs_tier)}</span>` : '';
+    const r = t.r_multiple == null ? '' : ` · <b style="color:${col}">${t.r_multiple >= 0 ? '+' : ''}${t.r_multiple.toFixed(2)}R</b>`;
+    return `<div class="sh-card">
+      <div class="sh-card-top">
+        <div class="sh-card-sym">${shEsc(t.symbol)} ${tag}</div>
+        <div class="sh-card-big" style="color:${col}">${shInr(t.pnl_inr, true)}<small>${pct}</small></div>
+      </div>
+      <div class="sh-card-row">
+        <span>₹<b>${t.entry_price}</b> → ₹<b>${t.exit_price}</b></span>
+        <span>Qty <b>${qty}</b></span>
+        <span><b>${t.hold_days != null ? t.hold_days : '—'}</b>d held</span>
+      </div>
+      <div class="sh-card-foot">
+        <span>${fmtPerfDate(t.entry_date)} → ${fmtPerfDate(t.exit_date)}</span>
+        <span>${shEsc(t.exit_reason)}${r}</span>
+      </div>
+    </div>`;
+  }).join('') : '<div class="empty-state">No shadow trades closed yet</div>';
 }
 
 function renderShadowEquity() {
@@ -4852,6 +5131,14 @@ function shXLabels(elId, rows) {
     `<span>${new Date(rows[i].timestamp).toLocaleDateString('en-IN', {day: 'numeric', month: 'short'})}</span>`).join('');
 }
 
+// Axis label with as many decimals as the visible range needs. A fixed 1dp in
+// lakhs printed "₹13.5L" on every gridline of a ₹6k-wide curve.
+function shAxisInr(v, range) {
+  const step = range / 4 / 1e5;                   // gridline spacing, in lakhs
+  const dp = Math.min(3, Math.max(1, Math.ceil(-Math.log10(step || 1))));
+  return '₹' + (v / 1e5).toFixed(dp) + 'L';
+}
+
 function drawShEquityChart(period) {
   const canvas = document.getElementById('shEquityCanvas');
   if (!canvas || !_shSnapshots.length) return;
@@ -4872,7 +5159,7 @@ function drawShEquityChart(period) {
     ctx.strokeStyle = '#22262e'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(W - PAD.right, y); ctx.stroke();
     ctx.fillStyle = '#6b7280'; ctx.font = '9px monospace'; ctx.textAlign = 'right';
-    ctx.fillText('₹' + (val / 100000).toFixed(1) + 'L', PAD.left - 6, y + 3);
+    ctx.fillText(shAxisInr(val, hi - lo), PAD.left - 6, y + 3);
   }
   // Starting capital reference.
   ctx.setLineDash([2, 4]); ctx.strokeStyle = 'rgba(179,136,255,0.5)'; ctx.lineWidth = 1;
@@ -5065,6 +5352,18 @@ function renderShadowGates(days) {
       <td class="td-muted" style="font-size:10px">${d.liquidates ? 'Liquidate / stay flat' : 'Hold'}</td>
     </tr>`).join('')
     : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No gate history yet</td></tr>';
+
+  const pill = (ok, text) => `<span class="sh-pill ${ok ? 'ok' : 'bad'}">${shEsc(text)}</span>`;
+  const list = document.getElementById('shGateCards');
+  if (list) list.innerHTML = rows.length ? rows.map(d => `<div class="sh-gate-row">
+      <div class="sh-gate-date">${new Date(d.date).toLocaleDateString('en-IN', {day: 'numeric', month: 'short'})}</div>
+      <div class="sh-gate-pills">
+        ${pill(d.ma_allowed, String(d.ma_status).replace('MA', 'MA '))}
+        ${pill(d.si_allowed, String(d.si_status).split(' —')[0])}
+        ${d.entries_allowed ? '<span class="sh-pill ok">Entries open</span>' : '<span class="sh-pill mid">Entries blocked</span>'}
+      </div>
+    </div>`).join('')
+    : '<div class="empty-state">No gate history yet</div>';
 }
 
 // ─── INVESTMENT EQUITY CURVE (backend-driven, investment_equity_history.json) ──

@@ -4747,7 +4747,10 @@ function renderShadowPerf(trades) {
   const T = trades.slice().sort((a, b) => (b.exit_date || '').localeCompare(a.exit_date || ''));
   const wins = T.filter(t => (t.pnl_inr || 0) >= 0);
   const total = T.reduce((s, t) => s + (t.pnl_inr || 0), 0);
-  const avgR = T.length ? T.reduce((s, t) => s + (t.r_multiple || 0), 0) / T.length : null;
+  // Sleeve sells (book "sleeve") have no stop, so no R: average R over the
+  // trades that carry one, while P&L, win rate and count cover every exit.
+  const TR = T.filter(t => t.r_multiple != null);
+  const avgR = TR.length ? TR.reduce((s, t) => s + t.r_multiple, 0) / TR.length : null;
   const avgHold = T.length ? Math.round(T.reduce((s, t) => s + (t.hold_days || 0), 0) / T.length) : null;
   const dates = T.map(t => t.exit_date).filter(Boolean).sort();
   const capL = (_shCapital / 1e5).toFixed(1).replace(/\.0$/, '');
@@ -4785,7 +4788,9 @@ function renderShadowPerf(trades) {
 
   document.getElementById('shTradeLog').innerHTML = T.length ? T.map(t => {
     const cls = (t.pnl_inr || 0) >= 0 ? 'td-pos' : 'td-neg';
-    const rs = t.rs_tier
+    const rs = t.book === 'sleeve'
+      ? '<span class="sl-pill hold" title="Defensive sleeve ETF">sleeve</span>'
+      : t.rs_tier
       ? `<span class="tag tag-rs-${String(t.rs_tier).toLowerCase()}" style="font-size:8px">${shEsc(t.rs_tier)}</span>` : '—';
     return `<tr>
       <td class="td-symbol">${shEsc(t.symbol)}</td>
@@ -4794,10 +4799,11 @@ function renderShadowPerf(trades) {
       <td>₹${t.exit_price}</td>
       <td class="td-muted" style="font-size:10px">${fmtPerfDate(t.exit_date)}</td>
       <td class="td-muted">${t.hold_days != null ? t.hold_days : '—'}d</td>
-      <td class="td-muted">${t.shares != null ? t.shares : '—'}</td>
+      <td class="td-muted">${t.shares != null ? (Number.isInteger(t.shares) ? t.shares : (+t.shares).toFixed(2)) : '—'}</td>
       <td class="${cls}">${(t.pnl_pct || 0) >= 0 ? '+' : ''}${(t.pnl_pct || 0).toFixed(2)}%</td>
       <td class="${cls}">${shInr(t.pnl_inr, true)}</td>
-      <td class="${cls}">${(t.r_multiple || 0) >= 0 ? '+' : ''}${(t.r_multiple || 0).toFixed(2)}R</td>
+      <td class="${t.r_multiple == null ? 'td-muted' : cls}">${t.r_multiple == null ? '—'
+        : `${t.r_multiple >= 0 ? '+' : ''}${t.r_multiple.toFixed(2)}R`}</td>
       <td class="td-muted" style="font-size:10px">${shEsc(t.exit_reason)}</td>
       <td>${rs}</td>
     </tr>`;
@@ -4973,9 +4979,15 @@ function renderShadowSizing(siz, snap) {
   document.getElementById('shRiskStrip').innerHTML =
     item('NAV (Capital Base)', fmt(siz.capital_base)) +
     item('20d Equity MA', `${s.equity_curve_ma20 != null ? fmt(s.equity_curve_ma20) : '—'} ${badge(ec)}`) +
-    item('High-Water Mark', `${s.high_water_mark != null ? fmt(s.high_water_mark) : '—'} ${badge(ddm)}`) +
-    item('Drawdown from Peak', s.drawdown_pct_from_peak != null ? s.drawdown_pct_from_peak.toFixed(1) + '%' : '—',
+    // Two drawdowns. The risk layer's grades the stock book alone (scope
+    // "book"), so it sits at 0% while the book is flat and a sleeve leg is
+    // losing; the account's is the whole NAV, sleeve and cash included.
+    item('Stock-Book HWM', `${s.high_water_mark != null ? fmt(s.high_water_mark) : '—'} ${badge(ddm)}`) +
+    item('Stock-Book DD', s.drawdown_pct_from_peak != null ? s.drawdown_pct_from_peak.toFixed(2) + '%' : '—',
          ddm < 1 ? 'color:var(--amber)' : '') +
+    item('Account DD', s.account_drawdown_pct != null
+         ? `${s.account_drawdown_pct.toFixed(2)}% <span style="font-size:10px;color:var(--muted)">of ${fmt(s.account_high_water_mark)}</span>`
+         : '—', (s.account_drawdown_pct || 0) > 0 ? 'color:var(--red)' : '') +
     item('5-Day Circuit Breaker', siz.fast_trigger_breached ? 'ON ⚡' : 'off',
          siz.fast_trigger_breached ? 'color:var(--amber)' : '') +
     item('Effective Risk / Trade', `${(siz.effective_risk_pct || 0).toFixed(2)}% <span style="font-size:10px;color:var(--muted)">of ${siz.base_risk_pct}%</span>`) +

@@ -1956,7 +1956,7 @@
       <div class="stat-card red">
         <div class="stat-label">Current Drawdown %</div>
         <div class="stat-value" id="ddCurrentPctBig">—</div>
-        <div class="stat-sub">from most recent peak</div>
+        <div class="stat-sub">incl. open P&amp;L, from peak</div>
       </div>
       <div class="stat-card amber">
         <div class="stat-label">Max Drawdown ₹</div>
@@ -1969,6 +1969,7 @@
         <div class="stat-sub">all-time, since inception</div>
       </div>
     </div>
+    <div class="sizing-legend" id="ddScopeNote" style="display:none"></div>
 
     <!-- Portfolio Heat Trend -->
     <div class="equity-card">
@@ -4331,6 +4332,18 @@ function computeDrawdownStats(snapshots) {
 
 function renderDrawdownKpis(snapshots) {
   const s = computeDrawdownStats(snapshots);
+  // Say which drawdown this is, and give the other one, so the Sizing tab's
+  // smaller number does not read as a contradiction.
+  const lastSnap = snapshots[snapshots.length - 1] || {};
+  const note = document.getElementById('ddScopeNote');
+  if (note && lastSnap.drawdown_pct_from_peak != null && lastSnap.high_water_mark != null) {
+    note.style.display = 'block';
+    note.innerHTML = `These drawdowns are <b>mark-to-market</b>: open positions' unrealised P&amp;L ` +
+      `included, peak ₹${Math.round(Math.max(...snapshots.map(x => x.total_equity))).toLocaleString('en-IN')}. ` +
+      `The <b>Sizing</b> tab's <b>${lastSnap.drawdown_pct_from_peak.toFixed(1)}%</b> counts <b>closed trades only</b> ` +
+      `(peak ₹${Math.round(lastSnap.high_water_mark).toLocaleString('en-IN')}) — that is the one the ` +
+      `position-size brake uses, because open gains can still reverse. The gap is open profit that was given back.`;
+  }
   document.getElementById('ddCurrentInr').textContent   = '₹' + Math.round(s.curDD_inr).toLocaleString('en-IN');
   document.getElementById('ddCurrentPct').textContent   = s.curDD_pct.toFixed(2) + '% from peak';
   document.getElementById('ddCurrentPctBig').textContent = s.curDD_pct.toFixed(2) + '%';
@@ -4588,15 +4601,18 @@ async function loadSizing() {
 
     // Risk-state strip needs equity_curve.json's latest snapshot for HWM/drawdown%/20d-MA —
     // position_sizing.json only carries capital_base/effective_risk_pct/multipliers.
-    let latestSnap = null;
+    let latestSnap = null, mtmDD = null;
     try {
       const eqText = await ghFetch('equity_curve.json');
       const eqData = JSON.parse(eqText);
-      const snaps = eqData.snapshots || [];
+      const snaps = (eqData.snapshots || []).slice()
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
       latestSnap = snaps.length ? snaps[snaps.length - 1] : null;
+      // The Performance tab's figure, so the two can sit side by side here.
+      if (snaps.length) mtmDD = computeDrawdownStats(snaps);
     } catch (e) { /* non-fatal — strip just omits HWM/drawdown if unavailable */ }
 
-    renderRiskStateStrip(data, latestSnap);
+    renderRiskStateStrip(data, latestSnap, mtmDD);
 
     if (!positions.length) {
       listEl.innerHTML = '<div class="empty-state">No open positions right now — sizing recommendations will appear here once the tracker opens a new trade.</div>';
@@ -4629,7 +4645,15 @@ async function loadSizing() {
   }
 }
 
-function renderRiskStateStrip(data, snap) {
+// Two drawdowns exist and both are right; they measure different curves.
+//   closed trades   capital_base = start + realised P&L. The sizing rules'
+//                   drawdown brake reads this one (unrealised gains can still
+//                   reverse, so they never size a trade). From the backend.
+//   mark-to-market  total_equity, open P&L included. What the Performance
+//                   tab charts. Peaks higher when open trades run up, so after
+//                   open profit is given back it reads deeper.
+// Unlabelled, the same account showed 1.5% here and 4.8% on Performance.
+function renderRiskStateStrip(data, snap, mtmDD) {
   const stripEl = document.getElementById('riskStateStrip');
   if (!stripEl) return;
   const capitalBase = data.capital_base || 0;
@@ -4655,12 +4679,18 @@ function renderRiskStateStrip(data, snap) {
       <div class="sizing-summary-val" style="font-size:15px">${ma20} ${ecBadge}</div>
     </div>
     <div class="sizing-summary-item">
-      <div class="sizing-summary-label">High-Water Mark</div>
+      <div class="sizing-summary-label">High-Water Mark — closed trades</div>
       <div class="sizing-summary-val" style="font-size:15px">${hwm} ${ddBadge}</div>
     </div>
     <div class="sizing-summary-item">
-      <div class="sizing-summary-label">Drawdown from Peak</div>
-      <div class="sizing-summary-val" style="font-size:15px;color:${ddMult<1?'var(--amber)':'#fff'}">${ddPct}</div>
+      <div class="sizing-summary-label">Drawdown — closed trades</div>
+      <div class="sizing-summary-val" style="font-size:15px;color:${ddMult<1?'var(--amber)':'#fff'}">${ddPct}
+        <span style="font-size:10px;font-weight:600;color:var(--muted)">sets sizing</span></div>
+    </div>
+    <div class="sizing-summary-item">
+      <div class="sizing-summary-label">Drawdown — incl. open P&amp;L</div>
+      <div class="sizing-summary-val" style="font-size:15px;color:var(--muted)">${mtmDD ? mtmDD.curDD_pct.toFixed(1) + '%' : '—'}
+        <span style="font-size:10px;font-weight:600">as on Performance</span></div>
     </div>
     <div class="sizing-summary-item">
       <div class="sizing-summary-label">Effective Risk / Trade</div>

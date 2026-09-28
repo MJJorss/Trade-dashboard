@@ -1301,7 +1301,11 @@
      under 600px each row becomes a card with the number that matters on top.
      Both views are rendered; CSS picks one, so nothing depends on the width
      at render time and rotating the phone just works. */
-  .sh-mob { display: none; }
+  /* !important because .sh-cards sets display:flex on the same elements and
+     comes later — without it the phone cards showed under the desktop table. */
+  .sh-mob { display: none !important; }
+  .perf-topbot { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px; margin-bottom: 16px; }
   .sh-more { display: none; }
   .sh-cards { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
   .sh-card {
@@ -1339,9 +1343,11 @@
   .sh-pill.mid { color: var(--amber); background: rgba(255,171,0,0.13); }
 
   @media (max-width: 600px) {
-    #tab-shadow .sh-desk { display: none; }
-    #tab-shadow .sh-mob  { display: block; }
-    #tab-shadow .sh-cards.sh-mob { display: flex; }
+    /* Site-wide: any tab can render a table (.sh-desk) and a card list
+       (.sh-mob) side by side and let the width choose. */
+    .sh-desk { display: none !important; }
+    .sh-mob  { display: block !important; }
+    .sh-cards.sh-mob { display: flex !important; }
     /* The intro is a paragraph of rules; on a phone it pushed every number
        below the fold. Two lines, then a tap to read the rest. */
     .sh-notice .sh-notice-body {
@@ -1359,6 +1365,16 @@
     .sh-gate-strip::-webkit-scrollbar { display: none; }
     .sh-gate-strip .stat-card { flex: 0 0 64%; scroll-snap-align: start; padding: 12px 14px; }
     .sh-gate-strip .stat-card .stat-sub { font-size: 10px; }
+    /* Two tables side by side cannot fit a phone: their minimum width pushed
+       the whole page to ~520px, so the tab slid sideways and clipped. */
+    .perf-topbot { grid-template-columns: minmax(0, 1fr); }
+    /* Monthly summary: 8 columns clipped Best/Worst off the right edge. Wins
+       is implied by Win% and P&L % by P&L ₹, so those two go and the rest fit. */
+    #perfMonthTable th:nth-child(3), #perfMonthTable td:nth-child(3),
+    #perfMonthTable th:nth-child(6), #perfMonthTable td:nth-child(6) { display: none; }
+    #perfMonthTable th, #perfMonthTable td { padding-left: 6px; padding-right: 6px; }
+    #perfMonthTable td { white-space: nowrap; }
+    #perfMonthTable .pm-sub { display: block; }
     #tab-shadow .perf-kpi-strip .stat-value,
     #tab-shadow .dd-kpi-strip .stat-value { font-size: 22px; }
     #tab-shadow .sizing-summary-bar { gap: 10px 14px; }
@@ -1972,7 +1988,7 @@
     </div>
 
     <!-- Top & Bottom performers -->
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;" id="perfTopBot">
+    <div class="perf-topbot" id="perfTopBot">
       <div>
         <div class="section-header" style="margin-top:0; margin-bottom:10px">
           <div class="section-title"><span class="icon">🏆</span>Top 5</div>
@@ -2017,7 +2033,8 @@
         <button class="filter-btn" onclick="filterPerfTrades('Jadhav',this)">Jadhav</button>
       </div>
     </div>
-    <div class="table-wrap">
+    <div class="sh-cards sh-mob" id="perfTradeCards"></div>
+    <div class="table-wrap sh-desk">
       <table class="trade-table">
         <thead>
           <tr>
@@ -3992,6 +4009,8 @@ async function loadPerf() {
       '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">No data yet</td></tr>';
     document.getElementById('perfTradeLog').innerHTML =
       '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:20px">No closed trades</td></tr>';
+    if (document.getElementById('perfTradeCards'))
+      document.getElementById('perfTradeCards').innerHTML = '<div class="empty-state">No closed trades</div>';
     ['perfTotalInr','perfTotalPct','perfWinRate','perfWinLoss',
      'perfAvgHold','perfTradeCount','perfDateRange'].forEach(id => {
       const el = document.getElementById(id);
@@ -4133,10 +4152,10 @@ function renderPerf(trades) {
         <td>${d.count}</td>
         <td>${d.wins}</td>
         <td class="${cls}">${wr}%</td>
-        <td class="${cls}">${d.inr >= 0 ? '+' : ''}₹${Math.abs(d.inr).toLocaleString('en-IN')}</td>
+        <td class="${cls}">${d.inr >= 0 ? '+' : '-'}₹${Math.abs(d.inr).toLocaleString('en-IN')}</td>
         <td class="${cls}">${pct >= 0 ? '+' : ''}${pct}%</td>
-        <td class="td-pos" style="font-size:10px">${(best && best.symbol) ? best.symbol : '—'} <span style="opacity:0.6">${best ? '+'+best.pnl_pct.toFixed(1)+'%' : ''}</span></td>
-        <td class="td-neg" style="font-size:10px">${(worst && worst.symbol) ? worst.symbol : '—'} <span style="opacity:0.6">${worst && worst.pnl_pct < 0 ? worst.pnl_pct.toFixed(1)+'%' : ''}</span></td>
+        <td class="td-pos" style="font-size:10px">${(best && best.symbol) ? best.symbol : '—'} <span class="pm-sub" style="opacity:0.6">${best ? '+'+best.pnl_pct.toFixed(1)+'%' : ''}</span></td>
+        <td class="td-neg" style="font-size:10px">${(worst && worst.symbol) ? worst.symbol : '—'} <span class="pm-sub" style="opacity:0.6">${worst && worst.pnl_pct < 0 ? worst.pnl_pct.toFixed(1)+'%' : ''}</span></td>
       </tr>`;
     }).join('');
   }
@@ -4155,10 +4174,36 @@ function fmtPerfDate(raw) {
 function renderPerfTradeLog(trades) {
   const SLOT_CAPITAL = 1_000_000 / 7;
   const tbody = document.getElementById('perfTradeLog');
+  const cards = document.getElementById('perfTradeCards');
   if (!trades.length) {
     tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:20px">No trades match filter</td></tr>';
+    if (cards) cards.innerHTML = '<div class="empty-state">No trades match filter</div>';
     return;
   }
+  // Phone view: 11 columns do not fit 390px — everything after Exit was cut
+  // off. One card per trade, with the P&L where the eye lands first.
+  if (cards) cards.innerHTML = trades.map(t => {
+    const inr  = t.pnl_inr != null ? t.pnl_inr : Math.round((t.pnl_pct || 0) / 100 * (t.capital_per_slot || SLOT_CAPITAL));
+    const pct  = t.pnl_pct || 0;
+    const col  = pct >= 0 ? 'var(--green)' : 'var(--red)';
+    const sc   = (t.scanner && t.scanner.includes('VCP')) ? 'VCP' : (t.scanner && t.scanner.includes('Mark')) ? 'Mark' : (t.scanner && t.scanner.includes('Jadhav')) ? 'Jadhav' : (t.scanner || '—');
+    const rsTag = t.rs_tier ? `<span class="tag tag-rs-${t.rs_tier.toLowerCase()}" style="font-size:8px">${t.rs_tier}</span>` : '';
+    const reason = (t.exit_reason || '').replace(' 🔴','').replace(' 🔵','').trim();
+    return `<div class="sh-card">
+      <div class="sh-card-top">
+        <div class="sh-card-sym">${t.symbol} <span class="sh-pill mid" style="color:var(--muted);background:rgba(107,114,128,0.14)">${sc}</span> ${rsTag}</div>
+        <div class="sh-card-big" style="color:${col}">${inr >= 0 ? '+' : '-'}₹${Math.abs(inr).toLocaleString('en-IN')}<small>${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</small></div>
+      </div>
+      <div class="sh-card-row">
+        <span>₹<b>${t.entry_price}</b> → ₹<b>${t.exit_price}</b></span>
+        <span><b>${t.hold_days != null ? t.hold_days : '—'}</b>d held</span>
+      </div>
+      <div class="sh-card-foot">
+        <span>${fmtPerfDate(t.entry_date || t.date)} → ${fmtPerfDate(t.exit_date)}</span>
+        <span>${reason || '—'}</span>
+      </div>
+    </div>`;
+  }).join('');
   tbody.innerHTML = trades.map(t => {
     const inr  = t.pnl_inr != null ? t.pnl_inr : Math.round((t.pnl_pct || 0) / 100 * (t.capital_per_slot || SLOT_CAPITAL));
     const cls  = (t.pnl_pct || 0) >= 0 ? 'td-pos' : 'td-neg';
@@ -5983,6 +6028,8 @@ if (cfg.user && cfg.repo) {
     '<div class="empty-state" style="grid-column:1/-1">Configure GitHub repo in ⚙️ Config tab to load data</div>';
   document.getElementById('perfTradeLog').innerHTML =
     '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:20px">Configure GitHub repo in ⚙️ Config tab to load data</td></tr>';
+  if (document.getElementById('perfTradeCards'))
+    document.getElementById('perfTradeCards').innerHTML = '<div class="empty-state">Configure GitHub repo in ⚙️ Config tab to load data</div>';
   document.getElementById('perfMonthBody').innerHTML =
     '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Configure GitHub repo in ⚙️ Config tab</td></tr>';
   ['countAction','countWatchlist','countRadar','countTotal',

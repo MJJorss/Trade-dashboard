@@ -340,7 +340,17 @@
       align-items: stretch;
       gap: 9px;
     }
-    .section-title { white-space: nowrap; }
+    /* Titles now have their own full-width line (above), so a long one may
+       wrap. Kept on one line, "Open Positions — Recommended vs Actual" pushed
+       the Sizing page to 436px and the RS subtitle ran off the edge. */
+    .section-title { white-space: normal; line-height: 1.35; }
+    /* A title with a subtitle: the subtitle takes its own line underneath
+       rather than squeezing the title into a narrow column beside it. */
+    .section-title:has(.section-sub) { flex-wrap: wrap; row-gap: 3px; }
+    .section-title .section-sub { flex-basis: 100%; text-transform: none; letter-spacing: 0; }
+    /* RS cards are two to a row on a phone; the change % and RS rank no
+       longer fit beside the price, so let them drop to a second line. */
+    .rs-card-price-row { flex-wrap: wrap; row-gap: 3px; }
     .filter-group {
       overflow-x: auto;
       flex-wrap: nowrap;
@@ -1368,6 +1378,19 @@
     /* Two tables side by side cannot fit a phone: their minimum width pushed
        the whole page to ~520px, so the tab slid sideways and clipped. */
     .perf-topbot { grid-template-columns: minmax(0, 1fr); }
+    /* Sizing position cards: the P&L column kept its own strip down the right
+       and squeezed everything else into a narrow column, so labels wrapped to
+       three lines. On a phone the symbol and P&L share the top line and the
+       details get the full width underneath. */
+    .sizing-card > div:first-child { display: contents; }
+    .sizing-card { row-gap: 0; }
+    .sizing-card .sizing-sym   { grid-column: 1; grid-row: 1; align-self: center; }
+    .sizing-card .sizing-right { grid-column: 2; grid-row: 1; }
+    .sizing-card .sizing-meta, .sizing-card .sizing-compare,
+    .sizing-card .sizing-risk-row { grid-column: 1 / -1; }
+    .sizing-card .sizing-cap-strip { width: 90px; }
+    .sizing-compare, .sizing-risk-row { gap: 12px; }
+    .sizing-compare-block, .sizing-risk-block { flex: 1 1 0; min-width: 0; }
     /* Monthly summary: 8 columns clipped Best/Worst off the right edge. Wins
        is implied by Win% and P&L % by P&L ₹, so those two go and the rest fit. */
     #perfMonthTable th:nth-child(3), #perfMonthTable td:nth-child(3),
@@ -1760,7 +1783,7 @@
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
       <!-- Row 1: RS Tier + Title -->
       <div class="section-header" style="margin-bottom:0">
-        <div class="section-title"><span class="icon">📈</span>RS Universe <span style="font-size:10px;color:var(--muted);font-family:var(--font-mono);font-weight:400">— sorted by RS × 20d accumulation</span></div>
+        <div class="section-title"><span class="icon">📈</span>RS Universe <span class="section-sub" style="font-size:10px;color:var(--muted);font-family:var(--font-mono);font-weight:400">— sorted by RS × 20d accumulation</span></div>
         <div class="filter-group" id="rsTierFilter">
           <button class="filter-btn active" onclick="setRsTier('HIGH',this)">🟢 HIGH</button>
           <button class="filter-btn" onclick="setRsTier('MID',this)">🟡 MID</button>
@@ -4033,7 +4056,7 @@ function renderPerf(trades) {
   const avgHold   = trades.length ? Math.round(trades.reduce((s,t) => s + (t.hold_days||0), 0) / trades.length) : 0;
   const dates     = trades.map(t => t.exit_date).filter(Boolean).sort();
 
-  document.getElementById('perfTotalInr').textContent  = (totalInr >= 0 ? '+' : '') + '₹' + Math.abs(totalInr).toLocaleString('en-IN');
+  document.getElementById('perfTotalInr').textContent  = (totalInr >= 0 ? '+' : '-') + '₹' + Math.abs(totalInr).toLocaleString('en-IN');
   document.getElementById('perfTotalInr').style.color  = totalInr >= 0 ? 'var(--green)' : 'var(--red)';
   document.getElementById('perfTotalPct').textContent  = (totalPct >= 0 ? '+' : '') + totalPct + '% on ₹10L';
   document.getElementById('perfWinRate').textContent   = winRate + '%';
@@ -4110,7 +4133,7 @@ function renderPerf(trades) {
         <div class="scanner-stat">Trades: <span>${d.count}</span></div>
         <div class="scanner-stat">Win Rate: <span class="${cls}">${wr}%</span></div>
         <div class="scanner-stat">Avg Return: <span class="${cls}">${avg >= 0 ? '+' : ''}${avg}%</span></div>
-        <div class="scanner-stat">Total P&amp;L: <span class="${cls}">${d.inr >= 0 ? '+' : ''}₹${Math.abs(d.inr).toLocaleString('en-IN')}</span></div>
+        <div class="scanner-stat">Total P&amp;L: <span class="${cls}">${d.inr >= 0 ? '+' : '-'}₹${Math.abs(d.inr).toLocaleString('en-IN')}</span></div>
       </div>`;
     }).join('');
   }
@@ -4126,7 +4149,7 @@ function renderPerf(trades) {
       <td class="td-symbol">${t.symbol}</td>
       <td class="td-muted">${(t.scanner ? t.scanner.split(' ')[0] : '') || '—'}</td>
       <td class="${cls}">${t.pnl_pct >= 0 ? '+' : ''}${t.pnl_pct != null ? t.pnl_pct.toFixed(1) : '—'}%</td>
-      <td class="${cls}">${inr >= 0 ? '+' : ''}₹${Math.abs(inr).toLocaleString('en-IN')}</td>
+      <td class="${cls}">${inr >= 0 ? '+' : '-'}₹${Math.abs(inr).toLocaleString('en-IN')}</td>
     </tr>`;
   };
   const miniHead = '<thead><tr><th>Symbol</th><th>Scanner</th><th>P&L%</th><th>P&L ₹</th></tr></thead>';
@@ -4324,7 +4347,7 @@ function renderDrawdownKpis(snapshots) {
   const chgPct = first.total_equity ? (chg / first.total_equity * 100) : 0;
   const chgEl = document.getElementById('eqCurrentChange');
   chgEl.style.color = chg >= 0 ? 'var(--green)' : 'var(--red)';
-  chgEl.textContent = (chg >= 0 ? '+' : '') + '₹' + Math.round(Math.abs(chg)).toLocaleString('en-IN') +
+  chgEl.textContent = (chg >= 0 ? '+' : '-') + '₹' + Math.round(Math.abs(chg)).toLocaleString('en-IN') +
                        ' (' + (chgPct >= 0 ? '+' : '') + chgPct.toFixed(2) + '%)';
 }
 
@@ -4706,7 +4729,7 @@ function renderSizing(data, sectorMap) {
     <div class="sizing-summary-item">
       <div class="sizing-summary-label">Open Unrealized P&amp;L</div>
       <div class="sizing-summary-val" style="color:${totalUnrealized>=0?'var(--green)':'var(--red)'}">
-        ${totalUnrealized>=0?'+':''}${fmt(Math.abs(totalUnrealized))}
+        ${totalUnrealized>=0?'+':'-'}${fmt(Math.abs(totalUnrealized))}
       </div>
     </div>`;
 
@@ -4754,7 +4777,7 @@ function renderSizing(data, sectorMap) {
         </div>
       </div>
       <div class="sizing-right">
-        <div class="sizing-pnl ${pnlCls}">${p.unrealized_pnl>=0?'+':''}₹${Math.round(Math.abs(p.unrealized_pnl)).toLocaleString('en-IN')}</div>
+        <div class="sizing-pnl ${pnlCls}">${p.unrealized_pnl>=0?'+':'-'}₹${Math.round(Math.abs(p.unrealized_pnl)).toLocaleString('en-IN')}</div>
         <div class="sizing-pnl-pct">${p.unrealized_pnl_pct>=0?'+':''}${p.unrealized_pnl_pct}%</div>
         <div class="sizing-cap-strip"><div class="sizing-cap-fill" style="width:${fillPct}%"></div></div>
       </div>
@@ -5598,9 +5621,15 @@ function drawInvEquityChart(snapshots, period) {
   const idxs = [];
   for (let i=0; i<filtered.length; i+=step) idxs.push(i);
   if (idxs[idxs.length-1] !== filtered.length-1) idxs.push(filtered.length-1);
+  // The history can hold two snapshots on one date, which printed every date
+  // twice ("4 Sept 4 Sept 11 Sept…"). A repeat keeps its slot, so the spacing
+  // still lines up with the chart, but is left blank.
+  let prevLbl = null;
   labelDiv.innerHTML = idxs.map(i => {
-    const d = new Date(filtered[i].date);
-    return `<span>${d.toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</span>`;
+    const lbl = new Date(filtered[i].date).toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+    const out = `<span>${lbl === prevLbl ? '' : lbl}</span>`;
+    prevLbl = lbl;
+    return out;
   }).join('');
 
   // Headline period-change (distinct from the "since inception" line above)
@@ -5609,7 +5638,7 @@ function drawInvEquityChart(snapshots, period) {
   const chgPct = first.total_equity ? (chg / first.total_equity * 100) : 0;
   const chgEl = document.getElementById('invEqCurrentChange');
   chgEl.style.color = chg >= 0 ? 'var(--green)' : 'var(--red)';
-  chgEl.textContent = (chg >= 0 ? '+' : '') + '₹' + Math.round(Math.abs(chg)).toLocaleString('en-IN') +
+  chgEl.textContent = (chg >= 0 ? '+' : '-') + '₹' + Math.round(Math.abs(chg)).toLocaleString('en-IN') +
                        ' (' + (chgPct >= 0 ? '+' : '') + chgPct.toFixed(2) + '%) · ' + period;
 
   // Interactive tooltip (mouse + touch)

@@ -2154,10 +2154,6 @@
 
   <!-- ══ CONFIG TAB ══════════════════════════════════ -->
   <div class="tab-panel" id="tab-config">
-    <div class="notice">
-      <strong>Setup Required:</strong> Enter your GitHub details below so the dashboard can fetch your trading data. Your data is read directly from GitHub — no server required for monitoring mode.
-    </div>
-
     <div class="section-header" style="margin-top:0">
       <div class="section-title"><span class="icon">🎨</span>Appearance</div>
     </div>
@@ -2167,35 +2163,20 @@
     <div class="divider"></div>
 
     <div class="section-header">
-      <div class="section-title"><span class="icon">⚙️</span>Data Source Configuration</div>
+      <div class="section-title"><span class="icon">🔒</span>Data &amp; Access</div>
+    </div>
+    <div class="config-bar" style="flex-direction:column; align-items:flex-start; gap:10px;">
+      <div style="font-size:11.5px; color:var(--text); line-height:1.7;">
+        Data is read from the <b>trade-dashboard-data</b> repository by this site's server, so the
+        repository can stay private and no GitHub token is ever kept in the browser.
+        The site is protected by the password set in Cloudflare (<code>DASHBOARD_PASSWORD</code>);
+        each device stays signed in for 30 days.
+      </div>
+      <button class="config-save" onclick="signOut()">Sign out on this device</button>
     </div>
 
-    <div class="config-bar" style="flex-direction:column; align-items:flex-start; gap:12px;">
-      <div style="width:100%">
-        <div class="config-label" style="margin-bottom:6px">GitHub Username</div>
-        <input class="config-input" id="cfgUser" placeholder="e.g. MJJorss" style="width:100%">
-      </div>
-      <div style="width:100%">
-        <div class="config-label" style="margin-bottom:6px">Data Repository Name</div>
-        <input class="config-input" id="cfgRepo" placeholder="e.g. trade-dashboard-data" style="width:100%">
-      </div>
-      <div style="width:100%">
-        <div class="config-label" style="margin-bottom:6px">Branch</div>
-        <input class="config-input" id="cfgBranch" placeholder="main" style="width:100%">
-      </div>
-      <div style="width:100%">
-        <div class="config-label" style="margin-bottom:6px">GitHub Token (read-only, stays in browser)</div>
-        <input class="config-input" id="cfgToken" type="password" placeholder="ghp_xxxxxxxxxxxx (optional for public repo)">
-      </div>
-      <button class="config-save" onclick="saveConfig()">Save & Reload Data</button>
-    </div>
-
-    <div class="divider"></div>
-
-    <div class="section-header">
-      <div class="section-title"><span class="icon">📋</span>Data File Paths</div>
-    </div>
-    <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px; font-size:11px; color:var(--muted); line-height:2;">
+    <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px; font-size:11px; color:var(--muted); line-height:2; margin-top:12px;">
+      <div><span style="color:var(--accent)">radar.json</span> → Radar</div>
       <div><span style="color:var(--accent)">announcements_log.csv</span> → FCIS Intelligence (Action / Watchlist / Radar)</div>
       <div><span style="color:var(--accent)">positions.json</span> → Portfolio (7 slots, tiers, stops)</div>
       <div><span style="color:var(--accent)">signals_today.json</span> → Chartink Signals (5-day rolling window)</div>
@@ -2836,11 +2817,7 @@ renderThemePickers();
   if (t && meta) meta.setAttribute('content', t.c.meta);
 })();
 
-// ─── CONFIG ──────────────────────────────────────────
-const DEFAULTS = {
-  user: '', repo: 'trade-dashboard-data', branch: 'main', token: ''
-};
-let cfg = loadCfg();
+// ─── STATE ───────────────────────────────────────────
 let allFcisData  = [];
 let allRsData    = [];
 let allRsVolData = [];   // rs_volume.json — enriched HIGH RS with volume metrics
@@ -2848,25 +2825,10 @@ let allIpoData   = [];   // ipo_breakout_signals.json — recent IPO base/breako
 let refreshTimer = null;
 let refreshMins  = 60;
 
-// The whole config lives in sessionStorage, which the browser clears when the
-// tab closes — for an installed app that is every launch, so it opened on the
-// Config tab each time. The repo location (user / repo / branch) is not a
-// secret and is also kept in localStorage; the token never is.
-function loadCfg() {
-  let saved = {};
-  try { saved = JSON.parse(localStorage.getItem('mjcfg-repo') || '{}'); } catch {}
-  try {
-    const s = sessionStorage.getItem('mjcfg');
-    return {...DEFAULTS, ...saved, ...(s ? JSON.parse(s) : {})};
-  } catch { return {...DEFAULTS, ...saved}; }
-}
-function saveCfgStore(c) {
-  try { sessionStorage.setItem('mjcfg', JSON.stringify(c)); } catch {}
-  try {
-    localStorage.setItem('mjcfg-repo',
-      JSON.stringify({user: c.user, repo: c.repo, branch: c.branch}));
-  } catch {}
-}
+// The repo location and an optional GitHub token used to be entered on the
+// Config tab and kept in the browser. The server reads the data now, so
+// remove any copies older versions left behind.
+try { sessionStorage.removeItem('mjcfg'); localStorage.removeItem('mjcfg-repo'); } catch (e) {}
 
 // ─── MARKET STATUS ────────────────────────────────────
 function updateMarketStatus() {
@@ -3220,12 +3182,17 @@ function rdCloseDossier() {
 }
 
 // ─── GITHUB FETCH ─────────────────────────────────────
+// Data files come through this site's own server (worker.js /api/data/),
+// which reads the data repo with a server-side token, so the repo can be
+// private and the browser never needs GitHub credentials.
+let _signInReload = false;
 async function ghFetch(filename) {
-  if (!cfg.user || !cfg.repo) throw new Error('GitHub not configured. Go to Config tab.');
-  const bust = Date.now(); // cache-buster — prevents Cloudflare serving stale files
-  const url  = `https://raw.githubusercontent.com/${cfg.user}/${cfg.repo}/${cfg.branch}/${filename}?t=${bust}`;
-  const headers = cfg.token ? {Authorization: `token ${cfg.token}`} : {};
-  const res = await fetch(url, {headers, cache:'no-store'});
+  const bust = Date.now(); // cache-buster — passed on so GitHub's CDN copy is bypassed
+  const url  = `/api/data/${filename}?t=${bust}`;
+  const res = await fetch(url, {cache:'no-store', credentials:'same-origin'});
+  // Session expired (or signed out in another tab): reloading shows the
+  // sign-in screen. Once only, so a misconfigured server cannot loop.
+  if (res.status === 401 && !_signInReload) { _signInReload = true; location.reload(); }
   if (!res.ok) throw new Error(`${filename}: HTTP ${res.status}`);
   // Set by sw.js when the network failed and this is the last saved copy.
   if (res.headers.get('x-mj-offline')) document.body.classList.add('is-offline');
@@ -3261,12 +3228,6 @@ async function loadAllData() {
   icon.style.animation = 'spin 0.8s linear infinite';
   document.body.classList.remove('is-offline');
 
-  if (!cfg.user) {
-    showConfig();
-    btn.classList.remove('spinning');
-    icon.style.animation = '';
-    return;
-  }
 
   updateMarketStatus();
 
@@ -4390,29 +4351,13 @@ function renderRS(capFilter) {
 }
 
 // ─── CONFIG ───────────────────────────────────────────
-function showConfig() {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  const configBtn = document.querySelector('.tab-btn[onclick*="\'config\'"]');
-  if (configBtn) configBtn.classList.add('active');
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('tab-config').classList.add('active');
-  showToast('Please configure your GitHub repo first', 'error');
-}
-
-function saveConfig() {
-  cfg.user   = document.getElementById('cfgUser').value.trim();
-  cfg.repo   = document.getElementById('cfgRepo').value.trim();
-  cfg.branch = document.getElementById('cfgBranch').value.trim() || 'main';
-  cfg.token  = document.getElementById('cfgToken').value.trim();
-  saveCfgStore(cfg);
-  showToast('Config saved!', 'success');
-  setTimeout(loadAllData, 300);
-}
-
-function populateConfigInputs() {
-  document.getElementById('cfgUser').value   = cfg.user;
-  document.getElementById('cfgRepo').value   = cfg.repo;
-  document.getElementById('cfgBranch').value = cfg.branch;
+// Drops this device's copies of the data (service worker cache) along with
+// the session, so a signed-out phone does not keep showing positions.
+async function signOut() {
+  try {
+    if (window.caches) await Promise.all((await caches.keys()).map(k => caches.delete(k)));
+  } catch (e) {}
+  location.href = '/logout';
 }
 
 // ─── TAB SWITCHING ────────────────────────────────────
@@ -5477,7 +5422,6 @@ function renderSizing(data, sectorMap) {
   }).join('');
 }
 
-populateConfigInputs();
 updateMarketStatus();
 setInterval(updateMarketStatus, 60000);
 
@@ -6726,40 +6670,7 @@ function fmtInr(v) {
   return v.toLocaleString('en-IN');
 }
 
-if (cfg.user && cfg.repo) {
-  loadAllData();
-} else {
-  // Show demo/empty states with config prompt
-  ['actionList','watchlistList','radarList'].forEach(id => {
-    document.getElementById(id).innerHTML =
-      '<div class="empty-state">Configure GitHub repo in ⚙️ Config tab to load data</div>';
-  });
-  // The Radar is the landing tab now, so it has to say what is missing
-  // rather than sitting on "Loading the Radar" for a session with no config.
-  document.getElementById('rdRegimeDetail').textContent =
-    'Configure GitHub repo in ⚙️ Config tab to load the Radar';
-  var rdEmptyEl = document.getElementById('rdEmpty');
-  rdEmptyEl.textContent = 'Configure GitHub repo in ⚙️ Config tab to load data';
-  rdEmptyEl.style.display = 'block';
-  document.getElementById('portfolioGrid').innerHTML =
-    '<div class="empty-state" style="grid-column:1/-1">Configure GitHub repo in ⚙️ Config tab to load data</div>';
-  document.getElementById('chartinkDays').innerHTML =
-    '<div class="empty-state">Configure GitHub repo in ⚙️ Config tab to load data</div>';
-  document.getElementById('rsGrid').innerHTML =
-    '<div class="empty-state" style="grid-column:1/-1">Configure GitHub repo in ⚙️ Config tab to load data</div>';
-  document.getElementById('perfTradeLog').innerHTML =
-    '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:20px">Configure GitHub repo in ⚙️ Config tab to load data</td></tr>';
-  if (document.getElementById('perfTradeCards'))
-    document.getElementById('perfTradeCards').innerHTML = '<div class="empty-state">Configure GitHub repo in ⚙️ Config tab to load data</div>';
-  document.getElementById('perfMonthBody').innerHTML =
-    '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">Configure GitHub repo in ⚙️ Config tab</td></tr>';
-  ['countAction','countWatchlist','countRadar','countTotal',
-   'activeSlots','freeSlots','phase2Count','t1Count',
-   'ckT1Count','ckT2Count','ckT3Count','ckTotalCount',
-   'rsHighCount','rsMidCount','rsLowCount','rsTotal'].forEach(id => {
-    document.getElementById(id).textContent = '0';
-  });
-}
+loadAllData();   // data comes from this site's /api/data, nothing to configure
 </script>
 </body>
 </html>

@@ -12,7 +12,11 @@
   },
   "assets": {
     "directory": ".",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
+    // Every request runs the Worker first, so the password gate covers the
+    // page itself and not only /api/*. Without this Cloudflare serves
+    // matching static files straight from the edge.
+    "run_worker_first": true
   },
   "compatibility_flags": [
     "nodejs_compat"

@@ -14,7 +14,7 @@
 
    Bump VERSION to drop every cached copy on the next visit. */
 
-const VERSION = 'mj-v1';
+const VERSION = 'mj-v2';
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', e => {

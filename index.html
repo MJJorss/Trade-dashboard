@@ -474,6 +474,16 @@
   .tag-hc        { background: rgba(232,163,61,0.1);    color: var(--accent); border: 1px solid rgba(232,163,61,0.25); }
   .tag-cap       { background: rgba(179,136,255,0.1);  color: var(--purple); border: 1px solid rgba(179,136,255,0.25); }
   .tag-scanner   { background: rgba(255,213,79,0.1);   color: var(--gold);   border: 1px solid rgba(255,213,79,0.25); }
+  /* Concall growth trigger (catalyst_cards.json): one badge style on every tab */
+  .tag-trg       { text-transform: none; letter-spacing: 0; cursor: help; white-space: nowrap; }
+  .tag-trg-hi    { background: rgba(0,230,118,0.10); color: var(--green); border: 1px solid rgba(0,230,118,0.25); }
+  .tag-trg-mid   { background: rgba(255,171,0,0.10); color: var(--amber); border: 1px solid rgba(255,171,0,0.25); }
+  .tag-trg-lo    { background: rgba(255,255,255,0.04); color: var(--muted); border: 1px solid rgba(255,255,255,0.12); }
+  .tag-trg-flag  { background: rgba(255,61,87,0.12); color: var(--red); border: 1px solid rgba(255,61,87,0.30); }
+  .trg-line      { font-size: 10px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+  .trg-line b    { color: var(--text); font-weight: 600; }
+  .trg-line a    { color: var(--accent); }
+  .trg-deliver   { font-size: 10px; color: var(--green); margin-top: 4px; }
   .score-block { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
   .score-num {
     font-family: var(--font-head); font-weight: 800; font-size: 24px;
@@ -2598,7 +2608,7 @@ function rdCard(s) {
     '<span class="rd-score">' + rdNum(s.score, 0) + '</span></div>' +
     '<div class="rd-name">' + rdEsc(s.name || '') + '</div>' +
     '<div class="rd-tags"><span class="rd-state rd-state-' + rdEsc(s.state) + '">' +
-    rdEsc(s.state) + '</span>' + rdRsTag(s.rs_tier) + catTag + '</div>' +
+    rdEsc(s.state) + '</span>' + rdRsTag(s.rs_tier) + catTag + catChip(s.symbol) + '</div>' +
     '<div class="rd-pillars">' + bars + '</div>' +
     '<div class="rd-meta"><span>' + rdEsc(s.nse_sector || '') + '</span>' +
     '<span>' + rdSigned(s.pct_from_52w_high, 1, '% vs high') + '</span>' +
@@ -2660,6 +2670,31 @@ function rdOpenDossier(symbol) {
        '</div>' : '');
   }
 
+  var trg = '';
+  var tr = catRec(s.symbol);
+  if (tr) {
+    var trows = [];
+    if (tr.f) trows.push(['Red flag', '<span style="color:var(--red)">' + rdEsc(tr.f) + '</span>']);
+    if (tr.t != null) {
+      trows.push(['Trigger score', rdEsc(tr.t) + ' / 100']);
+      trows.push(['Visibility · credibility · priced-in',
+                  rdEsc(tr.v ?? '—') + ' · ' + rdEsc(tr.c ?? '—') + (tr.g ? ' (' + rdEsc(tr.g) + ')' : '') +
+                  ' · ' + rdEsc(tr.p ?? '—')]);
+    }
+    if (tr.n) trows.push([tr.w ? '⏳ Next (due soon)' : 'Next dated item',
+                          rdEsc(tr.n) + (tr.d ? ' · ' + catDue(tr.d) : '')]);
+    if (tr.ob != null) trows.push(['Order book', rdEsc(tr.ob) + '× revenue']);
+    if (tr.on) trows.push(['New orders since the call', '₹' + Math.round(tr.on).toLocaleString('en-IN') + ' Cr']);
+    if (tr.pe != null) trows.push(['Forward PE (guided)', rdEsc(tr.pe)]);
+    if (tr.dl) trows.push(['Delivered (filing)', '✅ ' + rdEsc(tr.dl[0]) + ' · ' + rdEsc(tr.dl[1])]);
+    trg = '<div class="section-header" style="margin-top:16px"><div class="section-title">' +
+      '<span class="icon">🎯</span>Growth trigger (concalls)</div></div>' +
+      trows.map(function (r) { return '<div class="rd-row"><span>' + r[0] + '</span><span>' + r[1] + '</span></div>'; }).join('') +
+      (tr.sm ? '<div class="rd-detail" style="margin-top:8px">' + rdEsc(tr.sm) + '</div>' : '') +
+      (tr.src ? '<div class="rd-detail" style="margin-top:6px"><a href="' + rdEsc(tr.src) +
+       '" target="_blank" rel="noopener" style="color:var(--accent)">Read the ' + rdEsc(tr.doc || '') + ' concall</a></div>' : '');
+  }
+
   document.getElementById('rdDossier').innerHTML =
     '<div class="rd-dossier-head">' + rdEsc(s.symbol) + '</div>' +
     '<div class="rd-name" style="white-space:normal">' + rdEsc(s.name || '') + '</div>' +
@@ -2670,7 +2705,7 @@ function rdOpenDossier(symbol) {
     '<div class="section-header" style="margin-top:16px"><div class="section-title">' +
     '<span class="icon">🧱</span>Pillars</div></div>' + pillars +
     '<div class="section-header" style="margin-top:16px"><div class="section-title">' +
-    '<span class="icon">📈</span>The numbers</div></div>' + rows + catalyst +
+    '<span class="icon">📈</span>The numbers</div></div>' + rows + catalyst + trg +
     '<div class="rd-note">State and score are read from the last settled session (' +
     rdEsc(_rdData.as_of) + '). Thresholds are judgement, not a backtest — this is an ' +
     'attention tool, and no live trading rule reads it.</div>';
@@ -2735,6 +2770,9 @@ async function loadAllData() {
 
   updateMarketStatus();
 
+  // Concall growth-trigger badges are read by several tabs, so load them first.
+  await loadCatalystCards();
+
   await Promise.allSettled([
     loadFCIS(),
     loadPortfolio(),
@@ -2759,6 +2797,87 @@ async function loadAllData() {
     showToast('Data refreshed', 'success');
   }
   scheduleRefresh();
+}
+
+// ─── CONCALL GROWTH TRIGGER (catalyst_cards.json) ─────
+// Written twice a month by the laptop concall job. Short keys:
+//  t score · g credibility grade · f red flag · n/d next dated item · w project
+//  due this month or next · ob order book ÷ revenue · on new orders since the
+//  call (₹ Cr) · pe forward PE · dl last promise delivered by a filing · sm
+//  summary · src call link · doc call date · st status.
+let _cat = null;
+
+async function loadCatalystCards() {
+  try {
+    _cat = JSON.parse(await ghFetch('catalyst_cards.json'));
+    const asOf = new Date(String(_cat.as_of || '') + 'T00:00:00+05:30');
+    const age = (Date.now() - asOf.getTime()) / 86400000;
+    _cat._stale = !(age >= 0) || age > (_cat.stale_after_days || 21);
+  } catch (e) {
+    console.warn('[catalyst] ' + e.message);
+    _cat = null;
+  }
+}
+
+function catRec(sym) {
+  if (!_cat || _cat._stale || !_cat.s) return null;
+  return _cat.s[String(sym || '').replace(/\.(NS|BO)$/i, '').toUpperCase().trim()] || null;
+}
+
+function catEsc(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, ch =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+function catDue(d) {
+  if (!d) return '';
+  const p = String(d).split('-');
+  const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(p[1], 10) - 1];
+  return m ? m + ' ' + p[0] : d;
+}
+
+function catTitle(r) {
+  const bits = [];
+  if (r.f) bits.push('Red flag: ' + r.f);
+  if (r.t != null) bits.push('Trigger ' + r.t + '/100 (visibility ' + (r.v ?? '—') + ', credibility ' +
+                             (r.c ?? '—') + (r.g ? ' ' + r.g : '') + ', priced-in ' + (r.p ?? '—') + ')');
+  if (r.n) bits.push('Next: ' + r.n + (r.d ? ' (' + catDue(r.d) + ')' : ''));
+  if (r.sm) bits.push(r.sm);
+  if (r.doc) bits.push('From the ' + r.doc + ' concall');
+  return bits.join('\n');
+}
+
+/* Small badge for tag rows: 🎯72 (+ ⏳ when a project is due this month or next),
+   or ⚠ red flag. Nothing when the stock has no scored concall. */
+function catChip(sym) {
+  const r = catRec(sym);
+  if (!r) return '';
+  const title = catEsc(catTitle(r));
+  if (r.f) return `<span class="tag tag-trg tag-trg-flag" title="${title}">⚠ Red flag</span>`;
+  if (r.t == null) return '';
+  const cls = r.t >= 70 ? 'tag-trg-hi' : r.t >= 50 ? 'tag-trg-mid' : 'tag-trg-lo';
+  const grade = r.g && r.g !== 'U' ? ' ' + catEsc(r.g) : '';
+  return `<span class="tag tag-trg ${cls}" title="${title}">🎯${r.t}${grade}${r.w ? ' ⏳' : ''}</span>`;
+}
+
+/* One explanatory line for cards with room for it. */
+function catLine(sym) {
+  const r = catRec(sym);
+  if (!r) return '';
+  const bits = [];
+  if (r.f) {
+    bits.push(`<span style="color:var(--red);font-weight:700">⚠ Concall red flag:</span> <span style="color:var(--red)">${catEsc(r.f)}</span>`);
+  } else if (r.t != null) {
+    bits.push(`🎯 Trigger <b>${r.t}</b>` + (r.g && r.g !== 'U' ? ` · cred <b>${catEsc(r.g)}</b>` : ''));
+    if (r.n) bits.push(`${r.w ? '⏳ ' : ''}next: ${catEsc(r.n)}${r.d ? ' (' + catDue(r.d) + ')' : ''}`);
+    if (r.ob != null) bits.push(`OB <b>${r.ob}×</b> rev`);
+    if (r.on) bits.push(`+₹${Math.round(r.on).toLocaleString('en-IN')} Cr orders since call`);
+  } else {
+    return '';
+  }
+  if (r.dl) bits.push(`<span style="color:var(--green)">✅ ${catEsc(r.dl[0])} (${catEsc(r.dl[1])})</span>`);
+  const src = r.src ? ` · <a href="${catEsc(r.src)}" target="_blank" rel="noopener">call</a>` : '';
+  return `<div class="trg-line" title="${catEsc(catTitle(r))}">${bits.join(' · ')}${src}</div>`;
 }
 
 // ─── FCIS ─────────────────────────────────────────────
@@ -2846,8 +2965,12 @@ function renderStockList(containerId, items, type) {
         <div class="stock-tags">
           ${rs ? `<span class="tag tag-rs-${rs.toLowerCase()}">${rs} RS</span>` : ''}
           ${r.scanner ? `<span class="tag tag-scanner">${r.scanner}</span>` : ''}
+          ${catChip(symbol)}
         </div>
         ${headline ? `<div class="announce-text">${headline.substring(0,120)}${headline.length>120?'…':''}</div>` : ''}
+        ${r.promise_match && r.promise_match !== 'nan'
+            ? `<div class="trg-deliver">✅ Delivers a promised project: ${catEsc(r.promise_match)}</div>` : ''}
+        ${catLine(symbol)}
       </div>
       <div class="score-block">
         <div class="score-num ${type}">${Math.round(score)}</div>
@@ -3141,7 +3264,9 @@ function renderPositionCard(pos, idx, live) {
         <span class="phase-badge phase-${phase}">Phase ${phase}</span>
         ${merged ? `<span class="tag merged-badge">×${count} slots merged</span>` : ''}
         ${phase2Price && phase < 2 ? `<span class="tag" style="background:rgba(0,230,118,0.07);color:var(--muted);border:1px solid rgba(0,230,118,0.15)">P2 @ ₹${phase2Price}</span>` : ''}
+        ${catChip(sym)}
       </div>
+      ${catLine(sym)}
     </div>
     <div class="pos-bar-wrap">
       <div class="pos-bar-labels">
@@ -3392,6 +3517,7 @@ function renderChartink() {
             ${rsLabel ? `<span class="tag tag-rs-${rsCls}">${rsLabel}</span>` : ''}
             ${cap     ? `<span class="tag tag-cap">${cap}</span>` : ''}
             ${mjBadgeHtml}
+            ${catChip(s.symbol)}
           </div>
           ${volPillHTML(s)}
         </div>
@@ -3754,6 +3880,7 @@ function renderRS(capFilter) {
       + qtHtml
       + rsTierHtml
       + rsMjHtml
+      + catChip(name)
       + '</div>'
       + priceHtml
       + volHtml

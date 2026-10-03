@@ -6,7 +6,7 @@
    only ever a fallback for when the network fails, never a shortcut.
 
      the page itself        network first, cached copy when offline
-     data files (GitHub)    network first, last good copy when offline — the
+     data files (/api/data) network first, last good copy when offline — the
                             response is marked so the page can say it is
                             showing saved data rather than pretending it is live
      /api/*                 never cached: a stale price is not a price
@@ -14,7 +14,7 @@
 
    Bump VERSION to drop every cached copy on the next visit. */
 
-const VERSION = 'mj-v2';
+const VERSION = 'mj-v3';
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -63,6 +63,12 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
 
   if (url.origin === self.location.origin) {
+    // Data files (worker.js /api/data/): network first, last good copy when
+    // offline, marked so the page can say it is showing saved data.
+    if (url.pathname.startsWith('/api/data/')) {
+      e.respondWith(networkFirst(req, bare(req.url), true));
+      return;
+    }
     if (url.pathname.startsWith('/api/')) return;
     if (req.mode === 'navigate') {
       e.respondWith(networkFirst(req, '/', false));

@@ -1456,6 +1456,15 @@
   .rd-sector.top { border-color:rgba(0,230,118,0.3); color:var(--green); }
   .rd-sector.bottom { border-color:rgba(255,61,87,0.25); color:var(--red); }
   .rd-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:10px; }
+  .rd-group { grid-column:1/-1; display:flex; align-items:baseline; gap:8px; margin-top:8px;
+              font-family:var(--font-head); font-weight:700; font-size:13px; color:#fff;
+              border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:4px; }
+  .rd-group:first-child { margin-top:0; }
+  .rd-group small { font-family:var(--font-body); font-weight:400; font-size:10px; color:var(--muted); }
+  .rd-group.rd-group-sub { font-size:11px; color:var(--muted); border-bottom-style:dashed; }
+  .rd-card.rd-dim { opacity:0.55; }
+  .rd-card.rd-dim:hover { opacity:1; }
+  .rd-sort { display:flex; gap:4px; align-items:center; font-size:10px; color:var(--muted); }
   .rd-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
     padding:12px; cursor:pointer; transition:border-color .15s ease, transform .15s ease; }
   .rd-card:hover { border-color:var(--border2); transform:translateY(-1px); }
@@ -1609,6 +1618,11 @@
         <button class="filter-btn" onclick="rdSetFilter('LEADER',this)">Leader</button>
         <button class="filter-btn" onclick="rdSetFilter('EXTENDED',this)">Extended</button>
         <button class="filter-btn" onclick="rdSetFilter('ALL',this)">All</button>
+      </div>
+      <div class="rd-sort filter-group" id="rdSort">
+        <span>Sort</span>
+        <button class="filter-btn active" data-sort="stage" onclick="rdSetSort('stage',this)">By stage</button>
+        <button class="filter-btn" data-sort="score" onclick="rdSetSort('score',this)">By score</button>
       </div>
       <input class="rd-search" id="rdSearch" placeholder="Search symbol…" oninput="rdRenderGrid()">
     </div>
@@ -2571,8 +2585,57 @@ function rdRenderSectors() {
   }).join('');
 }
 
+/* How the Radar grid is ordered (Oct 2026).
+   By stage (default): one labelled section per stage, in funnel order
+   (Actionable, Setups, Leaders, ...), each sorted by score. Setups scoring
+   under RD_SETUP_FLOOR go last, after every other section, dimmed: a tight
+   base on a weak stock is rarely worth the attention. Inside Setups, a stock with a
+   concall project due this month or next (⏳ catalyst window) gets
+   RD_WINDOW_NUDGE points for ordering only, enough to break near-ties, never
+   enough to lift a weak stock over a strong one. Its displayed score is unchanged.
+   By score: one list, highest score first; the stage stays on the badge.
+   A search always lists matches by score. */
+var RD_SETUP_FLOOR  = 55;
+var RD_WINDOW_NUDGE = 2.5;
+var RD_GROUP_LABEL = {
+  ACTIONABLE: ['⚡ Actionable', 'setup whose price trigger fired on the last session'],
+  SETUP:      ['🎯 Setups', 'tight base near its pivot: closest to an entry'],
+  LEADER:     ['👑 Leaders', 'strong, but not in a buy zone right now'],
+  EXTENDED:   ['🚀 Extended', 'up 7%+ in 3 days: wait for a base'],
+  BROKEN:     ['💔 Broken', 'lost its trend or relative strength'],
+  NEUTRAL:    ['· Neutral', ''],
+  UNRATED:    ['· Unrated', 'not enough history']
+};
+var _rdSort = 'stage';
+try { var _rs = localStorage.getItem('rdSort'); if (_rs === 'score' || _rs === 'stage') _rdSort = _rs; } catch (e) {}
+
+function rdSetSort(mode, btn) {
+  _rdSort = mode;
+  try { localStorage.setItem('rdSort', mode); } catch (e) {}
+  var btns = document.querySelectorAll('#rdSort .filter-btn');
+  for (var i = 0; i < btns.length; i++) btns[i].classList.toggle('active', btns[i].getAttribute('data-sort') === mode);
+  rdRenderGrid();
+}
+
+function rdInWindow(s) {
+  if (s.trigger && s.trigger.window) return true;
+  var r = (typeof catRec === 'function') ? catRec(s.symbol) : null;
+  return !!(r && r.w && !r.f);
+}
+
+function rdOrderKey(s) {
+  return s.score + (s.state === 'SETUP' && rdInWindow(s) ? RD_WINDOW_NUDGE : 0);
+}
+
+function rdGroupHead(label, note, n, sub) {
+  return '<div class="rd-group' + (sub ? ' rd-group-sub' : '') + '">' + label +
+         ' <small>(' + n + ')' + (note ? ' · ' + note : '') + '</small></div>';
+}
+
 function rdRenderGrid() {
   if (!_rdData) return;
+  var sortBtns = document.querySelectorAll('#rdSort .filter-btn');
+  for (var k = 0; k < sortBtns.length; k++) sortBtns[k].classList.toggle('active', sortBtns[k].getAttribute('data-sort') === _rdSort);
   var wanted = _rdStates === 'ALL' ? null : _rdStates.split(',');
   var box = document.getElementById('rdSearch');
   var q = box && box.value ? box.value.trim().toUpperCase() : '';
@@ -2581,13 +2644,37 @@ function rdRenderGrid() {
     if (q) return true;
     return !wanted || wanted.indexOf(s.state) >= 0;
   });
-  rows.sort(function (a, b) {
-    var ai = RD_STATE_ORDER.indexOf(a.state), bi = RD_STATE_ORDER.indexOf(b.state);
-    if (ai !== bi) return ai - bi;
-    return b.score - a.score;
-  });
 
-  document.getElementById('rdGrid').innerHTML = rows.slice(0, 200).map(rdCard).join('');
+  var html = '';
+  if (q || _rdSort === 'score') {
+    rows.sort(function (a, b) { return b.score - a.score; });
+    html = rows.slice(0, 200).map(rdCard).join('');
+  } else {
+    var shown = 0, weakHtml = '', weakN = 0;
+    RD_STATE_ORDER.forEach(function (state) {
+      if (shown >= 200) return;
+      var group = rows.filter(function (s) { return s.state === state; });
+      if (!group.length) return;
+      group.sort(function (a, b) { return rdOrderKey(b) - rdOrderKey(a); });
+      var label = RD_GROUP_LABEL[state] || [state, ''];
+      if (state === 'SETUP') {
+        var strong = group.filter(function (s) { return s.score >= RD_SETUP_FLOOR; });
+        var weak   = group.filter(function (s) { return s.score <  RD_SETUP_FLOOR; });
+        html += rdGroupHead(label[0], label[1], strong.length);
+        html += strong.map(rdCard).join('');
+        weakN = weak.length;
+        weakHtml = weak.map(function (s) { return rdCard(s).replace('class="rd-card"', 'class="rd-card rd-dim"'); }).join('');
+      } else {
+        html += rdGroupHead(label[0], label[1], group.length);
+        html += group.slice(0, 200 - shown).map(rdCard).join('');
+      }
+      shown += group.length;
+    });
+    // weak setups go after every other section: a 51 setup never sits above a 78 leader
+    if (weakN) html += rdGroupHead('Lower-quality setups', 'score under ' + RD_SETUP_FLOOR + ', dimmed', weakN, true) + weakHtml;
+  }
+
+  document.getElementById('rdGrid').innerHTML = html;
   var empty = document.getElementById('rdEmpty');
   if (empty) {
     empty.style.display = rows.length ? 'none' : 'block';

@@ -8,6 +8,22 @@
      end of <body>. Theme colour matches --bg so the Android status bar and the
      splash screen blend into the page. -->
 <script>
+  /* If a script error stops the page on some device, say so on screen
+     instead of leaving it blank or stuck on "Loading…". */
+  window.addEventListener('error', function (e) {
+    if (!e.message || document.getElementById('fatalBanner')) return;
+    var show = function () {
+      var d = document.createElement('div');
+      d.id = 'fatalBanner'; d.className = 'fatal-banner';
+      d.textContent = 'Page error: ' + e.message + (e.lineno ? ' (line ' + e.lineno + ')' : '');
+      var b = document.createElement('button');
+      b.textContent = 'Reload'; b.onclick = function () { location.reload(); };
+      d.appendChild(b); document.body.appendChild(d);
+    };
+    document.body ? show() : document.addEventListener('DOMContentLoaded', show);
+  });
+</script>
+<script>
   /* Apply the saved theme before first paint so the page never flashes the
      default colours. setTheme() further down keeps this in sync. */
   (function () {
@@ -161,6 +177,7 @@
     flex: 1; justify-content: flex-end;
   }
   .market-badge {
+    white-space: nowrap;
     font-size: 10px; font-weight: 700;
     padding: 3px 8px; border-radius: 20px;
     letter-spacing: 0.5px;
@@ -1444,6 +1461,25 @@
     color: var(--accent); font-family: var(--font-head); font-weight: 700; font-size: 11px;
     padding: 6px 11px; border-radius: 999px; cursor: pointer; flex-shrink: 0;
   }
+  .install-help {
+    position: fixed; left: 12px; right: 12px; bottom: calc(16px + env(safe-area-inset-bottom));
+    z-index: 9500; max-width: 420px; margin: 0 auto;
+    background: var(--surface); border: 1px solid var(--border2); border-radius: 14px;
+    box-shadow: var(--shadow-lift); padding: 14px 16px; font-size: 12.5px; line-height: 1.55;
+    color: var(--text); display: flex; flex-direction: column; gap: 10px;
+  }
+  .install-help b { color: var(--text-strong); }
+  .install-help-title { font-family: var(--font-head); font-weight: 700; font-size: 14px; color: var(--text-strong); }
+  .install-help .config-save { align-self: flex-end; }
+  /* Shown only if a script error stops the page; the text is what to report. */
+  .fatal-banner {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 9800;
+    background: #7f1d1d; color: #fff; font: 12px/1.5 system-ui, sans-serif;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  }
+  .fatal-banner button { margin-left: 8px; background: #fff; color: #7f1d1d; border: 0;
+    border-radius: 6px; padding: 3px 10px; font-weight: 700; }
+
   /* Pull-to-refresh indicator. An installed app has no browser reload, so a
      pull at the top of the page is the gesture people expect. */
   .ptr {
@@ -4490,14 +4526,49 @@ function initAppInstall() {
     _installPrompt = e;
     if (btn) btn.style.display = 'inline-block';
   });
+  initInstallFallback();
   window.addEventListener('appinstalled', () => {
     _installPrompt = null;
     if (btn) btn.style.display = 'none';
     showToast('Installed — open MJ Trading from your home screen', 'success');
   });
 }
+// Chrome fires beforeinstallprompt only on its own terms: not in Samsung
+// Internet, Firefox or in-app browsers (a link opened from WhatsApp/Gmail),
+// not for a while after the prompt was dismissed, and not when the app is
+// already installed. So on a phone that is not running the installed app the
+// button is always shown, and without a native prompt it explains the
+// browser-menu route instead of doing nothing.
+function isStandalone() {
+  return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) ||
+         navigator.standalone === true;
+}
+function initInstallFallback() {
+  const btn = document.getElementById('installBtn');
+  const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (btn && mobile && !isStandalone()) btn.style.display = 'inline-block';
+}
+function showInstallHelp() {
+  const ua = navigator.userAgent;
+  let how;
+  if (/iPhone|iPad|iPod/i.test(ua)) how = 'In Safari tap Share, then <b>Add to Home Screen</b>.';
+  else if (/SamsungBrowser/i.test(ua)) how = 'Tap the menu (☰), then <b>Add page to → Home screen</b>.';
+  else if (/Android/i.test(ua) && /; wv\)|FBAN|FBAV|Instagram|WhatsApp|GSA\//i.test(ua))
+    how = 'This page is open inside another app. Open it in <b>Chrome</b> (menu → Open in browser), then tap ⋮ → <b>Install app</b>.';
+  else how = 'Tap Chrome\'s menu (⋮), then <b>Install app</b> or <b>Add to Home screen</b>. If it says the app is already installed, open MJ Trading from your home screen.';
+  let box = document.getElementById('installHelp');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'installHelp';
+    box.className = 'install-help';
+    box.setAttribute('role', 'dialog');
+    document.body.appendChild(box);
+  }
+  box.innerHTML = '<div class="install-help-title">Install MJ Trading</div><div>' + how +
+    '</div><button class="config-save" onclick="this.parentNode.remove()">Got it</button>';
+}
 async function installApp() {
-  if (!_installPrompt) return;
+  if (!_installPrompt) { showInstallHelp(); return; }
   _installPrompt.prompt();
   await _installPrompt.userChoice.catch(() => null);
   _installPrompt = null;

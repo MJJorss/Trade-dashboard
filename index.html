@@ -1845,6 +1845,79 @@
   .theme-preview .tp-cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; flex: 1; }
   .theme-preview .tp-card { border-radius: 6px; padding: 6px; display: flex; flex-direction: column; gap: 4px; }
   .theme-preview .tp-line { height: 4px; border-radius: 2px; }
+  /* ─── RESULTS TAB (results.json) ───────────────── */
+  .res-banner {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    padding: 12px 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px;
+    font-size: 11px; color: var(--muted);
+  }
+  .res-banner b { color: var(--text-strong); font-family: var(--font-head); font-weight: 700; }
+  .res-season { font-family: var(--font-head); font-weight: 800; font-size: 15px; color: var(--text-strong); }
+  .res-stale {
+    flex-basis: 100%; color: var(--amber); background: rgba(var(--amber-rgb),0.10);
+    border: 1px solid rgba(var(--amber-rgb),0.30); border-radius: 8px; padding: 6px 10px; font-size: 11px;
+  }
+  .res-sortbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .res-sort-btn {
+    flex: 1 1 180px; padding: 10px 14px; border-radius: 12px; cursor: pointer;
+    background: var(--card); border: 1px solid var(--border2); color: var(--text);
+    font-family: var(--font-head); font-weight: 700; font-size: 13px;
+  }
+  .res-sort-btn.active { background: rgba(var(--accent-rgb),0.14); border-color: var(--accent); color: var(--accent); }
+  .res-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .res-filters label { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .res-select {
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    border-radius: 10px; padding: 5px 8px; font-size: 11px; font-family: var(--font-body); max-width: 160px;
+  }
+  .res-count { font-size: 10px; color: var(--muted); margin-left: auto; }
+  /* The table scrolls sideways inside its own box; the page never does. */
+  .res-table-wrap {
+    width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg);
+    margin-bottom: 14px;
+  }
+  .res-table { min-width: 1180px; margin-bottom: 0; }
+  .res-table th { cursor: pointer; white-space: nowrap; user-select: none; }
+  .res-table th.res-sorted { color: var(--accent); }
+  .res-table td { white-space: nowrap; }
+  .res-table th:first-child, .res-table td:first-child {
+    position: sticky; left: 0; z-index: 2; background: var(--card);
+    box-shadow: 1px 0 0 var(--border); max-width: 160px;
+  }
+  .res-table thead th:first-child { z-index: 3; }
+  /* The sticky column must be opaque, or scrolled cells show through it; the
+     table's stripe / hover / theme rules are more specific than the above. */
+  .res-table.trade-table thead th:first-child,
+  .res-table.trade-table tbody tr td:first-child,
+  .res-table.trade-table tbody tr:nth-child(even) td:first-child { background: var(--card); }
+  .res-table.trade-table tbody tr:hover td:first-child,
+  .res-table.trade-table tbody tr.res-row.open td:first-child {
+    background: linear-gradient(rgba(var(--accent-rgb),0.06), rgba(var(--accent-rgb),0.06)), var(--card);
+  }
+  .res-table tbody tr.res-row { cursor: pointer; }
+  .res-table tbody tr.res-row.open td { background: rgba(var(--accent-rgb),0.06); }
+  .res-name { font-family: var(--font-head); font-weight: 700; color: var(--text-strong); font-size: 12px; line-height: 1.25; }
+  .res-sym { font-size: 10px; color: var(--muted); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .res-num { font-family: var(--font-mono); text-align: right; }
+  .res-table td.res-pos { color: var(--green); }
+  .res-table td.res-neg { color: var(--red); }
+  .res-scored { display: block; color: var(--muted); font-size: 9.5px; }
+  .res-flag { display: inline-block; margin: 1px 3px 1px 0; padding: 1px 6px; border-radius: 6px; font-size: 9.5px; white-space: nowrap; }
+  .res-flag-small { background: rgba(var(--amber-rgb),0.10); color: var(--amber); border: 1px solid rgba(var(--amber-rgb),0.25); }
+  .res-flag-turn  { background: rgba(var(--purple-rgb),0.10); color: var(--purple); border: 1px solid rgba(var(--purple-rgb),0.25); }
+  .res-flag-oneoff{ background: rgba(var(--teal-rgb),0.10); color: var(--teal); border: 1px solid rgba(var(--teal-rgb),0.25); }
+  .res-flag-both  { background: rgba(var(--green-rgb),0.10); color: var(--green); border: 1px solid rgba(var(--green-rgb),0.25); }
+  .res-table.trade-table tbody tr.res-detail td, .res-table.trade-table tbody tr.res-detail:hover td { background: var(--surface); box-shadow: none; }
+  .res-table tr.res-detail td { background: var(--surface); white-space: normal; position: static; box-shadow: none; max-width: none; }
+  .res-detail-inner { position: sticky; left: 12px; max-width: calc(100vw - 60px); width: 640px; padding: 4px 0; }
+  .res-comment { font-size: 12px; color: var(--text-strong); line-height: 1.5; margin-bottom: 8px; }
+  .res-hist { display: grid; grid-template-columns: repeat(5, auto); justify-content: start; gap: 3px 16px; font-size: 11px; margin: 4px 0 10px; }
+  .res-hist div { text-align: right; font-family: var(--font-mono); }
+  .res-hist div.res-h { color: var(--muted); font-family: var(--font-head); font-size: 10px; }
+  .res-hist div.res-q { text-align: left; }
+  .res-meta { font-size: 10.5px; color: var(--muted); line-height: 1.7; }
+  .res-meta a { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -1909,6 +1982,9 @@
   </button>
   <button class="tab-btn" onclick="switchTab('investment',this)">
     <span class="tab-icon">🌱</span>Investment
+  </button>
+  <button class="tab-btn" onclick="switchTab('results',this)">
+    <span class="tab-icon">🧾</span>Results
   </button>
   <button class="tab-btn" onclick="switchTab('ipo',this)">
     <span class="tab-icon">🆕</span>IPO
@@ -2757,6 +2833,52 @@
     <div id="invFooter" style="font-size:10px;color:var(--muted);text-align:center;margin-top:18px;"></div>
   </div>
 
+  <!-- ══ RESULTS TAB ════════════════════════════════ -->
+  <!-- Every company that has reported this quarter (results.json, written by
+       results_scanner.py at 9 pm and 8 am IST on weekdays). -->
+  <div class="tab-panel" id="tab-results">
+    <div class="res-banner" id="resBanner">Loading results…</div>
+
+    <div class="section-header">
+      <div class="section-title"><span class="icon">🧾</span>Quarterly results</div>
+      <div class="filter-group" id="resSectionGroup">
+        <button class="filter-btn active" onclick="resSetSection('non-financial',this)">Companies</button>
+        <button class="filter-btn" onclick="resSetSection('financial',this)">Banks &amp; Finance</button>
+      </div>
+    </div>
+
+    <div class="res-sortbar">
+      <button class="res-sort-btn active" id="resSortYoy" onclick="resSortPreset('yoy_score')">Best year-on-year</button>
+      <button class="res-sort-btn" id="resSortQoq" onclick="resSortPreset('qoq_score')">Best quarter-on-quarter</button>
+    </div>
+
+    <div class="res-filters">
+      <label for="resMinCap">Min market cap</label>
+      <select class="res-select" id="resMinCap" onchange="resRender()">
+        <option value="1000" selected>₹1,000 Cr</option>
+        <option value="2000">₹2,000 Cr</option>
+        <option value="5000">₹5,000 Cr</option>
+        <option value="10000">₹10,000 Cr</option>
+        <option value="20000">₹20,000 Cr</option>
+        <option value="50000">₹50,000 Cr</option>
+      </select>
+      <label for="resSector">Sector</label>
+      <select class="res-select" id="resSector" onchange="resRender()"><option value="">All sectors</option></select>
+      <input class="rd-search" id="resSearch" placeholder="Search company…" oninput="resRender()" style="max-width:170px">
+    </div>
+    <div class="res-filters filter-group" id="resToggles">
+      <button class="filter-btn" data-f="both" onclick="resToggle(this)">Both year-on-year and quarter-on-quarter up</button>
+      <button class="filter-btn" data-f="vcp" onclick="resToggle(this)">In VCP scan</button>
+      <button class="filter-btn" data-f="rs" onclick="resToggle(this)">Strong RS only</button>
+      <button class="filter-btn" data-f="hide" onclick="resToggle(this)">Hide small base / turnaround</button>
+      <span class="res-count" id="resCount"></span>
+    </div>
+
+    <div class="res-table-wrap" id="resWrap"><table class="trade-table res-table" id="resTable"></table></div>
+    <div class="empty-state" id="resEmpty" style="display:none">No results data yet</div>
+    <div class="rd-detail" id="resFooter" style="margin-top:6px"></div>
+  </div>
+
   <!-- ══ IPO BREAKOUT TAB ═══════════════════════════ -->
   <div class="tab-panel" id="tab-ipo">
     <div class="summary-strip" id="ipoSummary">
@@ -3331,6 +3453,7 @@ async function loadAllData() {
     loadSizing(),
     loadShadow(),
     loadInvestment(),
+    loadResults(),
     loadRadar(),
     loadIpo()
   ]);
@@ -6774,6 +6897,316 @@ function renderInvestment(data) {
 }
 
 // ─── IPO BREAKOUT SCANNER ───────────────────────────────
+// ─── RESULTS (results.json) ─────────────────────────
+// Every company that has reported this quarter, from NSE's XBRL filings.
+// Written by results_scanner.py (trade-alerts) at 9 pm and 8 am IST on
+// weekdays. Core profit = PBT - exceptional items - other income; banks,
+// NBFCs and insurers use profit after tax. yoy_score / qoq_score apply the
+// investment index's small-base rule and a +300% cap; the raw growth is what
+// the cells show. Plain string building: no optional chaining, no nullish
+// coalescing and no nested template literals (older Android Chrome).
+let _res = null;
+let _resSection = 'non-financial';
+let _resSort = { key: 'yoy_score', dir: -1 };
+const _resFlags = { both: false, vcp: false, rs: false, hide: false };
+let _resOpen = {};
+
+const RES_COLS = [
+  { key: 'company',           label: 'Company',             type: 'text' },
+  { key: 'sector',            label: 'Sector',              type: 'text' },
+  { key: 'mcap_cr',           label: 'Market cap',          type: 'num' },
+  { key: 'filing_date',       label: 'Filing date',         type: 'text', dir: -1 },
+  { key: 'profit_yoy',        label: 'Profit YoY',          type: 'num', score: 'yoy_score' },
+  { key: 'profit_qoq',        label: 'Profit QoQ',          type: 'num', score: 'qoq_score' },
+  { key: 'sales_yoy',         label: 'Sales YoY',           type: 'num' },
+  { key: 'sales_qoq',         label: 'Sales QoQ',           type: 'num' },
+  { key: 'margin_pct',        label: 'Core margin',         type: 'num' },
+  { key: 'flags',             label: 'Flags',               type: 'flags' },
+  { key: 'rs_tier',           label: 'RS tier',             type: 'rs' },
+  { key: 'in_vcp_scan',       label: 'In VCP scan',         type: 'bool' },
+  { key: 'pct_from_52w_high', label: '% from 52-week high', type: 'num' },
+  { key: 'trigger_score',     label: 'Trigger score',       type: 'num' }
+];
+const RES_RS_ORDER = { HIGH: 3, MID: 2, LOW: 1 };
+
+function resEsc(s) {
+  return String(s === null || s === undefined ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function resNum(v) { return (typeof v === 'number' && isFinite(v)) ? v : null; }
+function resPct(v) {
+  v = resNum(v);
+  if (v === null) return '—';
+  const d = Math.abs(v) >= 10 ? 0 : 1;
+  return (v > 0 ? '+' : '') + v.toFixed(d) + '%';
+}
+function resCr(v) {
+  v = resNum(v);
+  if (v === null) return '—';
+  return (v < 0 ? '−₹' : '₹') + Math.abs(Math.round(v)).toLocaleString('en-IN') + ' Cr';
+}
+function resWhen(s) {
+  // "2026-10-15 20:07" -> "15 Oct 2026, 8:07 pm" (already IST)
+  if (!s) return '—';
+  const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/);
+  if (!m) return resEsc(s);
+  const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m[2], 10) - 1];
+  let out = parseInt(m[3], 10) + ' ' + mon + ' ' + m[1];
+  if (m[4] !== undefined) {
+    let h = parseInt(m[4], 10);
+    const ap = h >= 12 ? 'pm' : 'am';
+    h = h % 12; if (h === 0) h = 12;
+    out += ', ' + h + ':' + m[5] + ' ' + ap;
+  }
+  return out;
+}
+function resIstNow() {
+  // today's date and time in IST as a Date in UTC fields
+  const d = new Date();
+  return new Date(d.getTime() + (330 + d.getTimezoneOffset()) * 60000);
+}
+function resParseDay(s) {
+  const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/);
+  if (!m) return null;
+  return new Date(+m[1], +m[2] - 1, +m[3], m[4] ? +m[4] : 0, m[5] ? +m[5] : 0);
+}
+
+async function loadResults() {
+  const banner = document.getElementById('resBanner');
+  try {
+    const data = JSON.parse(await ghFetch('results.json'));
+    if (!data || typeof data !== 'object' || !Array.isArray(data.rows)) throw new Error('no rows');
+    _res = data;
+  } catch (e) {
+    _res = null;
+    banner.textContent = 'No results data yet';
+    document.getElementById('resEmpty').style.display = '';
+    document.getElementById('resWrap').style.display = 'none';
+    document.getElementById('resCount').textContent = '';
+    return;
+  }
+  document.getElementById('resEmpty').style.display = 'none';
+  document.getElementById('resWrap').style.display = '';
+  resBanner();
+  resFillSectors();
+  resRender();
+}
+
+function resBanner() {
+  const m = _res.meta || {};
+  const c = m.counts || {};
+  let h = '<span class="res-season">' + resEsc(m.season || 'Results') + '</span>'
+    + '<span>Latest filing captured: <b>' + resWhen(m.latest_filing_captured) + '</b></span>'
+    + '<span><b>' + (c.reported || 0) + '</b> reported · <b>' + (c.in_universe || 0) + '</b> above ₹'
+    + Number(m.min_mcap_cr || 1000).toLocaleString('en-IN') + ' Cr · <b>' + (c.non_financial || 0)
+    + '</b> companies · <b>' + (c.financial || 0) + '</b> banks &amp; finance</span>'
+    + '<span>Filing deadline ' + resWhen(m.filing_deadline) + '</span>';
+  // Amber when the data is more than 2 days old while results are being filed.
+  const now = resIstNow();
+  const qe = resParseDay(m.quarter_end), dl = resParseDay(m.filing_deadline), run = resParseDay(m.run_time);
+  const inSeason = qe && dl && now > qe && now < new Date(dl.getTime() + 7 * 86400000);
+  const limit = (m.stale_after_days || 2) * 86400000;
+  if (inSeason && run && (now - run) > limit) {
+    h += '<div class="res-stale">⚠️ This data was last updated ' + resWhen(m.run_time)
+      + ' — more than ' + (m.stale_after_days || 2) + ' days ago, during results season. Check the Results Scanner run.</div>';
+  }
+  document.getElementById('resBanner').innerHTML = h;
+  const cv = m.coverage || [];
+  let foot = 'Updated ' + resWhen(m.run_time) + ' IST. Core profit = profit before tax − exceptional items − other income. '
+    + 'Banks &amp; finance: profit after tax; sales = net interest income (banks, lending NBFCs) or net premium (insurers). '
+    + 'Ranking: base-quarter profit ≤ 0 → sales growth; below ₹5 Cr → lower of profit and sales growth; capped at +300% for scoring.';
+  if (cv.length) {
+    foot += '<br>Quarters in store: ' + cv.map(function (x) { return resEsc(x.quarter) + ' ' + x.companies; }).join(' · ');
+  }
+  document.getElementById('resFooter').innerHTML = foot;
+}
+
+function resFillSectors() {
+  const sel = document.getElementById('resSector');
+  const keep = sel.value;
+  const seen = {};
+  _res.rows.forEach(function (r) { if (r.section === _resSection && r.sector) seen[r.sector] = 1; });
+  const names = Object.keys(seen).sort();
+  sel.innerHTML = '<option value="">All sectors</option>' + names.map(function (s) {
+    return '<option value="' + resEsc(s) + '"' + (s === keep ? ' selected' : '') + '>' + resEsc(s) + '</option>';
+  }).join('');
+}
+
+function resSetSection(sec, btn) {
+  _resSection = sec;
+  document.querySelectorAll('#resSectionGroup .filter-btn').forEach(function (b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  _resOpen = {};
+  if (_res) { resFillSectors(); resRender(); }
+}
+
+function resSortPreset(key) {
+  _resSort = { key: key, dir: -1 };
+  resRender();
+}
+
+function resSortBy(key) {
+  const col = RES_COLS.filter(function (c) { return c.key === key; })[0];
+  if (_resSort.key === key) _resSort.dir = -_resSort.dir;
+  else _resSort = { key: key, dir: col && col.type === 'text' && !col.dir ? 1 : -1 };
+  resRender();
+}
+
+function resToggle(btn) {
+  const f = btn.getAttribute('data-f');
+  _resFlags[f] = !_resFlags[f];
+  btn.classList.toggle('active', _resFlags[f]);
+  resRender();
+}
+
+function resSortValue(r, key) {
+  if (key === 'rs_tier') return RES_RS_ORDER[r.rs_tier] || 0;
+  if (key === 'in_vcp_scan') return r.in_vcp_scan ? 1 : 0;
+  if (key === 'flags') return (r.flags || []).length;
+  const v = r[key];
+  if (typeof v === 'string') return v.toLowerCase();
+  return resNum(v);
+}
+
+function resRows() {
+  const minCap = parseFloat(document.getElementById('resMinCap').value) || 0;
+  const sector = document.getElementById('resSector').value;
+  const q = (document.getElementById('resSearch').value || '').trim().toLowerCase();
+  const rows = _res.rows.filter(function (r) {
+    if (r.section !== _resSection) return false;
+    if ((r.mcap_cr || 0) < minCap) return false;
+    if (sector && r.sector !== sector) return false;
+    const flags = r.flags || [];
+    if (_resFlags.both && flags.indexOf('Both year-on-year and quarter-on-quarter up') < 0) return false;
+    if (_resFlags.vcp && !r.in_vcp_scan) return false;
+    if (_resFlags.rs && r.rs_tier !== 'HIGH') return false;
+    if (_resFlags.hide && (flags.indexOf('Small base') >= 0 || flags.indexOf('Turnaround from loss') >= 0)) return false;
+    if (q && (String(r.company).toLowerCase().indexOf(q) < 0 && String(r.symbol).toLowerCase().indexOf(q) < 0)) return false;
+    return true;
+  });
+  const key = _resSort.key, dir = _resSort.dir;
+  rows.sort(function (a, b) {
+    const x = resSortValue(a, key), y = resSortValue(b, key);
+    if (x === null && y === null) return 0;
+    if (x === null) return 1;          // blanks always last
+    if (y === null) return -1;
+    if (x < y) return -dir;
+    if (x > y) return dir;
+    return 0;
+  });
+  return rows;
+}
+
+function resGrowthCell(r, col) {
+  const raw = resNum(r[col.key]);
+  const sc = resNum(r[col.score]);
+  const sortedHere = _resSort.key === col.key || _resSort.key === col.score;
+  let txt = resPct(raw);
+  if (sortedHere && sc !== null && (raw === null || Math.abs(raw - sc) >= 0.5)) {
+    txt += ' <span class="res-scored">(scored ' + resPct(sc) + ')</span>';
+  }
+  const v = sortedHere && sc !== null ? sc : raw;
+  const cls = v === null ? '' : (v > 0 ? ' res-pos' : (v < 0 ? ' res-neg' : ''));
+  return '<td class="res-num' + cls + '">' + txt + '</td>';
+}
+
+function resFlagTags(flags) {
+  const cls = { 'Small base': 'res-flag-small', 'Turnaround from loss': 'res-flag-turn',
+                'One-off items removed': 'res-flag-oneoff',
+                'Both year-on-year and quarter-on-quarter up': 'res-flag-both' };
+  return (flags || []).map(function (f) {
+    return '<span class="res-flag ' + (cls[f] || 'res-flag-small') + '">' + resEsc(f) + '</span>';
+  }).join('');
+}
+
+function resCell(r, col) {
+  const v = r[col.key];
+  if (col.key === 'company') {
+    return '<td title="' + resEsc(r.company) + '"><div class="res-name">' + resEsc(r.symbol) + '</div><div class="res-sym">'
+      + resEsc(r.company) + '</div></td>';
+  }
+  if (col.score) return resGrowthCell(r, col);
+  if (col.key === 'mcap_cr') return '<td class="res-num">' + resCr(v) + '</td>';
+  if (col.key === 'filing_date') return '<td>' + resWhen(v) + '</td>';
+  if (col.key === 'flags') return '<td>' + resFlagTags(v) + '</td>';
+  if (col.key === 'rs_tier') {
+    if (!v || v === 'UNKNOWN') return '<td class="td-muted">—</td>';
+    return '<td><span class="tag tag-rs-' + String(v).toLowerCase() + '">' + resEsc(v) + '</span></td>';
+  }
+  if (col.key === 'in_vcp_scan') return '<td>' + (v ? '<span class="tag tag-scanner-vcp">VCP</span>' : '<span class="td-muted">—</span>') + '</td>';
+  if (col.key === 'trigger_score') {
+    if (resNum(v) === null) return '<td class="td-muted">—</td>';
+    const tc = v >= 70 ? 'tag-trg-hi' : (v >= 50 ? 'tag-trg-mid' : 'tag-trg-lo');
+    return '<td><span class="tag tag-trg ' + tc + '" title="Concall growth trigger, credibility '
+      + resEsc(r.credibility_grade || '—') + '">' + v + (r.credibility_grade ? ' · ' + resEsc(r.credibility_grade) : '') + '</span></td>';
+  }
+  if (col.key === 'margin_pct') return '<td class="res-num">' + (resNum(v) === null ? '—' : v.toFixed(1) + '%') + '</td>';
+  if (col.type === 'num') {
+    const n = resNum(v);
+    const cls = n === null ? '' : (n > 0 ? ' res-pos' : (n < 0 ? ' res-neg' : ''));
+    return '<td class="res-num' + (col.key === 'pct_from_52w_high' ? '' : cls) + '">' + resPct(n) + '</td>';
+  }
+  return '<td>' + resEsc(v) + '</td>';
+}
+
+function resDetail(r) {
+  const hist = ((_res.history || {})[r.symbol]) || [];
+  let g = '<div class="res-h res-q">Quarter</div><div class="res-h">' + resEsc(r.sales_label || 'Sales')
+    + ' (₹ Cr)</div><div class="res-h">' + resEsc(r.profit_label || 'Core profit')
+    + ' (₹ Cr)</div><div class="res-h">Margin</div><div class="res-h">Statement</div>';
+  hist.forEach(function (h) {
+    g += '<div class="res-q">' + resEsc(h.q) + '</div><div>' + (resNum(h.sales) === null ? '—' : Math.round(h.sales).toLocaleString('en-IN'))
+      + '</div><div>' + (resNum(h.profit) === null ? '—' : Math.round(h.profit).toLocaleString('en-IN'))
+      + '</div><div>' + (resNum(h.margin) === null ? '—' : h.margin.toFixed(1) + '%')
+      + '</div><div>' + (h.st === 'S' ? 'Standalone' : 'Consolidated') + '</div>';
+  });
+  let meta = 'Statement: <b>' + resEsc(r.statement) + '</b>'
+    + ' · Year-on-year ranked on: ' + resEsc(r.yoy_basis) + ' · Quarter-on-quarter ranked on: ' + resEsc(r.qoq_basis);
+  if (resNum(r.net_profit_cr) !== null) meta += '<br>Reported net profit ' + resCr(r.net_profit_cr);
+  if (r.section !== 'financial') {
+    meta += ' · Profit before tax ' + resCr(r.pbt_cr) + (r.pbt_derived ? ' (derived)' : '')
+      + ' · Other income ' + resCr(r.other_income_cr) + ' · Exceptional items ' + resCr(r.exceptional_cr);
+  }
+  if (r.filing_type === 'Revision') meta += '<br>Revised filing (the latest version is shown)';
+  if (r.data_notes && r.data_notes.length) meta += '<br>Data note: ' + r.data_notes.map(resEsc).join('; ');
+  if (r.filing_link) meta += '<br><a href="' + resEsc(r.filing_link) + '" target="_blank" rel="noopener">Open the filing on NSE ↗</a>';
+  return '<tr class="res-detail"><td colspan="' + RES_COLS.length + '"><div class="res-detail-inner">'
+    + '<div class="res-comment">' + resEsc(r.comment || 'Comment pending') + '</div>'
+    + '<div class="res-hist">' + g + '</div><div class="res-meta">' + meta + '</div></div></td></tr>';
+}
+
+function resRender() {
+  if (!_res) return;
+  const rows = resRows();
+  document.getElementById('resSortYoy').classList.toggle('active', _resSort.key === 'yoy_score');
+  document.getElementById('resSortQoq').classList.toggle('active', _resSort.key === 'qoq_score');
+  const marginLabel = _resSection === 'financial' ? 'Margin' : 'Core margin';
+  let h = '<thead><tr>' + RES_COLS.map(function (c) {
+    const on = _resSort.key === c.key || _resSort.key === c.score;
+    const arrow = on ? (_resSort.dir < 0 ? ' ▼' : ' ▲') : '';
+    const label = c.key === 'margin_pct' ? marginLabel : c.label;
+    return '<th class="' + (on ? 'res-sorted' : '') + '" onclick="resSortBy(\'' + c.key + '\')">' + label + arrow + '</th>';
+  }).join('') + '</tr></thead><tbody>';
+  rows.forEach(function (r) {
+    const open = !!_resOpen[r.symbol];
+    h += '<tr class="res-row' + (open ? ' open' : '') + '" onclick="resToggleRow(\'' + resEsc(r.symbol) + '\')">'
+      + RES_COLS.map(function (c) { return resCell(r, c); }).join('') + '</tr>';
+    if (open) h += resDetail(r);
+  });
+  if (!rows.length) {
+    h += '<tr><td colspan="' + RES_COLS.length + '" class="td-muted" style="text-align:left">No companies match these filters yet.</td></tr>';
+  }
+  h += '</tbody>';
+  document.getElementById('resTable').innerHTML = h;
+  const total = _res.rows.filter(function (r) { return r.section === _resSection; }).length;
+  document.getElementById('resCount').textContent = rows.length + ' of ' + total;
+}
+
+function resToggleRow(sym) {
+  _resOpen[sym] = !_resOpen[sym];
+  resRender();
+}
+
 async function loadIpo() {
   try {
     const text = await ghFetch('ipo_breakout_signals.json');

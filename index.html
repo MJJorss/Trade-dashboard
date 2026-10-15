@@ -1358,6 +1358,41 @@
   }
   .sh-gate-strip .stat-value { font-size: 16px; }
 
+  /* Step 3 — comparison sections (comparison.json) */
+  .sh-status-strip {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px; margin-bottom: 14px;
+  }
+  .sh-status-strip .stat-value { font-size: 15px; line-height: 1.3; }
+  .sh-status-strip .stat-sub { white-space: normal; }
+  .sh-score-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 10px; margin-bottom: 16px;
+  }
+  .sh-score-grid .stat-value { font-size: 22px; }
+  .sh-score-line { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .sh-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; font-size: 11px; color: var(--muted); }
+  .sh-legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+  .sh-note { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .sh-table-wrap { overflow-x: auto; margin-bottom: 16px; -webkit-overflow-scrolling: touch; }
+  .sh-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .sh-tbl th { text-align: left; color: var(--muted); font-weight: 600; font-size: 11px;
+    padding: 7px 8px; border-bottom: 1px solid var(--border2); white-space: nowrap; }
+  .sh-tbl td { padding: 7px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .sh-tbl td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .sh-tbl tr.sh-ref td { color: var(--muted); font-style: italic; }
+  .sh-pill { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .sh-pill.on  { background: rgba(var(--green-rgb),0.15); color: var(--green); }
+  .sh-pill.off { background: rgba(var(--red-rgb),0.15);   color: var(--red); }
+  .sh-pill.warn { background: rgba(var(--amber-rgb),0.15); color: var(--amber); }
+  .sh-reason { color: var(--muted); }
+  @media (max-width: 600px) {
+    .sh-score-grid { grid-template-columns: 1fr 1fr; }
+    .sh-score-grid .stat-value { font-size: 18px; }
+    .sh-tbl { font-size: 11.5px; }
+    .sh-tbl td, .sh-tbl th { padding: 6px 5px; }
+  }
+
   /* Phone layout for the Shadow tab. Wide tables (12 columns of closed trades,
      7 of sleeve legs) scrolled sideways and hid the P&L off the right edge, so
      under 600px each row becomes a card with the number that matters on top.
@@ -2428,12 +2463,64 @@
       <div class="sh-notice-body"><strong>🧪 Shadow book — paper only.</strong> What the
       Regime-Gated Swing System would have done: MA21 gate on MC150 with full liquidation, EMA13
       Phase 2 exit, ATR(14)×2.0 stop at 1.40% risk, ₹13.5L. No real orders and no real capital —
-      replayed once a day after the close (3:45 PM IST) by the research engine itself.
+      decided once a day at the 2:40 PM IST run on the price at that time by the research engine
+      itself (Swing), with Blend (50/50 with a gated Midcap 150 fund) beside it. The 10:40 AM run
+      decides nothing: it values the book at the morning price and records the previous decision
+      day's official closes.
       <div class="sh-meta" id="shMeta">Loading…</div></div>
       <button class="sh-more" onclick="this.parentNode.classList.toggle('open');
         this.textContent = this.parentNode.classList.contains('open') ? 'Less ▴' : 'More ▾'">More ▾</button>
     </div>
     <div class="notice sh-restated" id="shRestated" style="display:none"></div>
+
+    <!-- ── Step 3: Swing vs Blend vs live vs buy-and-hold (comparison.json) ── -->
+    <div id="shCmp">
+      <div class="sh-cmp-empty empty-state" id="shCmpEmpty">No comparison data yet</div>
+      <div id="shCmpBody" style="display:none">
+        <!-- 1. status strip -->
+        <div class="sh-status-strip" id="shStatus"></div>
+
+        <!-- 2. four score cards -->
+        <div class="sh-score-grid" id="shScores"></div>
+
+        <!-- 3. chart 1: books indexed to 100 -->
+        <div class="equity-card">
+          <div class="equity-card-head"><div>
+            <div class="equity-card-title">📈 Swing, Blend and Midcap 150 buy-and-hold — 100 on 15 September</div>
+            <div class="sh-legend" id="shCmpLegend1"></div>
+          </div></div>
+          <div class="equity-chart-wrap"><canvas id="shCmpCanvas1" height="220"></canvas></div>
+          <div class="equity-x-labels" id="shCmpX1"></div>
+          <div class="sh-note" id="shCmpShadeNote">Shaded days: market gate off (no new buys).</div>
+        </div>
+
+        <!-- 4. chart 2: live bot vs Swing -->
+        <div class="equity-card">
+          <div class="equity-card-head"><div>
+            <div class="equity-card-title">🔁 Live bot vs Swing — % return since 15 September</div>
+            <div class="sh-legend" id="shCmpLegend2"></div>
+          </div></div>
+          <div class="equity-chart-wrap"><canvas id="shCmpCanvas2" height="200"></canvas></div>
+          <div class="equity-x-labels" id="shCmpX2"></div>
+        </div>
+
+        <!-- 5. Blend breakdown -->
+        <div class="section-header"><div class="section-title"><span class="icon">⚖️</span>Blend — Swing half vs fund half</div></div>
+        <div class="sh-table-wrap" id="shBookB"></div>
+
+        <!-- 6. monthly tables -->
+        <div class="section-header"><div class="section-title"><span class="icon">📅</span>Monthly returns</div></div>
+        <div class="sh-table-wrap" id="shMonthly"></div>
+
+        <!-- 7. today's decisions -->
+        <div class="section-header"><div class="section-title"><span class="icon">🧾</span>Today's decisions</div></div>
+        <div class="sh-table-wrap" id="shDecisions"></div>
+
+        <!-- 8. live vs shadow -->
+        <div class="section-header"><div class="section-title"><span class="icon">🔍</span>Live bot vs shadow — open positions</div></div>
+        <div class="sh-table-wrap" id="shLiveVs"></div>
+      </div>
+    </div>
 
     <div class="sh-gate-strip" id="shGateStrip">
       <div class="loading-state" style="grid-column:1/-1"><div class="spinner"></div></div>
@@ -2486,7 +2573,7 @@
         <canvas id="shEquityCanvas" height="200"></canvas>
         <div class="equity-tooltip" id="shEqTooltip"></div>
         <div class="empty-state" id="shEqEmpty" style="display:none">
-          The shadow equity curve starts with the first 3:45 PM shadow run.
+          The shadow equity curve starts with the first daily shadow run.
         </div>
       </div>
       <div class="equity-x-labels" id="shEqXLabels"></div>
@@ -5471,6 +5558,288 @@ async function loadShadow() {
   renderShadowSizing(siz, _shSnapshots[_shSnapshots.length - 1]);
   renderShadowGates(gates ? (gates.days || []) : []);
   renderShadowSleeve(sleeve);
+  // comparison.json is new (step 3) and absent until the first 3:05 pm run:
+  // read it on its own so a missing file never blanks the rest of the tab.
+  let comp = null;
+  try { comp = await shGet('comparison.json'); } catch (e) { comp = null; }
+  renderShadowComparison(comp);
+}
+
+// ─── Step 3: Swing vs Blend vs live vs buy-and-hold (comparison.json) ──────
+// Plain string building only (no nested template literals, no nullish or
+// optional-chaining operators):
+// the dashboard has to parse on older Android Chrome.
+function shPct(v, dp) {
+  if (v === null || v === undefined || isNaN(v)) return '—';
+  const d = (dp === undefined) ? 1 : dp;
+  return (v > 0 ? '+' : '') + (+v).toFixed(d) + '%';
+}
+function shPctCol(v) {
+  if (v === null || v === undefined || isNaN(v)) return 'var(--muted)';
+  return v > 0 ? 'var(--green)' : (v < 0 ? 'var(--red)' : 'var(--muted)');
+}
+function shCard(label, value, sub, cls, valColor) {
+  return '<div class="stat-card ' + (cls || 'blue') + '">' +
+    '<div class="stat-label">' + label + '</div>' +
+    '<div class="stat-value"' + (valColor ? ' style="color:' + valColor + '"' : '') + '>' + value + '</div>' +
+    '<div class="stat-sub">' + (sub || '') + '</div></div>';
+}
+function shDateShort(iso) {
+  return new Date(iso + 'T00:00:00').toLocaleDateString('en-IN', {day: 'numeric', month: 'short'});
+}
+
+function renderShadowComparison(c) {
+  const empty = document.getElementById('shCmpEmpty');
+  const body = document.getElementById('shCmpBody');
+  if (!empty || !body) return;
+  if (!c || !c.daily || !c.daily.length || !c.summary) {
+    empty.style.display = 'block'; body.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none'; body.style.display = 'block';
+  renderShStatus(c);
+  renderShScores(c);
+  renderShCharts(c);
+  renderShBookB(c);
+  renderShMonthly(c);
+  renderShDecisions(c);
+  renderShLiveVs(c);
+}
+
+function renderShStatus(c) {
+  const st = c.status || {};
+  const gateOn = !!st.gate_entries_allowed;
+  const dist = st.gate_distance_pct;
+  const gateSub = 'Midcap 150 ' + (dist === null || dist === undefined ? '' :
+    Math.abs(dist).toFixed(1) + '% ' + (dist >= 0 ? 'above' : 'below') + ' ') +
+    'its 21-day average; Super Indicator ' + (st.gate_super_indicator_bullish ? 'bullish' : 'bearish');
+  const limits = [];
+  if (st.five_day_breaker_active) limits.push('5-day loss limit active');
+  if (st.high_water_mark_cut_active) limits.push('8% cut from peak active');
+  const late = !!(c.late_run || st.late_run);
+  document.getElementById('shStatus').innerHTML =
+    shCard('Market gate today', '<span class="sh-pill ' + (gateOn ? 'on' : 'off') + '">' +
+           (gateOn ? 'ON' : 'OFF') + '</span>', gateSub, gateOn ? 'green' : 'red') +
+    shCard('Position size level', shEsc(String(st.size_level || '—').split(' (')[0]),
+           shEsc(st.size_level || ''), 'blue') +
+    shCard('Loss limits', limits.length ? '<span class="sh-pill warn">ACTIVE</span>' : 'None active',
+           limits.length ? limits.join('; ') : '5-day loss limit and 8% cut from peak both off', limits.length ? 'amber' : 'purple') +
+    shCard('Last decision run', shEsc(st.decided_at_ist || '—') + ' IST',
+           shEsc(c.as_of || '') + (late ? ' · <span class="sh-pill warn">LATE RUN</span>' : ' · on time'),
+           late ? 'amber' : 'purple') +
+    shMorningCard(c);
+}
+
+// The 10:40 run values the book at the morning price and decides nothing.
+function shMorningCard(c) {
+  const m = c.morning;
+  if (!m || !m.marked_at_ist) return '';
+  const t = String(m.marked_at_ist).split(' ');
+  return shCard('Morning valuation', shEsc(t[1] || '') + ' IST',
+    'Swing ' + shPct(m.swing_return_pct) + ' · Blend ' + shPct(m.blend_return_pct) +
+    ' · ' + shEsc(t[0] || '') + ' (no decisions at this run)', 'blue');
+}
+
+function renderShScores(c) {
+  const s = c.summary;
+  const daily = c.daily;
+  const last = daily[daily.length - 1];
+  function card(title, key, value, cls) {
+    const x = s[key] || {};
+    const inv = (x.invested_pct === null || x.invested_pct === undefined) ? '' :
+      ' · invested ' + (+x.invested_pct).toFixed(0) + '%';
+    return '<div class="stat-card ' + cls + '">' +
+      '<div class="stat-label">' + title + '</div>' +
+      '<div class="stat-value" style="color:' + shPctCol(x.return_pct) + '">' + shPct(x.return_pct, 2) + '</div>' +
+      '<div class="stat-sub">' + (value === null ? 'since 15 Sep' : shInr(value) + ' · since 15 Sep') + '</div>' +
+      '<div class="sh-score-line">Worst fall ' + shPct(x.max_drawdown_pct) + ' · now ' +
+      shPct(x.current_drawdown_pct) + inv + '</div></div>';
+  }
+  document.getElementById('shScores').innerHTML =
+    card('Swing — v3 stock system', 'book_a', last.book_a, 'green') +
+    card('Blend — half Swing, half fund', 'book_b', last.book_b, 'blue') +
+    card('Live bot', 'live', null, 'amber') +
+    card('MID150BEES buy-and-hold', 'buy_hold', last.buy_hold, 'purple');
+}
+
+// One line chart on a canvas. series: [{vals:[..], color, label}]; shade: bool per row.
+function shLineChart(canvasId, xId, legendId, rows, series, shade, fmt) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const { ctx, W, H } = sizeCanvas(canvas, canvasId === 'shCmpCanvas1' ? 220 : 200);
+  const PAD = {top: 12, right: 10, bottom: 6, left: 48};
+  const cW = W - PAD.left - PAD.right, cH = H - PAD.top - PAD.bottom;
+  const all = [];
+  series.forEach(function (sr) { sr.vals.forEach(function (v) { if (v !== null && !isNaN(v)) all.push(v); }); });
+  if (!all.length) return;
+  let minV = Math.min.apply(null, all), maxV = Math.max.apply(null, all);
+  if (maxV - minV < 1e-9) { minV -= 1; maxV += 1; }
+  const padV = (maxV - minV) * 0.08; minV -= padV; maxV += padV;
+  const n = rows.length;
+  const x = function (i) { return PAD.left + (n <= 1 ? cW / 2 : i / (n - 1) * cW); };
+  const y = function (v) { return PAD.top + (1 - (v - minV) / (maxV - minV)) * cH; };
+  const css = getComputedStyle(document.documentElement);
+  // gate-off shading
+  if (shade) {
+    ctx.fillStyle = 'rgba(148,163,184,0.12)';
+    const half = n > 1 ? cW / (n - 1) / 2 : cW / 2;
+    shade.forEach(function (off, i) { if (off) ctx.fillRect(x(i) - half, PAD.top, half * 2, cH); });
+  }
+  // gridlines
+  ctx.strokeStyle = 'rgba(148,163,184,0.15)'; ctx.lineWidth = 1;
+  ctx.fillStyle = css.getPropertyValue('--muted').trim() || '#94a3b8';
+  ctx.font = '10px sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let g = 0; g <= 4; g++) {
+    const v = minV + (maxV - minV) * g / 4, yy = y(v);
+    ctx.beginPath(); ctx.moveTo(PAD.left, yy); ctx.lineTo(W - PAD.right, yy); ctx.stroke();
+    ctx.fillText(fmt(v), PAD.left - 6, yy);
+  }
+  series.forEach(function (sr) {
+    ctx.strokeStyle = sr.color; ctx.lineWidth = 2; ctx.beginPath();
+    let started = false;
+    sr.vals.forEach(function (v, i) {
+      if (v === null || isNaN(v)) return;
+      if (!started) { ctx.moveTo(x(i), y(v)); started = true; } else { ctx.lineTo(x(i), y(v)); }
+    });
+    ctx.stroke();
+  });
+  const step = Math.max(1, Math.floor(n / 5));
+  const idx = [];
+  for (let i = 0; i < n; i += step) idx.push(i);
+  if (idx[idx.length - 1] !== n - 1) idx.push(n - 1);
+  document.getElementById(xId).innerHTML = idx.map(function (i) {
+    return '<span>' + shDateShort(rows[i].date) + '</span>'; }).join('');
+  document.getElementById(legendId).innerHTML = series.map(function (sr) {
+    const lastV = sr.vals[sr.vals.length - 1];
+    return '<span><i style="background:' + sr.color + '"></i>' + sr.label +
+      (lastV === null || isNaN(lastV) ? '' : ' ' + fmt(lastV)) + '</span>'; }).join('');
+}
+
+function renderShCharts(c) {
+  const rows = c.daily;
+  const css = getComputedStyle(document.documentElement);
+  const col = function (v, fb) { const s = css.getPropertyValue(v).trim(); return s || fb; };
+  function idx(key) {
+    let base = null;
+    return rows.map(function (r) {
+      const v = r[key];
+      if (v === null || v === undefined) return null;
+      if (base === null) base = v;
+      return v / base * 100;
+    });
+  }
+  const shade = rows.map(function (r) { return r.gate_entries_allowed === false; });
+  const nOff = shade.filter(function (x) { return x; }).length;
+  const sn = document.getElementById('shCmpShadeNote');
+  if (sn) sn.textContent = 'Shaded days: market gate off (no new buys) — ' + nOff + ' of ' + rows.length + ' days.';
+  const f100 = function (v) { return (+v).toFixed(1); };
+  shLineChart('shCmpCanvas1', 'shCmpX1', 'shCmpLegend1', rows, [
+    {vals: idx('book_a'), color: col('--green', '#34d399'), label: 'Swing'},
+    {vals: idx('book_b'), color: col('--accent', '#818cf8'), label: 'Blend'},
+    {vals: idx('buy_hold'), color: col('--purple', '#b388ff'), label: 'Midcap 150 buy-and-hold'}
+  ], shade, f100);
+  const a = idx('book_a').map(function (v) { return v === null ? null : v - 100; });
+  const live = rows.map(function (r) { return (r.live_pct === null || r.live_pct === undefined) ? null : r.live_pct; });
+  const fp = function (v) { return (v > 0 ? '+' : '') + (+v).toFixed(1) + '%'; };
+  shLineChart('shCmpCanvas2', 'shCmpX2', 'shCmpLegend2', rows, [
+    {vals: live, color: col('--amber', '#fbbf24'), label: 'Live bot'},
+    {vals: a, color: col('--green', '#34d399'), label: 'Swing'}
+  ], null, fp);
+}
+
+function renderShBookB(c) {
+  const b = c.book_b_breakdown || {};
+  const last = c.daily[c.daily.length - 1];
+  const tot = (b.v3_half || 0) + (b.etf_half || 0);
+  const share = function (v) { return tot ? (v / tot * 100).toFixed(1) + '%' : '—'; };
+  const holds = b.etf_half_holdings_at_6_75_lakh_scale || {};
+  const holdTxt = Object.keys(holds).length ? Object.keys(holds).map(function (k) {
+    return shEsc(k) + ' ' + shInr(holds[k].value); }).join(', ') : 'cash only';
+  document.getElementById('shBookB').innerHTML =
+    '<table class="sh-tbl"><thead><tr><th>Half</th><th class="num">Value</th><th class="num">Share</th><th>What it holds</th></tr></thead><tbody>' +
+    '<tr><td>Swing half (Swing × ' + (b.v3_scale_of_book_a === null || b.v3_scale_of_book_a === undefined ? '—' :
+      (+b.v3_scale_of_book_a).toFixed(4)) + ')</td><td class="num">' + shInr(b.v3_half) + '</td><td class="num">' +
+      share(b.v3_half || 0) + '</td><td class="sh-reason">Swing\'s stocks, sleeve and cash, scaled</td></tr>' +
+    '<tr><td>Fund half (MID150BEES when the gate is on)</td><td class="num">' + shInr(b.etf_half) + '</td><td class="num">' +
+      share(b.etf_half || 0) + '</td><td class="sh-reason">Now: ' + shEsc(b.etf_half_holding || '—') + ' — ' + holdTxt + '</td></tr>' +
+    '<tr><td><b>Blend</b></td><td class="num"><b>' + shInr(last.book_b) + '</b></td><td class="num">100%</td>' +
+      '<td class="sh-reason">' + shEsc(b.rebalance_rule || '') + ' · ' + shEsc((c.labels || {}).book_b || '') + '</td></tr>' +
+    '</tbody></table>';
+}
+
+function renderShMonthly(c) {
+  const m = c.monthly || {};
+  const ref = c.backtest_reference || {};
+  const books = [['book_a', 'Swing'], ['book_b', 'Blend'], ['live', 'Live bot'], ['buy_hold', 'Buy-and-hold']];
+  const months = [];
+  books.forEach(function (bk) { (m[bk[0]] || []).forEach(function (r) { if (months.indexOf(r.month) < 0) months.push(r.month); }); });
+  months.sort();
+  let html = '<table class="sh-tbl"><thead><tr><th>Book</th>' + months.map(function (mo) {
+    return '<th class="num">' + mo + '</th>'; }).join('') + '<th class="num">Median month</th><th class="num">Worst month</th><th class="num">Worst fall</th></tr></thead><tbody>';
+  books.forEach(function (bk) {
+    const rows = m[bk[0]] || [];
+    const by = {};
+    rows.forEach(function (r) { by[r.month] = r; });
+    const s = (c.summary || {})[bk[0]] || {};
+    html += '<tr><td>' + bk[1] + '</td>' + months.map(function (mo) {
+      const r = by[mo];
+      if (!r) return '<td class="num">—</td>';
+      return '<td class="num" style="color:' + shPctCol(r.return_pct) + '">' + shPct(r.return_pct) +
+        (r.partial ? '<sup>*</sup>' : '') + '</td>'; }).join('') +
+      '<td class="num">—</td><td class="num">—</td><td class="num">' + shPct(s.max_drawdown_pct) + '</td></tr>';
+    const rf = ref[bk[0]];
+    if (rf) {
+      html += '<tr class="sh-ref"><td>Backtest 2020–26</td>' + months.map(function () { return '<td></td>'; }).join('') +
+        '<td class="num">' + shPct(rf.median_month_pct, 2) + '</td><td class="num">' + shPct(rf.worst_month_pct, 2) +
+        '</td><td class="num">' + shPct(rf.max_drawdown_pct, 2) + '</td></tr>';
+    }
+  });
+  html += '</tbody></table><div class="sh-note">* part month. Backtest rows: ' + shEsc(ref.period || '') + '.</div>';
+  document.getElementById('shMonthly').innerHTML = html;
+}
+
+function renderShDecisions(c) {
+  const d = c.decisions || {};
+  const rows = [];
+  (d.buys || []).forEach(function (b) {
+    rows.push(['Buy', b.symbol, b.shares + ' at ' + shInr(b.price), 'Stop loss ' + shInr(b.stop) +
+      (b.rank ? ' · ranked ' + b.rank + ' of ' + d.signals : '')]); });
+  (d.sells || []).forEach(function (s) {
+    rows.push(['Sell', s.symbol, s.shares + ' at ' + shInr(s.price), s.reason + ' · ' + shInr(s.pnl_inr, true)]); });
+  (d.sleeve || []).forEach(function (f) {
+    rows.push(['Sleeve ' + f.side, f.symbol, (+f.units).toFixed(2) + ' at ' + shInr(f.price), 'Defensive sleeve rebalance']); });
+  if (d.book_b_fund_half) {
+    rows.push(['Blend fund half', 'MID150BEES', d.book_b_fund_half === 'ETF' ? 'bought' : 'sold',
+      d.book_b_fund_half === 'ETF' ? 'Market gate turned on' : 'Midcap 150 fell below its 21-day average']); }
+  (d.skipped || []).forEach(function (s) { rows.push(['Skipped', s.symbol, '', s.reason]); });
+  const el = document.getElementById('shDecisions');
+  if (!rows.length) {
+    el.innerHTML = '<div class="empty-state">No decisions on ' + shEsc(d.date || c.as_of || 'the last run') +
+      ' — ' + (d.signals ? d.signals + ' signals' : 'no VCP signals') + '.</div>';
+    return;
+  }
+  el.innerHTML = '<table class="sh-tbl"><thead><tr><th>Action</th><th>Stock</th><th>Size</th><th>Reason</th></tr></thead><tbody>' +
+    rows.map(function (r) {
+      return '<tr><td>' + shEsc(r[0]) + '</td><td><b>' + shEsc(r[1]) + '</b></td><td class="num">' + shEsc(r[2]) +
+        '</td><td class="sh-reason">' + shEsc(r[3]) + '</td></tr>'; }).join('') +
+    '</tbody></table><div class="sh-note">Decisions of ' + shEsc(d.date || '') + ' at ' + shEsc((c.status || {}).decided_at_ist || '') + ' IST.</div>';
+}
+
+function renderShLiveVs(c) {
+  const l = c.live_vs_shadow || {};
+  const rows = [];
+  (l.both || []).forEach(function (s) { rows.push([s, 'Both', 'Held by the live bot and the shadow']); });
+  (l.live_only || []).forEach(function (x) {
+    rows.push([x.symbol, 'Live only', x.reason + (x.live_entry ? ' (live bought ' + x.live_entry +
+      (x.live_entry_time ? ' ' + x.live_entry_time : '') + ')' : '')]); });
+  (l.shadow_only || []).forEach(function (x) { rows.push([x.symbol, 'Shadow only', x.reason]); });
+  const el = document.getElementById('shLiveVs');
+  if (!rows.length) { el.innerHTML = '<div class="empty-state">Neither book holds any stock.</div>'; return; }
+  el.innerHTML = '<table class="sh-tbl"><thead><tr><th>Stock</th><th>Held by</th><th>Why</th></tr></thead><tbody>' +
+    rows.map(function (r) {
+      const cls = r[1] === 'Both' ? 'on' : (r[1] === 'Live only' ? 'warn' : 'off');
+      return '<tr><td><b>' + shEsc(r[0]) + '</b></td><td><span class="sh-pill ' + cls + '">' + r[1] +
+        '</span></td><td class="sh-reason">' + shEsc(r[2]) + '</td></tr>'; }).join('') + '</tbody></table>';
 }
 
 // The sleeve is the answer to "the gate is BELOW and the book is flat — so
@@ -5690,13 +6059,23 @@ function renderShadowHeader(state, siz) {
          dec.state && dec.state !== 'NORMAL' ? A : W) +
     card('Live Gate Check', eqVal, eqSub, eqv.match === false ? A : eqv.match ? G : W);
 
-  const restated = state.restated || [];
+  // state.restated carries two kinds of entry since step 3: rule changes
+  // ("Rule change from ...") and decisions a replay changed. Shown apart.
+  const allRestated = state.restated || [];
+  const ruleChanges = allRestated.filter(s => String(s).indexOf('Rule change') === 0);
+  const restated = allRestated.filter(s => String(s).indexOf('Rule change') !== 0);
   const rs = document.getElementById('shRestated');
-  rs.style.display = restated.length ? 'block' : 'none';
+  rs.style.display = (restated.length || ruleChanges.length) ? 'block' : 'none';
+  let rsHtml = '';
   if (restated.length) {
-    rs.innerHTML = `<strong>⚠️ Restated:</strong> the latest replay changed ${restated.length} ` +
-      `past decision(s) — ${restated.slice(0, 3).map(shEsc).join('; ')}`;
+    rsHtml += '<div><strong>⚠️ Restated:</strong> the latest replay changed ' + restated.length +
+      ' past decision(s) — ' + restated.slice(0, 3).map(shEsc).join('; ') + '</div>';
   }
+  if (ruleChanges.length) {
+    rsHtml += '<div style="margin-top:4px"><strong>Rule changes:</strong> ' +
+      ruleChanges.map(shEsc).join('; ') + '</div>';
+  }
+  rs.innerHTML = rsHtml;
 }
 
 function renderShadowPerf(trades) {

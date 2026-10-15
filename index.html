@@ -2464,7 +2464,7 @@
       Regime-Gated Swing System would have done: MA21 gate on MC150 with full liquidation, EMA13
       Phase 2 exit, ATR(14)×2.0 stop at 1.40% risk, ₹13.5L. No real orders and no real capital —
       decided once a day at about 3:10 PM IST on the price at that time by the research engine
-      itself (Book A), with Book B (50/50 with a gated Midcap 150 fund) beside it; the official
+      itself (Swing), with Blend (50/50 with a gated Midcap 150 fund) beside it; the official
       close is recorded after the market shuts and changes no decision.
       <div class="sh-meta" id="shMeta">Loading…</div></div>
       <button class="sh-more" onclick="this.parentNode.classList.toggle('open');
@@ -2472,7 +2472,7 @@
     </div>
     <div class="notice sh-restated" id="shRestated" style="display:none"></div>
 
-    <!-- ── Step 3: Book A vs Book B vs live vs buy-and-hold (comparison.json) ── -->
+    <!-- ── Step 3: Swing vs Blend vs live vs buy-and-hold (comparison.json) ── -->
     <div id="shCmp">
       <div class="sh-cmp-empty empty-state" id="shCmpEmpty">No comparison data yet</div>
       <div id="shCmpBody" style="display:none">
@@ -2485,7 +2485,7 @@
         <!-- 3. chart 1: books indexed to 100 -->
         <div class="equity-card">
           <div class="equity-card-head"><div>
-            <div class="equity-card-title">📈 Book A, Book B and Midcap 150 buy-and-hold — 100 on 15 September</div>
+            <div class="equity-card-title">📈 Swing, Blend and Midcap 150 buy-and-hold — 100 on 15 September</div>
             <div class="sh-legend" id="shCmpLegend1"></div>
           </div></div>
           <div class="equity-chart-wrap"><canvas id="shCmpCanvas1" height="220"></canvas></div>
@@ -2493,18 +2493,18 @@
           <div class="sh-note" id="shCmpShadeNote">Shaded days: market gate off (no new buys).</div>
         </div>
 
-        <!-- 4. chart 2: live bot vs Book A -->
+        <!-- 4. chart 2: live bot vs Swing -->
         <div class="equity-card">
           <div class="equity-card-head"><div>
-            <div class="equity-card-title">🔁 Live bot vs Book A — % return since 15 September</div>
+            <div class="equity-card-title">🔁 Live bot vs Swing — % return since 15 September</div>
             <div class="sh-legend" id="shCmpLegend2"></div>
           </div></div>
           <div class="equity-chart-wrap"><canvas id="shCmpCanvas2" height="200"></canvas></div>
           <div class="equity-x-labels" id="shCmpX2"></div>
         </div>
 
-        <!-- 5. Book B breakdown -->
-        <div class="section-header"><div class="section-title"><span class="icon">⚖️</span>Book B — v3 half vs fund half</div></div>
+        <!-- 5. Blend breakdown -->
+        <div class="section-header"><div class="section-title"><span class="icon">⚖️</span>Blend — Swing half vs fund half</div></div>
         <div class="sh-table-wrap" id="shBookB"></div>
 
         <!-- 6. monthly tables -->
@@ -5564,7 +5564,7 @@ async function loadShadow() {
   renderShadowComparison(comp);
 }
 
-// ─── Step 3: Book A vs Book B vs live vs buy-and-hold (comparison.json) ──────
+// ─── Step 3: Swing vs Blend vs live vs buy-and-hold (comparison.json) ──────
 // Plain string building only (no nested template literals, no nullish or
 // optional-chaining operators):
 // the dashboard has to parse on older Android Chrome.
@@ -5644,8 +5644,8 @@ function renderShScores(c) {
       shPct(x.current_drawdown_pct) + inv + '</div></div>';
   }
   document.getElementById('shScores').innerHTML =
-    card('Book A — v3 shadow', 'book_a', last.book_a, 'green') +
-    card('Book B — 50/50 blend', 'book_b', last.book_b, 'blue') +
+    card('Swing — v3 stock system', 'book_a', last.book_a, 'green') +
+    card('Blend — half Swing, half fund', 'book_b', last.book_b, 'blue') +
     card('Live bot', 'live', null, 'amber') +
     card('MID150BEES buy-and-hold', 'buy_hold', last.buy_hold, 'purple');
 }
@@ -5722,8 +5722,8 @@ function renderShCharts(c) {
   if (sn) sn.textContent = 'Shaded days: market gate off (no new buys) — ' + nOff + ' of ' + rows.length + ' days.';
   const f100 = function (v) { return (+v).toFixed(1); };
   shLineChart('shCmpCanvas1', 'shCmpX1', 'shCmpLegend1', rows, [
-    {vals: idx('book_a'), color: col('--green', '#34d399'), label: 'Book A'},
-    {vals: idx('book_b'), color: col('--accent', '#818cf8'), label: 'Book B'},
+    {vals: idx('book_a'), color: col('--green', '#34d399'), label: 'Swing'},
+    {vals: idx('book_b'), color: col('--accent', '#818cf8'), label: 'Blend'},
     {vals: idx('buy_hold'), color: col('--purple', '#b388ff'), label: 'Midcap 150 buy-and-hold'}
   ], shade, f100);
   const a = idx('book_a').map(function (v) { return v === null ? null : v - 100; });
@@ -5731,7 +5731,7 @@ function renderShCharts(c) {
   const fp = function (v) { return (v > 0 ? '+' : '') + (+v).toFixed(1) + '%'; };
   shLineChart('shCmpCanvas2', 'shCmpX2', 'shCmpLegend2', rows, [
     {vals: live, color: col('--amber', '#fbbf24'), label: 'Live bot'},
-    {vals: a, color: col('--green', '#34d399'), label: 'Book A'}
+    {vals: a, color: col('--green', '#34d399'), label: 'Swing'}
   ], null, fp);
 }
 
@@ -5745,12 +5745,12 @@ function renderShBookB(c) {
     return shEsc(k) + ' ' + shInr(holds[k].value); }).join(', ') : 'cash only';
   document.getElementById('shBookB').innerHTML =
     '<table class="sh-tbl"><thead><tr><th>Half</th><th class="num">Value</th><th class="num">Share</th><th>What it holds</th></tr></thead><tbody>' +
-    '<tr><td>v3 half (Book A × ' + (b.v3_scale_of_book_a === null || b.v3_scale_of_book_a === undefined ? '—' :
+    '<tr><td>Swing half (Swing × ' + (b.v3_scale_of_book_a === null || b.v3_scale_of_book_a === undefined ? '—' :
       (+b.v3_scale_of_book_a).toFixed(4)) + ')</td><td class="num">' + shInr(b.v3_half) + '</td><td class="num">' +
-      share(b.v3_half || 0) + '</td><td class="sh-reason">Book A\'s stocks, sleeve and cash, scaled</td></tr>' +
+      share(b.v3_half || 0) + '</td><td class="sh-reason">Swing\'s stocks, sleeve and cash, scaled</td></tr>' +
     '<tr><td>Fund half (MID150BEES when the gate is on)</td><td class="num">' + shInr(b.etf_half) + '</td><td class="num">' +
       share(b.etf_half || 0) + '</td><td class="sh-reason">Now: ' + shEsc(b.etf_half_holding || '—') + ' — ' + holdTxt + '</td></tr>' +
-    '<tr><td><b>Book B</b></td><td class="num"><b>' + shInr(last.book_b) + '</b></td><td class="num">100%</td>' +
+    '<tr><td><b>Blend</b></td><td class="num"><b>' + shInr(last.book_b) + '</b></td><td class="num">100%</td>' +
       '<td class="sh-reason">' + shEsc(b.rebalance_rule || '') + ' · ' + shEsc((c.labels || {}).book_b || '') + '</td></tr>' +
     '</tbody></table>';
 }
@@ -5758,7 +5758,7 @@ function renderShBookB(c) {
 function renderShMonthly(c) {
   const m = c.monthly || {};
   const ref = c.backtest_reference || {};
-  const books = [['book_a', 'Book A'], ['book_b', 'Book B'], ['live', 'Live bot'], ['buy_hold', 'Buy-and-hold']];
+  const books = [['book_a', 'Swing'], ['book_b', 'Blend'], ['live', 'Live bot'], ['buy_hold', 'Buy-and-hold']];
   const months = [];
   books.forEach(function (bk) { (m[bk[0]] || []).forEach(function (r) { if (months.indexOf(r.month) < 0) months.push(r.month); }); });
   months.sort();
@@ -5797,7 +5797,7 @@ function renderShDecisions(c) {
   (d.sleeve || []).forEach(function (f) {
     rows.push(['Sleeve ' + f.side, f.symbol, (+f.units).toFixed(2) + ' at ' + shInr(f.price), 'Defensive sleeve rebalance']); });
   if (d.book_b_fund_half) {
-    rows.push(['Book B fund half', 'MID150BEES', d.book_b_fund_half === 'ETF' ? 'bought' : 'sold',
+    rows.push(['Blend fund half', 'MID150BEES', d.book_b_fund_half === 'ETF' ? 'bought' : 'sold',
       d.book_b_fund_half === 'ETF' ? 'Market gate turned on' : 'Midcap 150 fell below its 21-day average']); }
   (d.skipped || []).forEach(function (s) { rows.push(['Skipped', s.symbol, '', s.reason]); });
   const el = document.getElementById('shDecisions');

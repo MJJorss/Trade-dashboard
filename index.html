@@ -2463,9 +2463,10 @@
       <div class="sh-notice-body"><strong>🧪 Shadow book — paper only.</strong> What the
       Regime-Gated Swing System would have done: MA21 gate on MC150 with full liquidation, EMA13
       Phase 2 exit, ATR(14)×2.0 stop at 1.40% risk, ₹13.5L. No real orders and no real capital —
-      decided once a day at about 3:10 PM IST on the price at that time by the research engine
-      itself (Swing), with Blend (50/50 with a gated Midcap 150 fund) beside it; the official
-      close is recorded after the market shuts and changes no decision.
+      decided once a day at the 2:40 PM IST run on the price at that time by the research engine
+      itself (Swing), with Blend (50/50 with a gated Midcap 150 fund) beside it. The 10:40 AM run
+      decides nothing: it values the book at the morning price and records the previous decision
+      day's official closes.
       <div class="sh-meta" id="shMeta">Loading…</div></div>
       <button class="sh-more" onclick="this.parentNode.classList.toggle('open');
         this.textContent = this.parentNode.classList.contains('open') ? 'Less ▴' : 'More ▾'">More ▾</button>
@@ -5623,9 +5624,20 @@ function renderShStatus(c) {
            shEsc(st.size_level || ''), 'blue') +
     shCard('Loss limits', limits.length ? '<span class="sh-pill warn">ACTIVE</span>' : 'None active',
            limits.length ? limits.join('; ') : '5-day loss limit and 8% cut from peak both off', limits.length ? 'amber' : 'purple') +
-    shCard('Last run', shEsc(st.decided_at_ist || '—') + ' IST',
+    shCard('Last decision run', shEsc(st.decided_at_ist || '—') + ' IST',
            shEsc(c.as_of || '') + (late ? ' · <span class="sh-pill warn">LATE RUN</span>' : ' · on time'),
-           late ? 'amber' : 'purple');
+           late ? 'amber' : 'purple') +
+    shMorningCard(c);
+}
+
+// The 10:40 run values the book at the morning price and decides nothing.
+function shMorningCard(c) {
+  const m = c.morning;
+  if (!m || !m.marked_at_ist) return '';
+  const t = String(m.marked_at_ist).split(' ');
+  return shCard('Morning valuation', shEsc(t[1] || '') + ' IST',
+    'Swing ' + shPct(m.swing_return_pct) + ' · Blend ' + shPct(m.blend_return_pct) +
+    ' · ' + shEsc(t[0] || '') + ' (no decisions at this run)', 'blue');
 }
 
 function renderShScores(c) {

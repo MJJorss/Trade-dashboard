@@ -7004,6 +7004,7 @@ function resBanner() {
   const c = m.counts || {};
   let h = '<span class="res-season">' + resEsc(m.season || 'Results') + '</span>'
     + '<span>Latest filing captured: <b>' + resWhen(m.latest_filing_captured) + '</b></span>'
+    + '<span>Last checked: <b>' + resWhen(m.run_time) + '</b></span>'
     + '<span><b>' + (c.reported || 0) + '</b> reported · <b>' + (c.in_universe || 0) + '</b> above ₹'
     + Number(m.min_mcap_cr || 1000).toLocaleString('en-IN') + ' Cr · <b>' + (c.non_financial || 0)
     + '</b> companies · <b>' + (c.financial || 0) + '</b> banks &amp; finance</span>'

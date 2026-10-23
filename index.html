@@ -1606,6 +1606,16 @@
   .rd-pill-bar { flex:1; height:6px; background:var(--border); border-radius:999px; overflow:hidden; }
   .rd-pill-bar span { display:block; height:100%; }
   .rd-pill-val { width:32px; text-align:right; font-family:var(--font-mono); color:var(--text); }
+  .rd-earn { text-transform:none; letter-spacing:0; white-space:nowrap; cursor:help; }
+  .rd-earn-pos { background:rgba(var(--green-rgb),0.10); color:var(--green); border:1px solid rgba(var(--green-rgb),0.25); }
+  .rd-earn-neg { background:rgba(var(--red-rgb),0.10); color:var(--red); border:1px solid rgba(var(--red-rgb),0.25); }
+  .rd-earn-flat { background:rgba(var(--ink-rgb),0.04); color:var(--muted); border:1px solid rgba(var(--ink-rgb),0.12); }
+  .rd-earn-stale { opacity:0.6; border-style:dashed; }
+  .rd-hist { display:grid; grid-template-columns:repeat(4, auto); justify-content:space-between; gap:3px 12px;
+    font-size:11px; margin:8px 0 2px; }
+  .rd-hist div { text-align:right; font-family:var(--font-mono); color:var(--text); }
+  .rd-hist div.rd-hh { color:var(--muted); font-family:var(--font-head); font-size:10px; }
+  .rd-hist div.rd-hq { text-align:left; }
   .rd-note { font-size:10.5px; color:var(--muted); line-height:1.5; margin-top:14px;
     padding-top:12px; border-top:1px solid var(--border); }
 
@@ -3070,6 +3080,7 @@ function updateMarketStatus() {
    live trading rule reads it.                                              */
 
 var _rdData = null;
+var _rdIndex = {};
 var _rdStates = 'ACTIONABLE,SETUP,LEADER';
 var RD_STATE_ORDER = ['ACTIONABLE', 'SETUP', 'LEADER', 'EXTENDED', 'BROKEN', 'NEUTRAL', 'UNRATED'];
 var RD_PILLARS = [
@@ -3113,9 +3124,14 @@ async function loadRadar() {
     return;
   }
   if (empty) empty.style.display = 'none';
+  _rdIndex = {};
+  (_rdData.stocks || []).forEach(function (s) { _rdIndex[s.symbol] = s; });
   rdRenderRegime();
   rdRenderSectors();
   rdRenderGrid();
+  // the Results tab shows each company's Radar stage; both files load in
+  // parallel, so redraw it if it got there first
+  if (typeof resRender === 'function' && typeof _res !== 'undefined' && _res) resRender();
 }
 
 function rdRenderRegime() {
@@ -3164,6 +3180,9 @@ function rdRenderRegime() {
     ' / volume ' + rdNum(w.volume * 100, 0) + ' / sector ' + rdNum(w.sector * 100, 0) +
     ' / catalyst ' + rdNum(w.catalyst * 100, 0) + ' / fundamentals ' +
     rdNum(w.fundamentals * 100, 0) +
+    (d.results_coverage ? '. Fundamentals from quarterly results (store ' + rdEsc(d.results_as_of || '—') +
+      '): ' + d.results_coverage.fresh + ' filed this quarter, ' + d.results_coverage.stale +
+      ' on last quarter, ' + d.results_coverage.missing + ' with none' : '') +
     '. The Radar ranks and explains — it places no orders, and no live trading rule reads it.';
 }
 
@@ -3274,6 +3293,36 @@ function rdRenderGrid() {
   }
 }
 
+/* Earnings (Oct 2026): the member's latest quarterly result from the Results
+   store, which now feeds the Fundamentals pillar. A dashed chip is last
+   quarter's result (the company has not filed this one yet); the arrow is
+   acceleration - this quarter's YoY against last quarter's YoY. */
+function rdQ(label) { return String(label || '').split(' ')[0]; }
+function rdEarnChip(s) {
+  var e = s.earnings;
+  if (!e) return '';
+  var g = e.yoy_score != null ? e.yoy_score : null;
+  var shown = e.profit_yoy != null ? e.profit_yoy : g;
+  var txt, cls;
+  if (shown == null) {
+    if (e.profit_qoq == null) return '';
+    txt = rdQ(e.quarter) + ' ' + rdSigned(e.profit_qoq, 0, '% QoQ');
+    cls = e.profit_qoq > 0 ? 'rd-earn-pos' : (e.profit_qoq < 0 ? 'rd-earn-neg' : 'rd-earn-flat');
+  } else {
+    txt = rdQ(e.quarter) + ' ' + rdSigned(shown, 0, '% YoY');
+    var v = g != null ? g : shown;
+    cls = v >= 15 ? 'rd-earn-pos' : (v < 0 ? 'rd-earn-neg' : 'rd-earn-flat');
+  }
+  if (e.accel_pp != null && Math.abs(e.accel_pp) >= 5) txt += e.accel_pp > 0 ? ' ↑' : ' ↓';
+  var tip = (e.fresh ? 'Latest result, ' : 'Last quarter\'s result (not filed this quarter yet), ') +
+    rdEsc(e.quarter) + ': ' + rdEsc(e.profit_label || 'profit') + ' ' + rdSigned(e.profit_yoy, 0, '%') +
+    ' YoY, ' + rdSigned(e.profit_qoq, 0, '%') + ' QoQ' +
+    (e.accel_pp != null ? '; YoY growth ' + (e.accel_pp >= 0 ? 'up ' : 'down ') + rdNum(Math.abs(e.accel_pp), 0) +
+     ' points on last quarter' : '');
+  return '<span class="tag rd-earn ' + cls + (e.fresh ? '' : ' rd-earn-stale') + '" title="' + tip + '">' +
+    rdEsc(txt) + '</span>';
+}
+
 function rdCard(s) {
   var bars = RD_PILLARS.map(function (p) {
     var v = (s.pillars && s.pillars[p[0]]) || 0;
@@ -3287,7 +3336,7 @@ function rdCard(s) {
     '<span class="rd-score">' + rdNum(s.score, 0) + '</span></div>' +
     '<div class="rd-name">' + rdEsc(s.name || '') + '</div>' +
     '<div class="rd-tags"><span class="rd-state rd-state-' + rdEsc(s.state) + '">' +
-    rdEsc(s.state) + '</span>' + rdRsTag(s.rs_tier) + catTag + catChip(s.symbol) + '</div>' +
+    rdEsc(s.state) + '</span>' + rdRsTag(s.rs_tier) + catTag + catChip(s.symbol) + rdEarnChip(s) + '</div>' +
     '<div class="rd-pillars">' + bars + '</div>' +
     '<div class="rd-meta"><span>' + rdEsc(s.nse_sector || '') + '</span>' +
     '<span>' + rdSigned(s.pct_from_52w_high, 1, '% vs high') + '</span>' +
@@ -3357,8 +3406,8 @@ function rdOpenDossier(symbol) {
     if (tr.t != null) {
       trows.push(['Trigger score', rdEsc(tr.t) + ' / 100']);
       trows.push(['Visibility · credibility · priced-in',
-                  rdEsc(tr.v ?? '—') + ' · ' + rdEsc(tr.c ?? '—') + (tr.g ? ' (' + rdEsc(tr.g) + ')' : '') +
-                  ' · ' + rdEsc(tr.p ?? '—')]);
+                  rdEsc(tr.v != null ? tr.v : '—') + ' · ' + rdEsc(tr.c != null ? tr.c : '—') + (tr.g ? ' (' + rdEsc(tr.g) + ')' : '') +
+                  ' · ' + rdEsc(tr.p != null ? tr.p : '—')]);
     }
     if (tr.n) trows.push([tr.w ? '⏳ Next (due soon)' : 'Next dated item',
                           rdEsc(tr.n) + (tr.d ? ' · ' + catDue(tr.d) : '')]);
@@ -3374,6 +3423,8 @@ function rdOpenDossier(symbol) {
        '" target="_blank" rel="noopener" style="color:var(--accent)">Read the ' + rdEsc(tr.doc || '') + ' concall</a></div>' : '');
   }
 
+  var res = rdEarnSection(s);
+
   document.getElementById('rdDossier').innerHTML =
     '<div class="rd-dossier-head">' + rdEsc(s.symbol) + '</div>' +
     '<div class="rd-name" style="white-space:normal">' + rdEsc(s.name || '') + '</div>' +
@@ -3384,13 +3435,54 @@ function rdOpenDossier(symbol) {
     '<div class="section-header" style="margin-top:16px"><div class="section-title">' +
     '<span class="icon">🧱</span>Pillars</div></div>' + pillars +
     '<div class="section-header" style="margin-top:16px"><div class="section-title">' +
-    '<span class="icon">📈</span>The numbers</div></div>' + rows + catalyst + trg +
+    '<span class="icon">📈</span>The numbers</div></div>' + rows + res + catalyst + trg +
     '<div class="rd-note">State and score are read from the last settled session (' +
     rdEsc(_rdData.as_of) + '). Thresholds are judgement, not a backtest — this is an ' +
     'attention tool, and no live trading rule reads it.</div>';
 
   document.getElementById('rdDrawer').classList.add('open');
   document.getElementById('rdDrawerBack').classList.add('open');
+}
+
+function rdEarnSection(s) {
+  var e = s.earnings;
+  var head = '<div class="section-header" style="margin-top:16px"><div class="section-title">' +
+    '<span class="icon">🧾</span>Latest result</div></div>';
+  if (!e) {
+    return head + '<div class="rd-detail">No quarterly result in the Results store yet - the ' +
+      'Fundamentals pillar holds it at a neutral value plus its quality tier.</div>';
+  }
+  var p = e.parts || {};
+  var part = function (v) { return v == null ? '—' : rdNum(v, 0); };
+  var margin = e.margin == null ? '—' : rdNum(e.margin, 1, '%') +
+    (e.margin_year_ago == null ? '' : ' (vs ' + rdNum(e.margin_year_ago, 1, '%') + ' a year ago)');
+  var rows = [
+    ['Quarter', rdEsc(e.quarter) + (e.fresh ? '' : ' · <span style="color:var(--amber)">not filed this quarter yet</span>')],
+    [rdEsc(e.profit_label || 'Profit') + ' YoY · QoQ', rdSigned(e.profit_yoy, 0, '%') + ' · ' + rdSigned(e.profit_qoq, 0, '%')],
+    ['Sales YoY · QoQ', rdSigned(e.sales_yoy, 0, '%') + ' · ' + rdSigned(e.sales_qoq, 0, '%')],
+    ['YoY growth vs last quarter\'s', e.accel_pp == null ? '—' :
+      (e.accel_pp >= 0 ? 'accelerating ' : 'slowing ') + rdSigned(e.accel_pp, 0, ' pts')],
+    ['Margin', margin],
+    ['Scored on', rdEsc(e.basis || '—')],
+    ['Parts: YoY · accel · QoQ · margin · tier',
+     part(p.yoy) + ' · ' + part(p.accel) + ' · ' + part(p.qoq) + ' · ' + part(p.margin) + ' · ' + part(p.tier)]
+  ].map(function (r) {
+    return '<div class="rd-row"><span>' + r[0] + '</span><span>' + r[1] + '</span></div>';
+  }).join('');
+  var flags = (e.flags || []).length ?
+    '<div class="rd-detail" style="margin-top:6px">' + e.flags.map(rdEsc).join(' · ') + '</div>' : '';
+  var grid = '';
+  if (e.history && e.history.length) {
+    grid = '<div class="rd-hist"><div class="rd-hh rd-hq">Quarter</div><div class="rd-hh">Sales ₹ Cr</div>' +
+      '<div class="rd-hh">' + rdEsc(e.profit_label || 'Profit') + ' ₹ Cr</div><div class="rd-hh">Margin</div>' +
+      e.history.map(function (h) {
+        return '<div class="rd-hq">' + rdEsc(h[0]) + '</div>' +
+          '<div>' + (h[1] == null ? '—' : Math.round(h[1]).toLocaleString('en-IN')) + '</div>' +
+          '<div>' + (h[2] == null ? '—' : Math.round(h[2]).toLocaleString('en-IN')) + '</div>' +
+          '<div>' + rdNum(h[3], 1, '%') + '</div>';
+      }).join('') + '</div>';
+  }
+  return head + rows + flags + grid;
 }
 
 function rdCloseDossier() {
@@ -3518,8 +3610,8 @@ function catDue(d) {
 function catTitle(r) {
   const bits = [];
   if (r.f) bits.push('Red flag: ' + r.f);
-  if (r.t != null) bits.push('Trigger ' + r.t + '/100 (visibility ' + (r.v ?? '—') + ', credibility ' +
-                             (r.c ?? '—') + (r.g ? ' ' + r.g : '') + ', priced-in ' + (r.p ?? '—') + ')');
+  if (r.t != null) bits.push('Trigger ' + r.t + '/100 (visibility ' + (r.v != null ? r.v : '—') + ', credibility ' +
+                             (r.c != null ? r.c : '—') + (r.g ? ' ' + r.g : '') + ', priced-in ' + (r.p != null ? r.p : '—') + ')');
   if (r.n) bits.push('Next: ' + r.n + (r.d ? ' (' + catDue(r.d) + ')' : ''));
   if (r.sm) bits.push(r.sm);
   if (r.doc) bits.push('From the ' + r.doc + ' concall');
@@ -4603,21 +4695,25 @@ function switchTab(name, btn) {
    Charts are drawn to a canvas sized from its rendered width, so they need to
    be redrawn whenever that width can have changed: tab switch, window resize,
    and phone rotation. */
+function chartShown(id) {
+  var el = document.getElementById(id);
+  return !!(el && el.offsetParent !== null);
+}
 function redrawVisibleCharts() {
   try {
     if (typeof _eqSnapshots !== 'undefined' && _eqSnapshots && _eqSnapshots.length
-        && document.getElementById('equityCanvas')?.offsetParent !== null) {
+        && chartShown('equityCanvas')) {
       drawEquityChart(_eqSnapshots, typeof _eqPeriod !== 'undefined' ? _eqPeriod : '1M');
       if (typeof drawHeatChart === 'function') {
         drawHeatChart(_eqSnapshots, typeof _eqPeriod !== 'undefined' ? _eqPeriod : '1M');
       }
     }
     if (typeof _invEqSnapshots !== 'undefined' && _invEqSnapshots && _invEqSnapshots.length
-        && document.getElementById('invEquityCanvas')?.offsetParent !== null) {
+        && chartShown('invEquityCanvas')) {
       drawInvEquityChart(_invEqSnapshots, typeof _invEqPeriod !== 'undefined' ? _invEqPeriod : '1M');
     }
     if (typeof _shSnapshots !== 'undefined' && _shSnapshots && _shSnapshots.length
-        && document.getElementById('shEquityCanvas')?.offsetParent !== null) {
+        && chartShown('shEquityCanvas')) {
       drawShEquityChart(_shPeriod);
       drawShHeatChart(_shPeriod);
     }
@@ -6932,6 +7028,7 @@ const RES_COLS = [
   { key: 'margin_pct',        label: 'Core margin',         type: 'num' },
   { key: 'flags',             label: 'Flags',               type: 'flags' },
   { key: 'rs_tier',           label: 'RS tier',             type: 'rs' },
+  { key: 'radar',             label: 'Radar',               type: 'radar' },
   { key: 'in_vcp_scan',       label: 'In VCP scan',         type: 'bool' },
   { key: 'pct_from_52w_high', label: '% from 52-week high', type: 'num' },
   { key: 'trigger_score',     label: 'Trigger score',       type: 'num' }
@@ -7078,8 +7175,13 @@ function resListingTags(r) {
   return Array.isArray(r.listing_tags) ? r.listing_tags : [];
 }
 
+function resRadar(r) {
+  return (typeof _rdIndex !== 'undefined' && _rdIndex[r.symbol]) || null;
+}
+
 function resSortValue(r, key) {
   if (key === 'rs_tier') return RES_RS_ORDER[r.rs_tier] || 0;
+  if (key === 'radar') { const x = resRadar(r); return x ? x.score : null; }
   if (key === 'in_vcp_scan') return r.in_vcp_scan ? 1 : 0;
   if (key === 'flags') return (r.flags || []).length;
   if (key === 'listing') return resListingTags(r).join(' ') || 'nse';
@@ -7160,6 +7262,12 @@ function resCell(r, col) {
   if (col.key === 'rs_tier') {
     if (!v || v === 'UNKNOWN') return '<td class="td-muted">—</td>';
     return '<td><span class="tag tag-rs-' + String(v).toLowerCase() + '">' + resEsc(v) + '</span></td>';
+  }
+  if (col.key === 'radar') {
+    const x = resRadar(r);
+    if (!x) return '<td class="td-muted" title="Not in the Radar universe">—</td>';
+    return '<td style="white-space:nowrap" title="' + resEsc(x.reason || '') + '"><span class="rd-state rd-state-'
+      + resEsc(x.state) + '">' + resEsc(x.state) + '</span> <span class="res-sym">' + Math.round(x.score) + '</span></td>';
   }
   if (col.key === 'in_vcp_scan') return '<td>' + (v ? '<span class="tag tag-scanner-vcp">VCP</span>' : '<span class="td-muted">—</span>') + '</td>';
   if (col.key === 'trigger_score') {

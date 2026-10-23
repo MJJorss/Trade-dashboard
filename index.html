@@ -1877,7 +1877,14 @@
     background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg);
     margin-bottom: 14px;
   }
-  .res-table { min-width: 1180px; margin-bottom: 0; }
+  .res-table { min-width: 100%; margin-bottom: 0; }
+  /* On a desktop the box also scrolls down, so its sideways scrollbar sits on
+     screen instead of under the last of 100+ rows; the header stays put. */
+  @media (min-width: 700px) {
+    .res-table-wrap { max-height: calc(100vh - 140px); overflow: auto; }
+  }
+  .res-table td.res-flags { white-space: normal; min-width: 170px; max-width: 240px; }
+  .res-table td.res-flags .res-flag { white-space: normal; }
   .res-table th { cursor: pointer; white-space: nowrap; user-select: none; }
   .res-table th.res-sorted { color: var(--accent); }
   .res-table td { white-space: nowrap; }
@@ -7128,7 +7135,7 @@ function resCell(r, col) {
   if (col.score) return resGrowthCell(r, col);
   if (col.key === 'mcap_cr') return '<td class="res-num">' + resCr(v) + '</td>';
   if (col.key === 'filing_date') return '<td>' + resWhen(v) + '</td>';
-  if (col.key === 'flags') return '<td>' + resFlagTags(v) + '</td>';
+  if (col.key === 'flags') return '<td class="res-flags">' + resFlagTags(v) + '</td>';
   if (col.key === 'rs_tier') {
     if (!v || v === 'UNKNOWN') return '<td class="td-muted">—</td>';
     return '<td><span class="tag tag-rs-' + String(v).toLowerCase() + '">' + resEsc(v) + '</span></td>';

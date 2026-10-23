@@ -6921,6 +6921,7 @@ let _resOpen = {};
 const RES_COLS = [
   { key: 'company',           label: 'Company',             type: 'text' },
   { key: 'sector',            label: 'Sector',              type: 'text' },
+  { key: 'listing',           label: 'Listing',             type: 'listing' },
   { key: 'mcap_cr',           label: 'Market cap',          type: 'num' },
   { key: 'filing_date',       label: 'Filing date',         type: 'text', dir: -1 },
   { key: 'profit_yoy',        label: 'Profit YoY',          type: 'num', score: 'yoy_score' },
@@ -7067,10 +7068,17 @@ function resToggle(btn) {
   resRender();
 }
 
+// "BSE only" / "SME" from the scanner's listing_tags; a row without the
+// field is an NSE main-board company (every row before BSE / SME coverage).
+function resListingTags(r) {
+  return Array.isArray(r.listing_tags) ? r.listing_tags : [];
+}
+
 function resSortValue(r, key) {
   if (key === 'rs_tier') return RES_RS_ORDER[r.rs_tier] || 0;
   if (key === 'in_vcp_scan') return r.in_vcp_scan ? 1 : 0;
   if (key === 'flags') return (r.flags || []).length;
+  if (key === 'listing') return resListingTags(r).join(' ') || 'nse';
   const v = r[key];
   if (typeof v === 'string') return v.toLowerCase();
   return resNum(v);
@@ -7137,6 +7145,13 @@ function resCell(r, col) {
   if (col.key === 'mcap_cr') return '<td class="res-num">' + resCr(v) + '</td>';
   if (col.key === 'filing_date') return '<td>' + resWhen(v) + '</td>';
   if (col.key === 'flags') return '<td class="res-flags">' + resFlagTags(v) + '</td>';
+  if (col.key === 'listing') {
+    const tags = resListingTags(r);
+    if (!tags.length) return '<td class="td-muted">NSE</td>';
+    return '<td>' + tags.map(function (t) {
+      return '<span class="res-flag ' + (t === 'SME' ? 'res-flag-turn' : 'res-flag-small') + '">' + resEsc(t) + '</span>';
+    }).join('') + '</td>';
+  }
   if (col.key === 'rs_tier') {
     if (!v || v === 'UNKNOWN') return '<td class="td-muted">—</td>';
     return '<td><span class="tag tag-rs-' + String(v).toLowerCase() + '">' + resEsc(v) + '</span></td>';

@@ -2081,7 +2081,7 @@
       <div class="stat-card green">
         <div class="stat-label">⚡ Action</div>
         <div class="stat-value" id="countAction">—</div>
-        <div class="stat-sub">Score ≥65 + Breakout</div>
+        <div class="stat-sub">Score ≥65 + Chartink breakout (5 days)</div>
       </div>
       <div class="stat-card amber">
         <div class="stat-label">👀 Watchlist</div>
@@ -2096,7 +2096,7 @@
       <div class="stat-card purple">
         <div class="stat-label">🔍 Total Scanned</div>
         <div class="stat-value" id="countTotal">—</div>
-        <div class="stat-sub">Today's announcements</div>
+        <div class="stat-sub">Announcements, last 7 days</div>
       </div>
     </div>
 
@@ -2277,8 +2277,6 @@
     <div class="rs-grid" id="rsGrid">
       <div class="loading-state"><div class="spinner"></div><div class="loading-text">Loading RS universe…</div></div>
     </div>
-      <div class="loading-state"><div class="spinner"></div><div class="loading-text">Loading RS universe…</div></div>
-    </div>
   </div>
 
   <!-- ══ CONFIG TAB ══════════════════════════════════ -->
@@ -2305,12 +2303,20 @@
     </div>
 
     <div style="background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:14px; font-size:11px; color:var(--muted); line-height:2; margin-top:12px;">
-      <div><span style="color:var(--accent)">radar.json</span> → Radar</div>
-      <div><span style="color:var(--accent)">announcements_log.csv</span> → FCIS Intelligence (Action / Watchlist / Radar)</div>
-      <div><span style="color:var(--accent)">positions.json</span> → Portfolio (7 slots, tiers, stops)</div>
-      <div><span style="color:var(--accent)">signals_today.json</span> → Chartink Signals (5-day rolling window)</div>
-      <div><span style="color:var(--accent)">master_universe.json</span> → RS Universe (HIGH/MID/LOW)</div>
-      <div><span style="color:var(--accent)">trade_history.json</span> → Performance Tab (closed trades, P&amp;L, monthly breakdown)</div>
+      <div><span style="color:var(--accent)">radar.json</span> → Radar (scores, stages, latest result per stock)</div>
+      <div><span style="color:var(--accent)">results.json</span> → Results (this quarter's filings, ranked)</div>
+      <div><span style="color:var(--accent)">announcements_log.csv</span> → FCIS (last 7 days: Action / Watchlist / Radar)</div>
+      <div><span style="color:var(--accent)">catalyst_cards.json</span> → Concall growth-trigger badges on every tab</div>
+      <div><span style="color:var(--accent)">signals_today.json</span> → Chartink (5-day window), FCIS Action, breadth banner</div>
+      <div><span style="color:var(--accent)">positions.json</span> → Portfolio (open positions, stops, tiers)</div>
+      <div><span style="color:var(--accent)">position_sizing.json</span> → Sizing (risk throttles, recommended vs actual)</div>
+      <div><span style="color:var(--accent)">equity_curve.json</span> → Performance and Sizing (equity curve, drawdown, heat)</div>
+      <div><span style="color:var(--accent)">trade_history.json</span> → Performance (closed trades, P&amp;L, monthly breakdown)</div>
+      <div><span style="color:var(--accent)">master_universe.json</span> → RS Universe (HIGH / MID / LOW), sectors for other tabs</div>
+      <div><span style="color:var(--accent)">rs_volume.json</span> → RS Universe (price, volume, pullback zone)</div>
+      <div><span style="color:var(--accent)">investment_index.json · investment_equity_history.json</span> → Investment</div>
+      <div><span style="color:var(--accent)">ipo_breakout_signals.json</span> → IPO</div>
+      <div><span style="color:var(--accent)">shadow/*.json</span> → Shadow (paper book, gate log, comparison)</div>
     </div>
 
     <div class="divider"></div>
@@ -2329,9 +2335,8 @@
     <div class="divider"></div>
 
     <div style="font-size:10px; color:var(--muted); line-height:1.8;">
-      <div>Dashboard v1.0 · Phase 1 (Monitor Only)</div>
-      <div>SEBI Compliant · No trading execution in this version</div>
-      <div>All data fetched from GitHub · No backend server required</div>
+      <div>Display only: this site places no orders. Live orders come from the bot (intraday tracker), not from here.</div>
+      <div>Data from trade-dashboard-data, read through this site's own server (worker.js); no token in the browser.</div>
       <div style="margin-top:8px; color:var(--border2)">Built for NSE/BSE swing trading · Chartink → GitHub Actions → Dashboard</div>
     </div>
   </div>
@@ -2770,7 +2775,7 @@
       <div style="display:flex;gap:20px;flex-wrap:wrap;">
         <div class="inv-kpi"><div class="inv-kpi-label">Slots Filled</div><div class="inv-kpi-value" id="invSlots">—</div></div>
         <div class="inv-kpi"><div class="inv-kpi-label">Deployed</div><div class="inv-kpi-value" id="invDeployed">—</div></div>
-        <div class="inv-kpi"><div class="inv-kpi-label">Portfolio P&amp;L</div><div class="inv-kpi-value" id="invPnl">—</div></div>
+        <div class="inv-kpi"><div class="inv-kpi-label" title="Unrealised P&amp;L of the holdings open now; the equity curve below is the whole index since inception">Open holdings P&amp;L</div><div class="inv-kpi-value" id="invPnl">—</div></div>
       </div>
     </div>
 
@@ -3495,7 +3500,21 @@ function rdCloseDossier() {
 // which reads the data repo with a server-side token, so the repo can be
 // private and the browser never needs GitHub credentials.
 let _signInReload = false;
-async function ghFetch(filename) {
+
+/* One download per file per refresh (Oct 2026). Several tabs read the same
+   file - Sizing re-read master_universe.json and equity_curve.json, ~0.95 MB
+   a refresh - so each file's request is shared until loadAllData starts the
+   next refresh. A failed request is not kept, so the next caller retries. */
+var _ghCache = {};
+function ghFetch(filename) {
+  if (_ghCache[filename]) return _ghCache[filename];
+  var p = ghFetchNetwork(filename);
+  _ghCache[filename] = p;
+  p.catch(function () { delete _ghCache[filename]; });
+  return p;
+}
+
+async function ghFetchNetwork(filename) {
   const bust = Date.now(); // cache-buster — passed on so GitHub's CDN copy is bypassed
   const url  = `/api/data/${filename}?t=${bust}`;
   const res = await fetch(url, {cache:'no-store', credentials:'same-origin'});
@@ -3539,6 +3558,7 @@ async function loadAllData() {
 
 
   updateMarketStatus();
+  _ghCache = {};              // a refresh downloads every file afresh, once
 
   // Concall growth-trigger badges are read by several tabs, so load them first.
   await loadCatalystCards();
@@ -3656,14 +3676,15 @@ async function loadFCIS() {
   try {
     const text = await ghFetch('announcements_log.csv');
     const rows = parseCSV(text);
-    // Get today & last 3 days for weekend
-    const now = new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Kolkata'}));
-    const cutoff = new Date(now); cutoff.setDate(cutoff.getDate() - 3);
+    // The last FCIS_WINDOW_DAYS calendar days, the same window as the
+    // Telegram morning report (morning_report.LOOKBACK_DAYS = 7, about five
+    // trading days). Until Oct 2026 a cutoff was computed here but never
+    // applied, so every scored row since April was listed.
+    const cutoff = fcisCutoff();
 
-    // Filter recent rows with score >= 40
     allFcisData = rows.filter(r => {
       const score = parseFloat(r.final_score || r.score || 0);
-      return score >= 40;
+      return score >= 40 && String(r.date || '').slice(0, 10) >= cutoff;
     }).sort((a,b) => parseFloat(b.final_score||b.score||0) - parseFloat(a.final_score||a.score||0));
 
     renderFCIS(allFcisData);
@@ -3674,16 +3695,40 @@ async function loadFCIS() {
   }
 }
 
+var FCIS_WINDOW_DAYS = 7;
+var _fcisShown = null;      // what is on screen, so a late Chartink load can redraw it
+
+function fcisCutoff() {
+  // 'YYYY-MM-DD', FCIS_WINDOW_DAYS before today in IST
+  var ist = new Date(Date.now() + (330 + new Date().getTimezoneOffset()) * 60000);
+  ist.setDate(ist.getDate() - FCIS_WINDOW_DAYS);
+  var mm = ist.getMonth() + 1, dd = ist.getDate();
+  return ist.getFullYear() + '-' + (mm < 10 ? '0' : '') + mm + '-' + (dd < 10 ? '0' : '') + dd;
+}
+
+/* Action, as the morning report defines it (morning_report.classify_announcements):
+   score >= 65 and the stock had a Chartink breakout signal in the last five
+   days. signals_today.json is that five-day window. The CSV has no breakout
+   column, which is why Action never fired before Oct 2026. */
+function fcisBreakout(symbol) {
+  var sym = String(symbol || '').toUpperCase();
+  if (typeof allCkData === 'undefined' || !allCkData || !allCkData.length) return false;
+  for (var i = 0; i < allCkData.length; i++) {
+    if (String(allCkData[i].symbol || '').toUpperCase() === sym) return true;
+  }
+  return false;
+}
+
 function classifyFCIS(row) {
   const score = parseFloat(row.final_score || row.score || 0);
-  const hasBreakout = (row.chartink_breakout||row.breakout||'').toLowerCase() === 'true'
-    || (row.signal_type||'').toLowerCase().includes('action');
+  const hasBreakout = fcisBreakout(row.symbol || row.stock);
   if (score >= 65 && hasBreakout) return 'action';
   if (score >= 65) return 'watchlist';
   return 'radar';
 }
 
 function renderFCIS(data, rsFilter=null) {
+  _fcisShown = data;
   const action    = data.filter(r => classifyFCIS(r) === 'action');
   const watchlist = data.filter(r => classifyFCIS(r) === 'watchlist');
   const radar     = data.filter(r => classifyFCIS(r) === 'radar');
@@ -3705,7 +3750,7 @@ function renderFCIS(data, rsFilter=null) {
 function renderStockList(containerId, items, type) {
   const el = document.getElementById(containerId);
   if (!items.length) {
-    el.innerHTML = `<div class="empty-state">No ${type} signals today</div>`;
+    el.innerHTML = '<div class="empty-state">No ' + type + ' signals in the last ' + FCIS_WINDOW_DAYS + ' days</div>';
     return;
   }
   el.innerHTML = items.map((r,i) => {
@@ -4065,6 +4110,7 @@ async function loadChartink() {
     const text = await ghFetch('signals_today.json');
     const raw  = JSON.parse(text);
     allCkData  = raw.signals || [];
+    if (_fcisShown && _fcisShown.length) renderFCIS(_fcisShown);
     renderChartink();
     renderBreadthBanner(raw.breadth_mc100 || null);
   } catch(e) {
@@ -4099,7 +4145,7 @@ function renderBreadthBanner(b) {
   else if (sig === 'EXTREME FEAR') { barColor = 'var(--purple)'; sigClass = 'extreme'; }
 
   if (fill)   { fill.style.width = pct + '%'; fill.style.background = barColor; }
-  if (count)  { count.textContent = b.above_21ema + '/100 above 21 EMA'; }
+  if (count)  { count.textContent = b.above_21ema + '/' + (b.total || 100) + ' above 21 EMA'; }
   if (signal) {
     var emoji = b.signal_emoji || '';
     signal.textContent  = emoji + ' ' + b.signal;
@@ -5689,7 +5735,7 @@ function renderSizing(data, sectorMap) {
     <b>Capital Deployed</b> = money actually sitting in the market right now.
     <b>Portfolio Heat</b> = the max ₹ you could lose today if every open stop hit at once — this is
     the number that matters for risk, not capital deployed. "Recommended" assumes flat 1% risk per
-    trade against your current capital base; "Actual" reflects your live flat 7-slot split.`;
+    trade against your current capital base, scaled down by the throttles above; "Actual" is what each open position was sized at on its own entry day.`;
 
   document.getElementById('sizingList').innerHTML = positions.map(p => {
     const diff = (p.actual_capital_deployed||0) - (p.recommended_capital||0);

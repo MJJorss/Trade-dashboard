@@ -1915,6 +1915,7 @@
   .res-flag-turn  { background: rgba(var(--purple-rgb),0.10); color: var(--purple); border: 1px solid rgba(var(--purple-rgb),0.25); }
   .res-flag-oneoff{ background: rgba(var(--teal-rgb),0.10); color: var(--teal); border: 1px solid rgba(var(--teal-rgb),0.25); }
   .res-flag-both  { background: rgba(var(--green-rgb),0.10); color: var(--green); border: 1px solid rgba(var(--green-rgb),0.25); }
+  .res-flag-half  { background: rgba(var(--ink-rgb),0.04); color: var(--muted); border: 1px solid rgba(var(--ink-rgb),0.14); }
   .res-table.trade-table tbody tr.res-detail td, .res-table.trade-table tbody tr.res-detail:hover td { background: var(--surface); box-shadow: none; }
   .res-table tr.res-detail td { background: var(--surface); white-space: normal; position: static; box-shadow: none; max-width: none; }
   .res-detail-inner { position: sticky; left: 12px; max-width: calc(100vw - 60px); width: 640px; padding: 4px 0; }
@@ -7008,7 +7009,9 @@ function resBanner() {
     + '<span>Last checked: <b>' + resWhen(m.run_time) + '</b></span>'
     + '<span><b>' + (c.reported || 0) + '</b> reported · <b>' + (c.in_universe || 0) + '</b> above ₹'
     + Number(m.min_mcap_cr || 1000).toLocaleString('en-IN') + ' Cr · <b>' + (c.non_financial || 0)
-    + '</b> companies · <b>' + (c.financial || 0) + '</b> banks &amp; finance</span>'
+    + '</b> companies · <b>' + (c.financial || 0) + '</b> banks &amp; finance'
+    + (c.bse_only ? ' · <b>' + c.bse_only + '</b> BSE only' : '')
+    + (c.sme ? ' · <b>' + c.sme + '</b> SME' : '') + '</span>'
     + '<span>Filing deadline ' + resWhen(m.filing_deadline) + '</span>';
   // Amber when the data is more than 2 days old while results are being filed.
   const now = resIstNow();
@@ -7023,7 +7026,8 @@ function resBanner() {
   const cv = m.coverage || [];
   let foot = 'Updated ' + resWhen(m.run_time) + ' IST. Core profit = profit before tax − exceptional items − other income. '
     + 'Banks &amp; finance: profit after tax; sales = net interest income (banks, lending NBFCs) or net premium (insurers). '
-    + 'Ranking: base-quarter profit ≤ 0 → sales growth; below ₹5 Cr → lower of profit and sales growth; capped at +300% for scoring.';
+    + 'Ranking: base-quarter profit ≤ 0 → sales growth; below ₹5 Cr → lower of profit and sales growth; capped at +300% for scoring.'
+    + ' BSE-only companies come from their Screener pages; SME companies mostly report half-yearly and are compared with the same half a year earlier.';
   if (cv.length) {
     foot += '<br>Quarters in store: ' + cv.map(function (x) { return resEsc(x.quarter) + ' ' + x.companies; }).join(' · ');
   }
@@ -7129,7 +7133,8 @@ function resGrowthCell(r, col) {
 function resFlagTags(flags) {
   const cls = { 'Small base': 'res-flag-small', 'Turnaround from loss': 'res-flag-turn',
                 'One-off items removed': 'res-flag-oneoff',
-                'Both year-on-year and quarter-on-quarter up': 'res-flag-both' };
+                'Both year-on-year and quarter-on-quarter up': 'res-flag-both',
+                'Half-yearly results': 'res-flag-half' };
   return (flags || []).map(function (f) {
     return '<span class="res-flag ' + (cls[f] || 'res-flag-small') + '">' + resEsc(f) + '</span>';
   }).join('');
@@ -7191,8 +7196,11 @@ function resDetail(r) {
       + ' · Other income ' + resCr(r.other_income_cr) + ' · Exceptional items ' + resCr(r.exceptional_cr);
   }
   if (r.filing_type === 'Revision') meta += '<br>Revised filing (the latest version is shown)';
+  if (r.period === 'Half year') meta += '<br>Half-yearly results: six months compared with the same six months a year earlier; no quarter-on-quarter figure.';
+  if (r.source === 'screener') meta += '<br>BSE-only company: figures from its Screener page (BSE blocks automated access). Other income there includes exceptional items. Filing date = when the scanner first saw the result.';
   if (r.data_notes && r.data_notes.length) meta += '<br>Data note: ' + r.data_notes.map(resEsc).join('; ');
-  if (r.filing_link) meta += '<br><a href="' + resEsc(r.filing_link) + '" target="_blank" rel="noopener">Open the filing on NSE ↗</a>';
+  if (r.filing_link) meta += '<br><a href="' + resEsc(r.filing_link) + '" target="_blank" rel="noopener">'
+    + (r.source === 'screener' ? 'Open the result PDF (via Screener) ↗' : 'Open the filing on NSE ↗') + '</a>';
   return '<tr class="res-detail"><td colspan="' + RES_COLS.length + '"><div class="res-detail-inner">'
     + '<div class="res-comment">' + resEsc(r.comment || 'Comment pending') + '</div>'
     + '<div class="res-hist">' + g + '</div><div class="res-meta">' + meta + '</div></div></td></tr>';

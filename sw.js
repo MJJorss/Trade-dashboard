@@ -14,7 +14,7 @@
 
    Bump VERSION to drop every cached copy on the next visit. */
 
-const VERSION = 'mj-v3';
+const VERSION = 'mj-v4';
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -71,7 +71,10 @@ self.addEventListener('fetch', e => {
     }
     if (url.pathname.startsWith('/api/')) return;
     if (req.mode === 'navigate') {
-      e.respondWith(networkFirst(req, '/', false));
+      // Each page keeps its own offline copy: research.html stored under '/'
+      // would replace the dashboard's saved copy (and the other way round).
+      const key = url.pathname === '/research.html' ? '/research.html' : '/';
+      e.respondWith(networkFirst(req, key, false));
       return;
     }
     if (url.pathname.startsWith('/icons/')) { e.respondWith(cacheFirst(req)); return; }

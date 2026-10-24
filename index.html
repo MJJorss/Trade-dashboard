@@ -193,6 +193,17 @@
     flex-shrink: 0;
   }
   .refresh-btn:hover { background: var(--border); border-color: var(--accent); }
+  /* Header link to the backtest reference page (research.html, behind the
+     same password gate). Sized like the header buttons beside it. */
+  .research-link {
+    background: var(--card); border: 1px solid var(--border);
+    color: var(--accent); text-decoration: none;
+    height: 32px; padding: 0 10px; border-radius: var(--radius);
+    display: flex; align-items: center;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
+    flex-shrink: 0; transition: all 0.2s;
+  }
+  .research-link:hover { background: var(--border); border-color: var(--accent); }
   .refresh-btn.spinning svg { animation: spin 1s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .last-updated {
@@ -1950,6 +1961,7 @@
     <span class="last-updated" id="lastUpdated">—</span>
     <span class="offline-pill" title="No connection — showing the last data this device loaded">Offline</span>
     <span class="market-badge" id="marketBadge">—</span>
+    <a class="research-link" href="/research.html" title="Backtest reference: every strategy on one basis">Research</a>
     <button class="install-btn" id="installBtn" onclick="installApp()" style="display:none"
             title="Install as an app">Install</button>
     <button class="theme-btn" id="themeBtn" onclick="toggleThemeMenu(event)" title="Change theme"

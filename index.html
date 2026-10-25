@@ -2635,6 +2635,10 @@
         <!-- 8. live vs shadow -->
         <div class="section-header"><div class="section-title"><span class="icon">🔍</span>Live bot vs shadow — open positions</div></div>
         <div class="sh-table-wrap" id="shLiveVs"></div>
+
+        <!-- 9. signal drift -->
+        <div class="section-header"><div class="section-title"><span class="icon">🧭</span>Signal drift — the 2:40 pm signal list vs the close</div></div>
+        <div class="sh-table-wrap" id="shDrift"></div>
       </div>
     </div>
 
@@ -5895,6 +5899,7 @@ function renderShadowComparison(c) {
   renderShMonthly(c);
   renderShDecisions(c);
   renderShLiveVs(c);
+  renderShDrift(c);
 }
 
 function renderShStatus(c) {
@@ -6150,6 +6155,42 @@ function renderShDecisions(c) {
       return '<tr><td>' + shEsc(r[0]) + '</td><td><b>' + shEsc(r[1]) + '</b></td><td class="num">' + shEsc(r[2]) +
         '</td><td class="sh-reason">' + shEsc(r[3]) + '</td></tr>'; }).join('') +
     '</tbody></table><div class="sh-note">Decisions of ' + shEsc(d.date || '') + ' at ' + shEsc((c.status || {}).decided_at_ist || '') + ' IST.</div>';
+}
+
+// Signal drift (comparison.json "signal_drift"): the decide run's VCP list against
+// the same scan on that day's settled close, and how stocks bought at 2:40 pm
+// that were no longer signals at the close did over the next 20 sessions.
+function renderShDrift(c) {
+  const el = document.getElementById('shDrift');
+  if (!el) return;
+  const d = c.signal_drift;
+  if (!d || !d.days) { el.innerHTML = '<div class="sh-note">No signal-drift records yet (first one after the next 10:40 update).</div>'; return; }
+  const bd = d.bought_but_dropped_by_close || {}, bk = d.bought_and_kept || {};
+  function side(x) {
+    if (!x.buys) return 'none yet';
+    return x.buys + ' bought · ' + (x.completed_20d ? 'average 20-day return ' + shPct(x.average_20d_return_pct) +
+      ' (' + x.completed_20d + ' complete)' : 'so far ' + shPct(x.average_return_to_date_pct));
+  }
+  let html = '<div class="sh-score-grid">' +
+    shCard('Days recorded', String(d.days), shEsc(d.first_day || '') + ' to ' + shEsc(d.last_day || ''), 'blue') +
+    shCard('Dropped by the close', shPct(d.dropped_pct_of_decide, 1).replace('+', ''),
+      d.dropped_by_close + ' of ' + d.decide_signals + ' signals at 2:40 pm were gone at the close', 'amber') +
+    shCard('Added by the close', shPct(d.added_pct_of_close, 1).replace('+', ''),
+      d.added_by_close + ' signals appeared only on the close list', 'purple') +
+    shCard('Bought, then dropped by the close', String(bd.buys || 0), shEsc(side(bd)), 'green') +
+    '</div>';
+  html += '<div class="sh-note">Bought and still a signal at the close: ' + shEsc(side(bk)) + '.' +
+    (bd.symbols && bd.symbols.length ? ' Dropped after buying: ' + shEsc(bd.symbols.join(', ')) + '.' : '') + '</div>';
+  const rows = (d.per_day || []).slice().reverse();
+  html += '<table class="sh-tbl"><thead><tr><th>Decide day</th><th class="num">2:40 pm</th><th class="num">Close</th>' +
+    '<th class="num">Kept</th><th class="num">Dropped</th><th class="num">Added</th><th class="num">Bought</th>' +
+    '<th class="num">Bought, dropped</th></tr></thead><tbody>' +
+    rows.map(function (r) {
+      return '<tr><td>' + shEsc(r.date) + '</td><td class="num">' + r.decide + '</td><td class="num">' + r.close +
+        '</td><td class="num">' + r.kept + '</td><td class="num">' + r.dropped + '</td><td class="num">' + r.added +
+        '</td><td class="num">' + r.bought + '</td><td class="num">' + r.bought_dropped + '</td></tr>';
+    }).join('') + '</tbody></table><div class="sh-note">' + shEsc(d.note || '') + '</div>';
+  el.innerHTML = html;
 }
 
 function renderShLiveVs(c) {

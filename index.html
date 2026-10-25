@@ -1382,6 +1382,9 @@
   }
   .sh-score-grid .stat-value { font-size: 22px; }
   .sh-score-line { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .stat-card.teal::after { background: linear-gradient(90deg, var(--teal), transparent 85%); }
+  .stat-card.teal::before { background: radial-gradient(120% 100% at 0% 0%, rgba(var(--teal-rgb),0.16), transparent 70%); }
+  .stat-card.gold::after { background: linear-gradient(90deg, var(--gold), transparent 85%); }
   .sh-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; font-size: 11px; color: var(--muted); }
   .sh-legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
   .sh-note { font-size: 11px; color: var(--muted); margin-top: 6px; }
@@ -2597,7 +2600,7 @@
         <!-- 3. chart 1: books indexed to 100 -->
         <div class="equity-card">
           <div class="equity-card-head"><div>
-            <div class="equity-card-title">📈 Swing, Blend and Midcap 150 buy-and-hold — 100 on 15 September</div>
+            <div class="equity-card-title">📈 Swing, Blend, Books C and D and Midcap 150 buy-and-hold — 100 on 15 September</div>
             <div class="sh-legend" id="shCmpLegend1"></div>
           </div></div>
           <div class="equity-chart-wrap"><canvas id="shCmpCanvas1" height="220"></canvas></div>
@@ -2618,6 +2621,8 @@
         <!-- 5. Blend breakdown -->
         <div class="section-header"><div class="section-title"><span class="icon">⚖️</span>Blend — Swing half vs fund half</div></div>
         <div class="sh-table-wrap" id="shBookB"></div>
+        <div class="section-header"><div class="section-title"><span class="icon">⚖️</span>Books C and D — Swing part vs fund part</div></div>
+        <div class="sh-table-wrap" id="shBookCD"></div>
 
         <!-- 6. monthly tables -->
         <div class="section-header"><div class="section-title"><span class="icon">📅</span>Monthly returns</div></div>
@@ -5886,6 +5891,7 @@ function renderShadowComparison(c) {
   renderShScores(c);
   renderShCharts(c);
   renderShBookB(c);
+  renderShBookCD(c);
   renderShMonthly(c);
   renderShDecisions(c);
   renderShLiveVs(c);
@@ -5922,6 +5928,8 @@ function shMorningCard(c) {
   const t = String(m.marked_at_ist).split(' ');
   return shCard('Morning valuation', shEsc(t[1] || '') + ' IST',
     'Swing ' + shPct(m.swing_return_pct) + ' · Blend ' + shPct(m.blend_return_pct) +
+    (m.book_c_return_pct === null || m.book_c_return_pct === undefined ? '' : ' · Book C ' + shPct(m.book_c_return_pct)) +
+    (m.book_d_return_pct === null || m.book_d_return_pct === undefined ? '' : ' · Book D ' + shPct(m.book_d_return_pct)) +
     ' · ' + shEsc(t[0] || '') + ' (no decisions at this run)', 'blue');
 }
 
@@ -5943,6 +5951,8 @@ function renderShScores(c) {
   document.getElementById('shScores').innerHTML =
     card('Swing — v3 stock system', 'book_a', last.book_a, 'green') +
     card('Blend — half Swing, half fund', 'book_b', last.book_b, 'blue') +
+    (s.book_c ? card('Book C — 30% Swing, 70% fund', 'book_c', last.book_c === undefined ? null : last.book_c, 'teal') : '') +
+    (s.book_d ? card('Book D — fund only', 'book_d', last.book_d === undefined ? null : last.book_d, 'gold') : '') +
     card('Live bot', 'live', null, 'amber') +
     card('MID150BEES buy-and-hold', 'buy_hold', last.buy_hold, 'purple');
 }
@@ -6021,8 +6031,10 @@ function renderShCharts(c) {
   shLineChart('shCmpCanvas1', 'shCmpX1', 'shCmpLegend1', rows, [
     {vals: idx('book_a'), color: col('--green', '#34d399'), label: 'Swing'},
     {vals: idx('book_b'), color: col('--accent', '#818cf8'), label: 'Blend'},
+    {vals: idx('book_c'), color: col('--teal', '#3ddbd9'), label: 'Book C (30/70)'},
+    {vals: idx('book_d'), color: col('--gold', '#ffd54f'), label: 'Book D (fund only)'},
     {vals: idx('buy_hold'), color: col('--purple', '#b388ff'), label: 'Midcap 150 buy-and-hold'}
-  ], shade, f100);
+  ].filter(function (sr) { return sr.vals.some(function (v) { return v !== null; }); }), shade, f100);
   const a = idx('book_a').map(function (v) { return v === null ? null : v - 100; });
   const live = rows.map(function (r) { return (r.live_pct === null || r.live_pct === undefined) ? null : r.live_pct; });
   const fp = function (v) { return (v > 0 ? '+' : '') + (+v).toFixed(1) + '%'; };
@@ -6052,10 +6064,37 @@ function renderShBookB(c) {
     '</tbody></table>';
 }
 
+// Books C and D: the same Swing and fund-half series as Blend at 30/70 and 0/100.
+function renderShBookCD(c) {
+  const el = document.getElementById('shBookCD');
+  if (!el) return;
+  const cd = c.book_cd_breakdown;
+  if (!cd) { el.innerHTML = '<div class="sh-note">No Book C or D data yet.</div>'; return; }
+  const last = c.daily[c.daily.length - 1];
+  const bc = cd.book_c || {}, bd = cd.book_d || {};
+  const share = function (v, tot) { return (v === null || v === undefined || !tot) ? '—' : (v / tot * 100).toFixed(1) + '%'; };
+  const lab = c.labels || {};
+  el.innerHTML =
+    '<table class="sh-tbl"><thead><tr><th>Book and part</th><th class="num">Value</th><th class="num">Share</th><th>Notes</th></tr></thead><tbody>' +
+    '<tr><td>Book C: Swing part (Swing × ' + (bc.v3_scale_of_book_a === null || bc.v3_scale_of_book_a === undefined ? '—' :
+      (+bc.v3_scale_of_book_a).toFixed(4)) + ')</td><td class="num">' + shInr(bc.v3_part) + '</td><td class="num">' +
+      share(bc.v3_part, last.book_c) + '</td><td class="sh-reason">Target 30%</td></tr>' +
+    '<tr><td>Book C: fund part</td><td class="num">' + shInr(bc.etf_part) + '</td><td class="num">' +
+      share(bc.etf_part, last.book_c) + '</td><td class="sh-reason">Target 70% · now ' + shEsc(cd.etf_half_holding || '—') + '</td></tr>' +
+    '<tr><td><b>Book C</b></td><td class="num"><b>' + shInr(last.book_c) + '</b></td><td class="num">100%</td>' +
+      '<td class="sh-reason">' + shEsc(bc.rebalance_rule || '') + ' · ' + shEsc(lab.book_c || '') + '</td></tr>' +
+    '<tr><td><b>Book D</b> (fund part only)</td><td class="num"><b>' + shInr(last.book_d) + '</b></td><td class="num">100%</td>' +
+      '<td class="sh-reason">Now ' + shEsc(cd.etf_half_holding || '—') + ' · ' + shEsc(bd.rebalance_rule || '') + ' · ' +
+      shEsc(lab.book_d || '') + '</td></tr>' +
+    '</tbody></table><div class="sh-note">' + shEsc(cd.source || '') + '</div>';
+}
+
 function renderShMonthly(c) {
   const m = c.monthly || {};
   const ref = c.backtest_reference || {};
-  const books = [['book_a', 'Swing'], ['book_b', 'Blend'], ['live', 'Live bot'], ['buy_hold', 'Buy-and-hold']];
+  const books = [['book_a', 'Swing'], ['book_b', 'Blend'], ['book_c', 'Book C (30/70)'], ['book_d', 'Book D (fund only)'],
+    ['live', 'Live bot'], ['buy_hold', 'Buy-and-hold']].filter(function (bk) {
+    return bk[0] === 'book_c' || bk[0] === 'book_d' ? !!(m[bk[0]] && m[bk[0]].length) : true; });
   const months = [];
   books.forEach(function (bk) { (m[bk[0]] || []).forEach(function (r) { if (months.indexOf(r.month) < 0) months.push(r.month); }); });
   months.sort();
@@ -6073,13 +6112,16 @@ function renderShMonthly(c) {
         (r.partial ? '<sup>*</sup>' : '') + '</td>'; }).join('') +
       '<td class="num">—</td><td class="num">—</td><td class="num">' + shPct(s.max_drawdown_pct) + '</td></tr>';
     const rf = ref[bk[0]];
-    if (rf) {
-      html += '<tr class="sh-ref"><td>Backtest 2020–26</td>' + months.map(function () { return '<td></td>'; }).join('') +
+    if (rf && rf.median_month_pct !== null && rf.median_month_pct !== undefined) {
+      html += '<tr class="sh-ref"><td>Backtest 2020–26' + (rf.period ? '<sup>†</sup>' : '') + '</td>' + months.map(function () { return '<td></td>'; }).join('') +
         '<td class="num">' + shPct(rf.median_month_pct, 2) + '</td><td class="num">' + shPct(rf.worst_month_pct, 2) +
         '</td><td class="num">' + shPct(rf.max_drawdown_pct, 2) + '</td></tr>';
     }
   });
-  html += '</tbody></table><div class="sh-note">* part month. Backtest rows: ' + shEsc(ref.period || '') + '.</div>';
+  const own = books.filter(function (bk) { return ref[bk[0]] && ref[bk[0]].period; });
+  html += '</tbody></table><div class="sh-note">* part month. Backtest rows: ' + shEsc(ref.period || '') + '.' +
+    (own.length ? ' † ' + own.map(function (bk) { return bk[1]; }).join(' and ') + ': ' + shEsc(ref[own[0][0]].period) + '.' : '') +
+    '</div>';
   document.getElementById('shMonthly').innerHTML = html;
 }
 

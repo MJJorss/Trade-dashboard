@@ -2930,7 +2930,7 @@
       <div class="stat-card amber">
         <div class="stat-label">👀 Watching</div>
         <div class="stat-value" id="ipoWatchingCount">—</div>
-        <div class="stat-sub">Valid base, no trigger yet</div>
+        <div class="stat-sub">Valid base, within 5% of base high</div>
       </div>
       <div class="stat-card blue">
         <div class="stat-label">⚠️ Suppressed</div>
@@ -2951,8 +2951,11 @@
         <button class="filter-btn" onclick="filterIpo('BREAKOUT',this)">Breakout</button>
         <button class="filter-btn" onclick="filterIpo('WATCHING',this)">Watching</button>
         <button class="filter-btn" onclick="filterIpo('BREAKOUT_SUPPRESSED',this)">Suppressed</button>
+        <button class="filter-btn" onclick="filterIpo('REJECTED',this)">Rejected</button>
       </div>
     </div>
+
+    <div id="ipoNote" style="display:none;font-size:12px;color:var(--amber);margin-bottom:12px;"></div>
 
     <div class="stock-list" id="ipoList">
       <div class="loading-state"><div class="spinner"></div><div class="loading-text">Loading IPO breakout data…</div></div>
@@ -7451,7 +7454,12 @@ async function loadIpo() {
     const text = await ghFetch('ipo_breakout_signals.json');
     const data = JSON.parse(text);
     allIpoData = data.signals || [];
-    renderIpo(allIpoData);
+    renderIpoCounts(allIpoData);
+    renderIpo(allIpoData.filter(r => !IPO_REJECTED.includes(r.status)));
+
+    const note = document.getElementById('ipoNote');
+    note.textContent = data.note || '';
+    note.style.display = data.note ? '' : 'none';
 
     const badge = document.getElementById('ipoBadge');
     const breakoutCount = allIpoData.filter(r => r.status === 'BREAKOUT').length;
@@ -7459,26 +7467,32 @@ async function loadIpo() {
     else badge.style.display = 'none';
 
     document.getElementById('ipoFooter').textContent =
-      `Generated: ${data.generated_at || '—'}  ·  Scan window: last ${data.scan_window_days || 365} days  ·  Update your CSV in trade-alerts/data/ipo_universe.csv twice a month`;
+      `Generated: ${data.generated_at || '—'}  ·  Scan window: last ${data.scan_window_days || 365} days  ·  IPO list: ${data.universe_source || '—'}`;
   } catch(e) {
     document.getElementById('ipoList').innerHTML =
       `<div class="error-state">⚠️ ${e.message}</div>`;
   }
 }
 
+const IPO_REJECTED = ['NO_BASE', 'ILLIQUID', 'TOO_NEW', 'NO_DATA'];
+
+// The summary always describes the whole scan, whichever filter is showing
+function renderIpoCounts(items) {
+  document.getElementById('ipoBreakoutCount').textContent  = items.filter(r => r.status === 'BREAKOUT').length;
+  document.getElementById('ipoWatchingCount').textContent  = items.filter(r => r.status === 'WATCHING').length;
+  document.getElementById('ipoSuppressedCount').textContent = items.filter(r => r.status === 'BREAKOUT_SUPPRESSED').length;
+  document.getElementById('ipoTotalCount').textContent      = items.length;
+}
+
 function renderIpo(items) {
   const breakouts   = items.filter(r => r.status === 'BREAKOUT');
   const watching    = items.filter(r => r.status === 'WATCHING');
   const suppressed  = items.filter(r => r.status === 'BREAKOUT_SUPPRESSED');
-
-  document.getElementById('ipoBreakoutCount').textContent  = breakouts.length;
-  document.getElementById('ipoWatchingCount').textContent  = watching.length;
-  document.getElementById('ipoSuppressedCount').textContent = suppressed.length;
-  document.getElementById('ipoTotalCount').textContent      = items.length;
+  const rejected    = items.filter(r => IPO_REJECTED.includes(r.status));
 
   const list = document.getElementById('ipoList');
   // Show breakouts first, then suppressed, then watching — most actionable on top
-  const ordered = [...breakouts, ...suppressed, ...watching];
+  const ordered = [...breakouts, ...suppressed, ...watching, ...rejected];
 
   if (!ordered.length) {
     list.innerHTML = '<div class="empty-state">No IPO base or breakout signals in the current scan</div>';
@@ -7491,7 +7505,8 @@ function renderIpo(items) {
                   : 'watchlist';
     const statusLabel = r.status === 'BREAKOUT' ? '🆕 BREAKOUT'
                        : r.status === 'BREAKOUT_SUPPRESSED' ? '⚠️ SUPPRESSED'
-                       : '👀 WATCHING';
+                       : r.status === 'WATCHING' ? '👀 WATCHING'
+                       : `✕ ${r.status.replace('_', ' ')}`;
     const cardId = `ipo-card-${i}`;
 
     let reasonTag = '';
@@ -7500,6 +7515,8 @@ function renderIpo(items) {
       else if (r.extended_move) reasonTag = `<span class="tag" style="background:rgba(var(--amber-rgb),0.15);color:var(--amber);">Extended +${r.extended_move_pct}% / 5d</span>`;
     }
 
+    if (IPO_REJECTED.includes(r.status) && r.reason) reasonTag = `<span class="tag">${r.reason}</span>`;
+
     return `<div class="stock-card ${typeCls} animate-in" id="${cardId}" style="animation-delay:${i*0.04}s">
       <div class="left-bar"></div>
       <div style="padding-left:8px;flex:1;">
@@ -7507,12 +7524,13 @@ function renderIpo(items) {
           <span>${r.symbol}</span>
           <span style="font-size:10px;color:var(--muted);font-weight:600;">${statusLabel}</span>
         </div>
-        <div class="stock-meta">${r.company || '—'} · Listed ${r.listing_date || '—'} · Issue ₹${r.issue_price || '—'}</div>
+        <div class="stock-meta">${r.company || '—'} · Listed ${r.listing_date || '—'} · Issue ₹${r.adj_issue_price || r.issue_price || '—'}</div>
         <div class="stock-tags">
           <span class="tag">Close ₹${r.current_close != null ? r.current_close : '—'}</span>
           <span class="tag">Base high ₹${r.base_high != null ? r.base_high : '—'}</span>
           <span class="tag">Vol ${r.volume_ratio != null ? r.volume_ratio : '—'}x</span>
-          <span class="tag">Depth ${r.depth_pct != null ? r.depth_pct : '—'}%</span>
+          <span class="tag">Base width ${r.base_width_pct != null ? r.base_width_pct : '—'}%</span>
+          <span class="tag">Below high ${r.depth_pct != null ? r.depth_pct : '—'}%</span>
           ${reasonTag}
         </div>
       </div>
@@ -7523,7 +7541,9 @@ function renderIpo(items) {
 function filterIpo(filter, btn) {
   document.querySelectorAll('#ipoFilter .filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  const data = filter === 'all' ? allIpoData : allIpoData.filter(r => r.status === filter);
+  const data = filter === 'all' ? allIpoData.filter(r => !IPO_REJECTED.includes(r.status))
+             : filter === 'REJECTED' ? allIpoData.filter(r => IPO_REJECTED.includes(r.status))
+             : allIpoData.filter(r => r.status === filter);
   renderIpo(data);
 }
 

@@ -1400,6 +1400,11 @@
   .sh-pill.off { background: rgba(var(--red-rgb),0.15);   color: var(--red); }
   .sh-pill.warn { background: rgba(var(--amber-rgb),0.15); color: var(--amber); }
   .sh-reason { color: var(--muted); }
+  /* Swing + Small-strong (inbox 032) */
+  .ss-badge { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 10px;
+              font-weight: 700; color: var(--teal, #3ddbd9); background: rgba(61,219,217,0.12); vertical-align: middle; }
+  .sh-tbl th.ss-sort { cursor: pointer; }
+  .sh-tbl th.ss-sort:after { content: ' \2195'; opacity: 0.5; }
   @media (max-width: 600px) {
     .sh-score-grid { grid-template-columns: 1fr 1fr; }
     .sh-score-grid .stat-value { font-size: 18px; }
@@ -2624,6 +2629,33 @@
         <div class="section-header"><div class="section-title"><span class="icon">⚖️</span>Books C and D — Swing part vs fund part</div></div>
         <div class="sh-table-wrap" id="shBookCD"></div>
 
+        <!-- 5b. Swing + Small-strong (inbox 032): its own block, hidden until the book goes live -->
+        <div id="shSS" style="display:none">
+          <div class="section-header"><div class="section-title"><span class="icon">🧺</span>Swing + Small-strong — paper book since go-live</div></div>
+          <div class="sh-score-grid" id="shSSCards"></div>
+          <div class="sh-note" id="shSSNote"></div>
+          <div class="equity-card">
+            <div class="equity-card-head"><div>
+              <div class="equity-card-title">📈 Since go-live — every line 100 on the go-live day</div>
+              <div class="sh-legend" id="shSSLegend1"></div>
+            </div></div>
+            <div class="equity-chart-wrap"><canvas id="shSSCanvas1" height="220"></canvas></div>
+            <div class="equity-x-labels" id="shSSX1"></div>
+          </div>
+          <div class="equity-card">
+            <div class="equity-card-head"><div>
+              <div class="equity-card-title">📉 Fall from the previous peak (%)</div>
+              <div class="sh-legend" id="shSSLegend2"></div>
+            </div></div>
+            <div class="equity-chart-wrap"><canvas id="shSSCanvas2" height="200"></canvas></div>
+            <div class="equity-x-labels" id="shSSX2"></div>
+          </div>
+          <div class="section-header"><div class="section-title"><span class="icon">🗓️</span>Small-strong basket — last month-end rebuild</div></div>
+          <div class="sh-table-wrap" id="shSSMonth"></div>
+          <div class="section-header"><div class="section-title"><span class="icon">📋</span>Small-strong basket — holdings</div></div>
+          <div class="sh-table-wrap" id="shSSHold"></div>
+        </div>
+
         <!-- 6. monthly tables -->
         <div class="section-header"><div class="section-title"><span class="icon">📅</span>Monthly returns</div></div>
         <div class="sh-table-wrap" id="shMonthly"></div>
@@ -3795,7 +3827,7 @@ function renderStockList(containerId, items, type) {
       <div class="left-bar"></div>
       <div style="padding-left:8px;flex:1;">
         <div class="stock-name" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span>${symbol}</span>
+          <span>${symbol}</span>${ssBadge(symbol)}
           ${hc ? '<span class="tag tag-hc">HC</span>' : ''}
           <span id="ckprice-${cardId}" style="font-size:11px;color:var(--muted);font-family:var(--font-mono);">—</span>
         </div>
@@ -4065,7 +4097,7 @@ function renderPositionCard(pos, idx, live) {
     <div class="pos-inner">
       <div class="pos-header">
         <div>
-          <div class="pos-name">${sym}</div>
+          <div class="pos-name">${sym}${ssBadge(sym)}</div>
           <div class="pos-meta">${slotInfo}</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
@@ -4833,6 +4865,7 @@ function initChartObserver() {
    already fired by the time it executes — a listener for it would never run.
    Check readyState instead of assuming. */
 function initUiEnhancements() {
+  loadSmallStrongHeld();
   initNavScrollHint();
   initChartObserver();
   initPullToRefresh();
@@ -5899,6 +5932,7 @@ function renderShadowComparison(c) {
   renderShCharts(c);
   renderShBookB(c);
   renderShBookCD(c);
+  renderShSmallStrong(c);
   renderShMonthly(c);
   renderShDecisions(c);
   renderShLiveVs(c);
@@ -6070,6 +6104,152 @@ function renderShBookB(c) {
     '<tr><td><b>Blend</b></td><td class="num"><b>' + shInr(last.book_b) + '</b></td><td class="num">100%</td>' +
       '<td class="sh-reason">' + shEsc(b.rebalance_rule || '') + ' · ' + shEsc((c.labels || {}).book_b || '') + '</td></tr>' +
     '</tbody></table>';
+}
+
+// ─── Swing + Small-strong (comparison.json test_books.small_strong; inbox 032) ─────
+// Plain string building only (no nested template literals, no nullish or
+// optional-chaining operators): the dashboard has to parse on older Android Chrome.
+let _ssHoldRows = [], _ssSortKey = 'value', _ssSortAsc = false;
+function ssNum(v) { return v === null || v === undefined || isNaN(v); }
+function renderShSmallStrong(c) {
+  const wrap = document.getElementById('shSS');
+  if (!wrap) return;
+  const b = (c && c.test_books) ? c.test_books.small_strong : null;
+  if (!b || !b.go_live) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  const lines = [['mix_50_50', 'Swing + Small-strong (50/50)', 'green'], ['mix_70_30', 'Swing + Small-strong (70/30)', 'teal'],
+                 ['basket', 'Small-strong basket alone', 'amber']];
+  document.getElementById('shSSCards').innerHTML = lines.map(function (ln) {
+    const s = b[ln[0]] || {};
+    let inv;
+    if (ln[0] === 'basket') {
+      inv = ssNum(s.pct_invested) ? '—' : s.pct_invested + '% in stocks, ' + (s.names || 0) + ' names';
+    } else {
+      inv = ssNum(s.basket_half_share_pct) ? '—' : 'basket half ' + s.basket_half_share_pct + '% of the mix, ' +
+        (ssNum(s.basket_half_invested_pct) ? '—' : s.basket_half_invested_pct) + '% of it in stocks';
+    }
+    return shCard(ln[1], shInr(s.value),
+      shPct(s.return_pct) + ' since ' + shDateShort(b.go_live) + ' · worst fall ' + shPct(s.worst_fall_pct) +
+      ' · from peak ' + shPct(s.fall_from_peak_pct) + ' · this month ' + shPct(s.month_pct) + '<br>' + shEsc(inv),
+      ln[2], shPctCol(s.return_pct));
+  }).join('');
+  const watch = (b.watch_lines || []).map(function (w) { return '<span class="sh-pill warn">WATCH</span> ' + shEsc(w); }).join('<br>');
+  document.getElementById('shSSNote').innerHTML = shEsc(b.research_note || '') + '<br>' + shEsc(b.note || '') + (watch ? '<br>' + watch : '');
+  const rows = (c.daily || []).filter(function (r) { return r.date >= b.go_live; });
+  const css = getComputedStyle(document.documentElement);
+  const col = function (v, fb) { const s = css.getPropertyValue(v).trim(); return s || fb; };
+  function idx(key) {
+    let base = null;
+    return rows.map(function (r) {
+      const v = r[key];
+      if (v === null || v === undefined) return null;
+      if (base === null) base = v;
+      return v / base * 100;
+    });
+  }
+  function dd(vals) {
+    let peak = null;
+    return vals.map(function (v) {
+      if (v === null) return null;
+      if (peak === null || v > peak) peak = v;
+      return (v / peak - 1) * 100;
+    });
+  }
+  const series = [
+    {vals: idx('ss_mix_50_50'), color: col('--green', '#34d399'), label: 'Swing + Small-strong (50/50)'},
+    {vals: idx('ss_mix_70_30'), color: col('--teal', '#3ddbd9'), label: 'Swing + Small-strong (70/30)'},
+    {vals: idx('ss_basket'), color: col('--amber', '#fbbf24'), label: 'Small-strong basket alone'},
+    {vals: idx('ss_swing'), color: col('--blue', '#60a5fa'), label: 'Swing'},
+    {vals: idx('book_b'), color: col('--accent', '#818cf8'), label: 'Blend'},
+    {vals: idx('buy_hold'), color: col('--purple', '#b388ff'), label: 'Midcap 150 buy-and-hold'}
+  ].filter(function (sr) { return sr.vals.some(function (v) { return v !== null; }); });
+  if (rows.length) {
+    const shade = rows.map(function (r) { return r.gate_entries_allowed === false; });
+    shLineChart('shSSCanvas1', 'shSSX1', 'shSSLegend1', rows, series, shade, function (v) { return (+v).toFixed(1); });
+    shLineChart('shSSCanvas2', 'shSSX2', 'shSSLegend2', rows, series.map(function (sr) {
+      return {vals: dd(sr.vals), color: sr.color, label: sr.label}; }), null, function (v) { return (+v).toFixed(1) + '%'; });
+  }
+  const m = b.last_month_end;
+  const list = function (xs) { return xs && xs.length ? xs.map(shEsc).join(', ') : 'none'; };
+  const sold = m && m.sold && m.sold.length ? m.sold.map(function (x) {
+    return shEsc(x.symbol) + ' (' + shEsc(x.reason) + ')'; }).join(', ') : 'none';
+  document.getElementById('shSSMonth').innerHTML = m ?
+    '<table class="sh-tbl"><tbody>' +
+    '<tr><td>Date</td><td>' + shEsc(m.date) + (m.late_run ? ' <span class="sh-pill warn">LATE RUN</span>' : '') + '</td></tr>' +
+    '<tr><td>Market gate</td><td><span class="sh-pill ' + (m.gate ? 'on' : 'off') + '">' + (m.gate ? 'ON' : 'OFF') +
+      '</span> <span class="sh-reason">' + shEsc(m.gate_source || '') + '</span></td></tr>' +
+    '<tr><td>Stocks that qualified</td><td>' + (ssNum(m.qualifiers) ? '—' : m.qualifiers) + '</td></tr>' +
+    '<tr><td>Bought</td><td>' + list(m.bought) + '</td></tr>' +
+    '<tr><td>Kept</td><td>' + (m.kept ? m.kept.length : 0) + ' names</td></tr>' +
+    '<tr><td>Sold</td><td>' + sold + '</td></tr>' +
+    '<tr><td>Trimmed back to 8%</td><td>' + list(m.trimmed) + '</td></tr>' +
+    '<tr><td>Next rebuild</td><td>' + shEsc(b.next_rebuild || '—') + '</td></tr>' +
+    '</tbody></table>' :
+    '<div class="sh-note">No month-end rebuild yet: the basket is in cash until ' + shEsc(b.next_rebuild || 'the next month-end') + '.</div>';
+  _ssHoldRows = (b.holdings || []).slice();
+  renderShSSHold();
+}
+function renderShSSHold() {
+  const el = document.getElementById('shSSHold');
+  if (!el) return;
+  if (!_ssHoldRows.length) { el.innerHTML = '<div class="sh-note">No holdings: the basket is in cash.</div>'; return; }
+  const k = _ssSortKey, asc = _ssSortAsc;
+  const rows = _ssHoldRows.slice().sort(function (a, b) {
+    const x = a[k], y = b[k];
+    if (x === y) return 0;
+    return (x > y ? 1 : -1) * (asc ? 1 : -1);
+  });
+  const cols = [['symbol', 'Stock', 0], ['sector', 'Sector', 0], ['entry_date', 'Entry date', 0], ['entry_price', 'Entry price', 1],
+                ['price_now', 'Price now', 1], ['gain_pct', 'Gain', 1], ['value', 'Value', 1], ['pct_of_half', '% of the half', 1],
+                ['days_held', 'Days held', 1]];
+  el.innerHTML = '<table class="sh-tbl"><thead><tr>' + cols.map(function (cl) {
+    return '<th class="ss-sort' + (cl[2] ? ' num' : '') + '" data-k="' + cl[0] + '">' + cl[1] + '</th>'; }).join('') +
+    '</tr></thead><tbody>' + rows.map(function (r) {
+      return '<tr><td>' + shEsc(r.symbol) + '</td><td>' + shEsc(r.sector) + '</td><td>' + shEsc(r.entry_date) + '</td>' +
+        '<td class="num">' + shInr(r.entry_price) + '</td><td class="num">' + shInr(r.price_now) + '</td>' +
+        '<td class="num" style="color:' + shPctCol(r.gain_pct) + '">' + shPct(r.gain_pct) + '</td>' +
+        '<td class="num">' + shInr(r.value) + '</td><td class="num">' + (ssNum(r.pct_of_half) ? '—' : (+r.pct_of_half).toFixed(1) + '%') + '</td>' +
+        '<td class="num">' + r.days_held + '</td></tr>'; }).join('') + '</tbody></table>';
+  const ths = el.querySelectorAll('th.ss-sort');
+  for (let i = 0; i < ths.length; i++) {
+    ths[i].addEventListener('click', function () {
+      const key = this.getAttribute('data-k');
+      if (key === _ssSortKey) { _ssSortAsc = !_ssSortAsc; } else { _ssSortKey = key; _ssSortAsc = true; }
+      renderShSSHold();
+    });
+  }
+}
+
+// "In Small-strong basket" badge on stock cards in every tab: each card carries a
+// hidden badge; the basket's holdings (read once from comparison.json) show it.
+let _ssHeld = null;
+function ssBadge(sym) {
+  return '<span class="ss-badge" data-ss-sym="' + shEsc(String(sym || '').toUpperCase()) +
+    '" style="display:none">In Small-strong basket</span>';
+}
+function ssApplyBadges() {
+  if (!_ssHeld) return;
+  const els = document.querySelectorAll('[data-ss-sym]');
+  for (let i = 0; i < els.length; i++) {
+    els[i].style.display = _ssHeld[els[i].getAttribute('data-ss-sym')] ? 'inline-block' : 'none';
+  }
+}
+async function loadSmallStrongHeld() {
+  _ssHeld = {};
+  try {
+    const c = await shGet('comparison.json');
+    const b = (c && c.test_books) ? c.test_books.small_strong : null;
+    if (b && b.holdings) b.holdings.forEach(function (h) { _ssHeld[String(h.symbol).toUpperCase()] = true; });
+  } catch (e) { /* no comparison file yet: no badges */ }
+  ssApplyBadges();
+  if (window.MutationObserver && document.body) {
+    let pending = false;
+    new MutationObserver(function () {
+      if (pending) return;
+      pending = true;
+      setTimeout(function () { pending = false; ssApplyBadges(); }, 200);
+    }).observe(document.body, {childList: true, subtree: true});
+  }
 }
 
 // Books C and D: the same Swing and fund-half series as Blend at 30/70 and 0/100.
@@ -7616,7 +7796,7 @@ function buildInvCard(c, i) {
 
   div.innerHTML = `
     <div class="rank-badge">#${c.slot_rank}</div>
-    <div class="inv-sym">${c.symbol}${qBadge}</div>
+    <div class="inv-sym">${c.symbol}${qBadge}${ssBadge(c.symbol)}</div>
     <div style="display:flex;align-items:center;gap:8px;margin-top:3px;flex-wrap:wrap;">
       <span id="${livePriceId}" style="font-size:13px;color:var(--muted);font-family:var(--font-mono);">₹${fmtPrice(c.cmp)}</span>
     </div>

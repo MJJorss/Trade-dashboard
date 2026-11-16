@@ -1400,6 +1400,15 @@
   .sh-pill.off { background: rgba(var(--red-rgb),0.15);   color: var(--red); }
   .sh-pill.warn { background: rgba(var(--amber-rgb),0.15); color: var(--amber); }
   .sh-reason { color: var(--muted); }
+  /* Shadow tab layout (inbox 033) */
+  details.sh-sec { border: 1px solid var(--border); border-radius: 12px; margin: 14px 0; padding: 4px 12px 10px; }
+  details.sh-sec > summary { cursor: pointer; font-weight: 700; padding: 10px 2px; color: var(--text-strong); list-style: none; }
+  details.sh-sec > summary::-webkit-details-marker { display: none; }
+  details.sh-sec > summary:before { content: '▸ '; color: var(--muted); }
+  details.sh-sec[open] > summary:before { content: '▾ '; }
+  .sh-all-books { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important; }
+  .sh-filter { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chart-bar.sh-bar-sleeve { background: linear-gradient(180deg, rgba(var(--gold-rgb),0.8), var(--gold)); box-shadow: none; }
   /* Swing + Small-strong (inbox 032) */
   .ss-badge { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 10px;
               font-weight: 700; color: var(--teal, #3ddbd9); background: rgba(61,219,217,0.12); vertical-align: middle; }
@@ -2590,30 +2599,46 @@
       <button class="sh-more" onclick="this.parentNode.classList.toggle('open');
         this.textContent = this.parentNode.classList.contains('open') ? 'Less ▴' : 'More ▾'">More ▾</button>
     </div>
-    <div class="notice sh-restated" id="shRestated" style="display:none"></div>
-
-    <!-- ── Step 3: Swing vs Blend vs live vs buy-and-hold (comparison.json) ── -->
+    <!-- Shadow tab layout (inbox 033): the answer to "how is each book doing?" first; per-book details and
+         checks below, collapsible. Every element id the render functions use is unchanged. -->
     <div id="shCmp">
       <div class="sh-cmp-empty empty-state" id="shCmpEmpty">No comparison data yet</div>
       <div id="shCmpBody" style="display:none">
         <!-- 1. status strip -->
         <div class="sh-status-strip" id="shStatus"></div>
 
-        <!-- 2. four score cards -->
-        <div class="sh-score-grid" id="shScores"></div>
+        <!-- 2. every book, one row of cards -->
+        <div class="section-header"><div class="section-title"><span class="icon">📊</span>All books</div></div>
+        <div class="sh-score-grid sh-all-books" id="shScores"></div>
 
-        <!-- 3. chart 1: books indexed to 100 -->
+        <!-- 3. charts -->
         <div class="equity-card">
           <div class="equity-card-head"><div>
-            <div class="equity-card-title">📈 Swing, Blend, Books C and D and Midcap 150 buy-and-hold — 100 on 15 September</div>
+            <div class="equity-card-title">📈 All books since 15 September — 100 on 15 September</div>
             <div class="sh-legend" id="shCmpLegend1"></div>
           </div></div>
           <div class="equity-chart-wrap"><canvas id="shCmpCanvas1" height="220"></canvas></div>
           <div class="equity-x-labels" id="shCmpX1"></div>
-          <div class="sh-note" id="shCmpShadeNote">Shaded days: market gate off (no new buys).</div>
+          <div class="sh-note" id="shCmpShadeNote">Shaded days: hold gate off.</div>
         </div>
-
-        <!-- 4. chart 2: live bot vs Swing -->
+        <div id="shTestCharts" style="display:none">
+          <div class="equity-card">
+            <div class="equity-card-head"><div>
+              <div class="equity-card-title">🧪 Paper tests since their go-live — each line 100 on its own go-live day</div>
+              <div class="sh-legend" id="shSSLegend1"></div>
+            </div></div>
+            <div class="equity-chart-wrap"><canvas id="shSSCanvas1" height="220"></canvas></div>
+            <div class="equity-x-labels" id="shSSX1"></div>
+          </div>
+          <div class="equity-card">
+            <div class="equity-card-head"><div>
+              <div class="equity-card-title">📉 Fall from the previous peak (%) — the same lines</div>
+              <div class="sh-legend" id="shSSLegend2"></div>
+            </div></div>
+            <div class="equity-chart-wrap"><canvas id="shSSCanvas2" height="200"></canvas></div>
+            <div class="equity-x-labels" id="shSSX2"></div>
+          </div>
+        </div>
         <div class="equity-card">
           <div class="equity-card-head"><div>
             <div class="equity-card-title">🔁 Live bot vs Swing — % return since 15 September</div>
@@ -2623,197 +2648,202 @@
           <div class="equity-x-labels" id="shCmpX2"></div>
         </div>
 
-        <!-- 5. Blend breakdown -->
-        <div class="section-header"><div class="section-title"><span class="icon">⚖️</span>Blend — Swing half vs fund half</div></div>
-        <div class="sh-table-wrap" id="shBookB"></div>
-        <div class="section-header"><div class="section-title"><span class="icon">⚖️</span>Books C and D — Swing part vs fund part</div></div>
-        <div class="sh-table-wrap" id="shBookCD"></div>
-
-        <!-- 5b. Swing + Small-strong (inbox 032): its own block, hidden until the book goes live -->
-        <div id="shSS" style="display:none">
-          <div class="section-header"><div class="section-title"><span class="icon">🧺</span>Swing + Small-strong — paper book since go-live</div></div>
-          <div class="sh-score-grid" id="shSSCards"></div>
-          <div class="sh-note" id="shSSNote"></div>
-          <div class="equity-card">
-            <div class="equity-card-head"><div>
-              <div class="equity-card-title">📈 Since go-live — every line 100 on the go-live day</div>
-              <div class="sh-legend" id="shSSLegend1"></div>
-            </div></div>
-            <div class="equity-chart-wrap"><canvas id="shSSCanvas1" height="220"></canvas></div>
-            <div class="equity-x-labels" id="shSSX1"></div>
-          </div>
-          <div class="equity-card">
-            <div class="equity-card-head"><div>
-              <div class="equity-card-title">📉 Fall from the previous peak (%)</div>
-              <div class="sh-legend" id="shSSLegend2"></div>
-            </div></div>
-            <div class="equity-chart-wrap"><canvas id="shSSCanvas2" height="200"></canvas></div>
-            <div class="equity-x-labels" id="shSSX2"></div>
-          </div>
-          <div class="section-header"><div class="section-title"><span class="icon">🗓️</span>Small-strong basket — last month-end rebuild</div></div>
-          <div class="sh-table-wrap" id="shSSMonth"></div>
-          <div class="section-header"><div class="section-title"><span class="icon">📋</span>Small-strong basket — holdings</div></div>
-          <div class="sh-table-wrap" id="shSSHold"></div>
-        </div>
-
-        <!-- 6. monthly tables -->
+        <!-- 4. monthly returns, every book -->
         <div class="section-header"><div class="section-title"><span class="icon">📅</span>Monthly returns</div></div>
         <div class="sh-table-wrap" id="shMonthly"></div>
 
-        <!-- 7. today's decisions -->
+        <!-- 5. today's decisions -->
         <div class="section-header"><div class="section-title"><span class="icon">🧾</span>Today's decisions</div></div>
         <div class="sh-table-wrap" id="shDecisions"></div>
-
-        <!-- 8. live vs shadow -->
-        <div class="section-header"><div class="section-title"><span class="icon">🔍</span>Live bot vs shadow — open positions</div></div>
-        <div class="sh-table-wrap" id="shLiveVs"></div>
-
-        <!-- 9. signal drift -->
-        <div class="section-header"><div class="section-title"><span class="icon">🧭</span>Signal drift — the 2:40 pm signal list vs the close</div></div>
-        <div class="sh-table-wrap" id="shDrift"></div>
       </div>
     </div>
 
-    <div class="sh-gate-strip" id="shGateStrip">
-      <div class="loading-state" style="grid-column:1/-1"><div class="spinner"></div></div>
-    </div>
+    <!-- 6. per-book details -->
+    <details class="sh-sec" open>
+      <summary>📊 Swing — performance, trades, sizing and the defensive sleeve</summary>
+      <div class="section-header" style="margin-top:0">
+        <div class="section-title"><span class="icon">📊</span>Stock trades</div>
+        <span class="freshness-badge" id="shFreshBadge" style="display:none"></span>
+      </div>
+      <div class="perf-kpi-strip">
+        <div class="stat-card green">
+          <div class="stat-label">Realised P&amp;L ₹ (stocks)</div>
+          <div class="stat-value" id="shTotalInr">—</div>
+          <div class="stat-sub" id="shTotalPct">—</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-label">Win Rate (stocks)</div>
+          <div class="stat-value" id="shWinRate">—</div>
+          <div class="stat-sub" id="shWinLoss">— W / — L</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">Avg R / Trade</div>
+          <div class="stat-value" id="shAvgR">—</div>
+          <div class="stat-sub" id="shAvgHold">avg hold —</div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-label">Stock Trades Closed</div>
+          <div class="stat-value" id="shTradeCount">—</div>
+          <div class="stat-sub" id="shDateRange">—</div>
+        </div>
+      </div>
+      <div class="sizing-summary-bar" id="shPerfSleeve"></div>
+      <div class="sh-note" id="shPerfTotal"></div>
 
-    <!-- Performance -->
-    <div class="section-header" style="margin-top:0">
-      <div class="section-title"><span class="icon">📊</span>Shadow Performance</div>
-      <span class="freshness-badge" id="shFreshBadge" style="display:none"></span>
-    </div>
-    <div class="perf-kpi-strip">
-      <div class="stat-card green">
-        <div class="stat-label">Realised P&amp;L ₹</div>
-        <div class="stat-value" id="shTotalInr">—</div>
-        <div class="stat-sub" id="shTotalPct">—</div>
-      </div>
-      <div class="stat-card amber">
-        <div class="stat-label">Win Rate</div>
-        <div class="stat-value" id="shWinRate">—</div>
-        <div class="stat-sub" id="shWinLoss">— W / — L</div>
-      </div>
-      <div class="stat-card blue">
-        <div class="stat-label">Avg R / Trade</div>
-        <div class="stat-value" id="shAvgR">—</div>
-        <div class="stat-sub" id="shAvgHold">avg hold —</div>
-      </div>
-      <div class="stat-card purple">
-        <div class="stat-label">Trades Closed</div>
-        <div class="stat-value" id="shTradeCount">—</div>
-        <div class="stat-sub" id="shDateRange">—</div>
-      </div>
-    </div>
-
-    <div class="equity-card">
-      <div class="equity-card-head">
-        <div>
-          <div class="equity-card-title">📈 Shadow Equity — Mark to Market</div>
-          <div class="equity-headline">
-            <div class="equity-headline-value" id="shEqVal">—</div>
-            <div class="equity-headline-change" id="shEqChange"></div>
+      <div class="equity-card">
+        <div class="equity-card-head">
+          <div>
+            <div class="equity-card-title">📈 Swing Equity — Mark to Market</div>
+            <div class="equity-headline">
+              <div class="equity-headline-value" id="shEqVal">—</div>
+              <div class="equity-headline-change" id="shEqChange"></div>
+            </div>
+          </div>
+          <div class="equity-period-group" id="shEqPeriodGroup">
+            <button class="inv-period-btn" onclick="setShEqPeriod('1M',this)">1M</button>
+            <button class="inv-period-btn" onclick="setShEqPeriod('3M',this)">3M</button>
+            <button class="inv-period-btn active" onclick="setShEqPeriod('ALL',this)">ALL</button>
           </div>
         </div>
-        <div class="equity-period-group" id="shEqPeriodGroup">
-          <button class="inv-period-btn" onclick="setShEqPeriod('1M',this)">1M</button>
-          <button class="inv-period-btn" onclick="setShEqPeriod('3M',this)">3M</button>
-          <button class="inv-period-btn active" onclick="setShEqPeriod('ALL',this)">ALL</button>
-        </div>
-      </div>
-      <div class="equity-chart-wrap">
-        <canvas id="shEquityCanvas" height="200"></canvas>
-        <div class="equity-tooltip" id="shEqTooltip"></div>
-        <div class="empty-state" id="shEqEmpty" style="display:none">
-          The shadow equity curve starts with the first daily shadow run.
-        </div>
-      </div>
-      <div class="equity-x-labels" id="shEqXLabels"></div>
-    </div>
-
-    <div class="dd-kpi-strip">
-      <div class="stat-card red">
-        <div class="stat-label">Current Drawdown</div>
-        <div class="stat-value" id="shDdCurInr">—</div>
-        <div class="stat-sub" id="shDdCurPct">—</div>
-      </div>
-      <div class="stat-card amber">
-        <div class="stat-label">Max Drawdown</div>
-        <div class="stat-value" id="shDdMaxInr">—</div>
-        <div class="stat-sub" id="shDdMaxPct">—</div>
-      </div>
-    </div>
-
-    <div class="equity-card">
-      <div class="equity-card-head">
-        <div>
-          <div class="equity-card-title">🔥 Shadow Heat — Open Stop Risk vs 7% Cap</div>
-          <div class="equity-headline">
-            <div class="equity-headline-value" id="shHeatVal" style="font-size:20px">—</div>
-            <div class="equity-headline-change" id="shHeatSub" style="color:var(--muted);font-weight:600"></div>
+        <div class="equity-chart-wrap">
+          <canvas id="shEquityCanvas" height="200"></canvas>
+          <div class="equity-tooltip" id="shEqTooltip"></div>
+          <div class="empty-state" id="shEqEmpty" style="display:none">
+            The shadow equity curve starts with the first daily shadow run.
           </div>
         </div>
+        <div class="equity-x-labels" id="shEqXLabels"></div>
       </div>
-      <div class="equity-chart-wrap">
-        <canvas id="shHeatCanvas" height="140"></canvas>
-        <div class="empty-state" id="shHeatEmpty" style="display:none">Heat history builds up alongside the equity curve.</div>
+
+      <div class="dd-kpi-strip">
+        <div class="stat-card red">
+          <div class="stat-label">Current Drawdown</div>
+          <div class="stat-value" id="shDdCurInr">—</div>
+          <div class="stat-sub" id="shDdCurPct">—</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-label">Max Drawdown</div>
+          <div class="stat-value" id="shDdMaxInr">—</div>
+          <div class="stat-sub" id="shDdMaxPct">—</div>
+        </div>
       </div>
-      <div class="equity-x-labels" id="shHeatXLabels"></div>
-    </div>
 
-    <div class="month-chart">
-      <div class="month-chart-title">📅 Shadow Monthly P&amp;L (₹)</div>
-      <div class="chart-bars" id="shMonthChart"></div>
-    </div>
+      <div class="equity-card">
+        <div class="equity-card-head">
+          <div>
+            <div class="equity-card-title">🔥 Swing Heat — Open Stop Risk vs 7% Cap</div>
+            <div class="equity-headline">
+              <div class="equity-headline-value" id="shHeatVal" style="font-size:20px">—</div>
+              <div class="equity-headline-change" id="shHeatSub" style="color:var(--muted);font-weight:600"></div>
+            </div>
+          </div>
+        </div>
+        <div class="equity-chart-wrap">
+          <canvas id="shHeatCanvas" height="140"></canvas>
+          <div class="empty-state" id="shHeatEmpty" style="display:none">Heat history builds up alongside the equity curve.</div>
+        </div>
+        <div class="equity-x-labels" id="shHeatXLabels"></div>
+      </div>
 
-    <div class="section-header">
-      <div class="section-title"><span class="icon">📜</span>Shadow Closed Trades</div>
-    </div>
-    <div class="sh-cards sh-mob" id="shTradeCards"></div>
-    <div class="table-wrap sh-desk">
-      <table class="trade-table">
-        <thead>
-          <tr>
-            <th>Symbol</th><th>Entry</th><th>Entry Date</th><th>Exit</th><th>Exit Date</th><th>Hold</th>
-            <th>Qty</th><th>P&amp;L%</th><th>P&amp;L ₹</th><th>R</th><th>Exit Reason</th><th>RS</th>
-          </tr>
-        </thead>
-        <tbody id="shTradeLog">
-          <tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">Loading…</td></tr>
-        </tbody>
-      </table>
-    </div>
+      <div class="month-chart">
+        <div class="month-chart-title">📅 Closed trades by month (₹), stocks and sleeve</div>
+        <div class="chart-bars" id="shMonthChart"></div>
+        <div class="sh-note">Basis: closed trades only, by exit month — the stock part and the sleeve part stacked.
+          Open positions are not counted here; the Monthly returns table above is mark-to-market and includes them.</div>
+      </div>
 
-    <!-- Sizing -->
-    <div class="section-header">
-      <div class="section-title"><span class="icon">🥇</span>Defensive Sleeve</div>
-    </div>
-    <div class="sizing-summary-bar" id="shSleeveStrip"></div>
-    <div id="shSleeveLegs"></div>
+      <div class="section-header">
+        <div class="section-title"><span class="icon">📜</span>Closed trades</div>
+        <div class="sh-filter" id="shTradeFilter">
+          <button class="inv-period-btn active" data-f="stock" onclick="setShTradeFilter('stock',this)">Stocks</button>
+          <button class="inv-period-btn" data-f="sleeve" onclick="setShTradeFilter('sleeve',this)">Sleeve</button>
+          <button class="inv-period-btn" data-f="all" onclick="setShTradeFilter('all',this)">All</button>
+        </div>
+      </div>
+      <div class="sh-cards sh-mob" id="shTradeCards"></div>
+      <div class="table-wrap sh-desk">
+        <table class="trade-table">
+          <thead>
+            <tr>
+              <th>Symbol</th><th>Entry</th><th>Entry Date</th><th>Exit</th><th>Exit Date</th><th>Hold</th>
+              <th>Qty</th><th>P&amp;L%</th><th>P&amp;L ₹</th><th>R</th><th>Exit Reason</th><th>RS</th>
+            </tr>
+          </thead>
+          <tbody id="shTradeLog">
+            <tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
 
-    <div class="section-header">
-      <div class="section-title"><span class="icon">⚖️</span>Shadow Sizing</div>
-    </div>
-    <div class="sizing-summary-bar" id="shRiskStrip"></div>
-    <div class="sizing-summary-bar" id="shSizingSummary"></div>
-    <div class="sizing-legend" id="shSizingLegend"></div>
-    <div id="shSizingList">
-      <div class="loading-state"><div class="spinner"></div></div>
-    </div>
+      <div class="section-header">
+        <div class="section-title"><span class="icon">⚖️</span>Sizing and open positions</div>
+      </div>
+      <div class="sizing-summary-bar" id="shRiskStrip"></div>
+      <div class="sh-note" id="shRiskNote"></div>
+      <div class="sizing-summary-bar" id="shSizingSummary"></div>
+      <div class="sizing-legend" id="shSizingLegend"></div>
+      <div id="shSizingList">
+        <div class="loading-state"><div class="spinner"></div></div>
+      </div>
 
-    <!-- Gate history -->
-    <div class="section-header">
-      <div class="section-title"><span class="icon">🛡️</span>Regime Gate — Last 15 Sessions</div>
-    </div>
-    <div class="sh-gate-list sh-mob" id="shGateCards"></div>
-    <div class="table-wrap sh-desk">
-      <table class="trade-table">
-        <thead><tr><th>Date</th><th>MC150 vs MA21</th><th>SI Gate</th><th>New Entries</th><th>Book</th></tr></thead>
-        <tbody id="shGateBody">
-          <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Loading…</td></tr>
-        </tbody>
-      </table>
-    </div>
+      <div class="section-header">
+        <div class="section-title"><span class="icon">🥇</span>Defensive Sleeve</div>
+      </div>
+      <div class="sizing-summary-bar" id="shSleeveResult"></div>
+      <div class="sizing-summary-bar" id="shSleeveStrip"></div>
+      <div id="shSleeveLegs"></div>
+      <div id="shSleeveClosed"></div>
+    </details>
+
+    <details class="sh-sec">
+      <summary>⚖️ Blend, Book C and Book D — Swing part against fund part</summary>
+      <div class="sh-table-wrap" id="shBookB"></div>
+      <div class="sh-table-wrap" id="shBookCD"></div>
+    </details>
+
+    <details class="sh-sec" id="shSSWrap" style="display:none">
+      <summary>🧺 Swing + Small-strong — paper test</summary>
+      <div id="shSS" style="display:none">
+        <div class="sh-score-grid" id="shSSCards"></div>
+        <div class="sh-note" id="shSSNote"></div>
+        <div class="sh-table-wrap" id="shSSWatch"></div>
+        <div class="section-header"><div class="section-title"><span class="icon">🗓️</span>Small-strong basket — last rebuild</div></div>
+        <div class="sh-table-wrap" id="shSSMonth"></div>
+        <div class="section-header"><div class="section-title"><span class="icon">📋</span>Small-strong basket — holdings</div></div>
+        <div class="sh-table-wrap" id="shSSHold"></div>
+      </div>
+    </details>
+
+    <details class="sh-sec" id="shT10Wrap" style="display:none">
+      <summary>🧭 Swing with sector strength — paper test</summary>
+      <div id="shT10"></div>
+    </details>
+
+    <!-- 7. checks -->
+    <details class="sh-sec">
+      <summary>🔍 Checks — live bot against shadow, signal drift, decision price, regime gate, rule changes</summary>
+      <div class="section-header"><div class="section-title"><span class="icon">🔍</span>Live bot vs shadow — open positions</div></div>
+      <div class="sh-table-wrap" id="shLiveVs"></div>
+      <div class="section-header"><div class="section-title"><span class="icon">🧭</span>Signal drift — the 2:40 pm signal list vs the close</div></div>
+      <div class="sh-table-wrap" id="shDrift"></div>
+      <div class="section-header"><div class="section-title"><span class="icon">🎯</span>Decision price against the official close</div></div>
+      <div class="sh-table-wrap" id="shTrueup"></div>
+      <div class="section-header"><div class="section-title"><span class="icon">🛡️</span>Regime Gate — Last 15 Sessions</div></div>
+      <div class="sh-gate-strip" id="shGateStrip">
+        <div class="loading-state" style="grid-column:1/-1"><div class="spinner"></div></div>
+      </div>
+      <div class="sh-gate-list sh-mob" id="shGateCards"></div>
+      <div class="table-wrap sh-desk">
+        <table class="trade-table">
+          <thead><tr><th>Date</th><th>Hold gate (MC150 vs MA21)</th><th>Super Indicator</th><th>New buys</th><th>Swing book</th></tr></thead>
+          <tbody id="shGateBody">
+            <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="section-header"><div class="section-title"><span class="icon">📝</span>Rule changes and restatements</div></div>
+      <div class="notice sh-restated" id="shRestated" style="display:none"></div>
+    </details>
   </div>
 
   <!-- ══ INVESTMENT INDEX TAB ══════════════════════════ -->
@@ -5888,6 +5918,7 @@ async function loadShadow() {
   renderShadowSizing(siz, _shSnapshots[_shSnapshots.length - 1]);
   renderShadowGates(gates ? (gates.days || []) : []);
   renderShadowSleeve(sleeve);
+  renderShSleeveResult(sleeve, hist ? (hist.trades || []) : []);
   // comparison.json is new (step 3) and absent until the first 3:05 pm run:
   // read it on its own so a missing file never blanks the rest of the tab.
   let comp = null;
@@ -5927,32 +5958,38 @@ function renderShadowComparison(c) {
     return;
   }
   empty.style.display = 'none'; body.style.display = 'block';
-  renderShStatus(c);
-  renderShScores(c);
-  renderShCharts(c);
-  renderShBookB(c);
-  renderShBookCD(c);
-  renderShSmallStrong(c);
-  renderShMonthly(c);
-  renderShDecisions(c);
-  renderShLiveVs(c);
-  renderShDrift(c);
+  // each block renders on its own: one failing never blanks the rest of the tab
+  [renderShStatus, renderShScores, renderShCharts, renderShBookB, renderShBookCD, renderShSmallStrong, renderShT10,
+   renderShMonthly, renderShDecisions, renderShLiveVs, renderShDrift, renderShTrueup].forEach(function (f) {
+    try { f(c); } catch (e) { if (window.console) console.warn('Shadow tab: ' + (f.name || 'block') + ' failed', e); }
+  });
+}
+
+function shGateWords(st) {
+  const dist = st.gate_distance_pct;
+  const hold = !!st.gate_above_21_day_average;
+  const holdSub = 'Midcap 150 ' + (dist === null || dist === undefined ? '' :
+    Math.abs(dist).toFixed(1) + '% ' + (dist >= 0 ? 'above' : 'below') + ' ') + 'its 21-day average';
+  const buys = !!st.gate_entries_allowed;
+  const buysSub = buys ? 'Hold gate on and Super Indicator bullish' :
+    (!hold ? 'hold gate off' : 'Super Indicator bearish');
+  return {hold: hold, holdSub: holdSub, buys: buys, buysSub: buysSub};
 }
 
 function renderShStatus(c) {
   const st = c.status || {};
-  const gateOn = !!st.gate_entries_allowed;
-  const dist = st.gate_distance_pct;
-  const gateSub = 'Midcap 150 ' + (dist === null || dist === undefined ? '' :
-    Math.abs(dist).toFixed(1) + '% ' + (dist >= 0 ? 'above' : 'below') + ' ') +
-    'its 21-day average; Super Indicator ' + (st.gate_super_indicator_bullish ? 'bullish' : 'bearish');
+  const g = shGateWords(st);
   const limits = [];
   if (st.five_day_breaker_active) limits.push('5-day loss limit active');
   if (st.high_water_mark_cut_active) limits.push('8% cut from peak active');
   const late = !!(c.late_run || st.late_run);
+  const fund = (c.book_b_breakdown || {}).etf_half_holding;
   document.getElementById('shStatus').innerHTML =
-    shCard('Market gate today', '<span class="sh-pill ' + (gateOn ? 'on' : 'off') + '">' +
-           (gateOn ? 'ON' : 'OFF') + '</span>', gateSub, gateOn ? 'green' : 'red') +
+    shCard('Hold gate', '<span class="sh-pill ' + (g.hold ? 'on' : 'off') + '">' + (g.hold ? 'ON' : 'OFF') + '</span>',
+           shEsc(g.holdSub) + (fund ? ' · fund half now holds ' + shEsc(fund === 'ETF' ? 'MID150BEES' : fund) : ''),
+           g.hold ? 'green' : 'red') +
+    shCard('New buys', '<span class="sh-pill ' + (g.buys ? 'on' : 'off') + '">' + (g.buys ? 'ON' : 'OFF') + '</span>',
+           shEsc(g.buysSub), g.buys ? 'green' : 'amber') +
     shCard('Position size level', shEsc(String(st.size_level || '—').split(' (')[0]),
            shEsc(st.size_level || ''), 'blue') +
     shCard('Loss limits', limits.length ? '<span class="sh-pill warn">ACTIVE</span>' : 'None active',
@@ -5979,24 +6016,46 @@ function renderShScores(c) {
   const s = c.summary;
   const daily = c.daily;
   const last = daily[daily.length - 1];
-  function card(title, key, value, cls) {
-    const x = s[key] || {};
+  const tb = c.test_books || {};
+  function card(title, x, value, since, cls, tag) {
+    x = x || {};
     const inv = (x.invested_pct === null || x.invested_pct === undefined) ? '' :
       ' · invested ' + (+x.invested_pct).toFixed(0) + '%';
     return '<div class="stat-card ' + cls + '">' +
-      '<div class="stat-label">' + title + '</div>' +
+      '<div class="stat-label">' + title + (tag ? ' <span class="sh-pill warn">paper test</span>' : '') + '</div>' +
       '<div class="stat-value" style="color:' + shPctCol(x.return_pct) + '">' + shPct(x.return_pct, 2) + '</div>' +
-      '<div class="stat-sub">' + (value === null ? 'since 15 Sep' : shInr(value) + ' · since 15 Sep') + '</div>' +
+      '<div class="stat-sub">' + (value === null || value === undefined ? '' : shInr(value) + ' · ') + 'since ' + since + '</div>' +
       '<div class="sh-score-line">Worst fall ' + shPct(x.max_drawdown_pct) + ' · now ' +
       shPct(x.current_drawdown_pct) + inv + '</div></div>';
   }
-  document.getElementById('shScores').innerHTML =
-    card('Swing — v3 stock system', 'book_a', last.book_a, 'green') +
-    card('Blend — half Swing, half fund', 'book_b', last.book_b, 'blue') +
-    (s.book_c ? card('Book C — 30% Swing, 70% fund', 'book_c', last.book_c === undefined ? null : last.book_c, 'teal') : '') +
-    (s.book_d ? card('Book D — fund only', 'book_d', last.book_d === undefined ? null : last.book_d, 'gold') : '') +
-    card('Live bot', 'live', null, 'amber') +
-    card('MID150BEES buy-and-hold', 'buy_hold', last.buy_hold, 'purple');
+  function testCard(title, x, since, cls) {
+    x = x || {};
+    const iv = (x.pct_invested !== null && x.pct_invested !== undefined) ? x.pct_invested : x.basket_half_invested_pct;
+    const inv = (iv === null || iv === undefined) ? '' : ' · ' + (x.pct_invested !== null && x.pct_invested !== undefined ?
+      'invested ' : 'basket half invested ') + (+iv).toFixed(0) + '%';
+    return card(title, {return_pct: x.return_pct, max_drawdown_pct: x.worst_fall_pct,
+                        current_drawdown_pct: x.fall_from_peak_pct}, x.value, since, cls, true).replace('</div></div>', inv + '</div></div>');
+  }
+  const ss = tb.small_strong, t10 = tb.t10;
+  let html = card('Swing — v3 stock system', s.book_a, last.book_a, '15 Sep', 'green') +
+    card('Blend — half Swing, half fund', s.book_b, last.book_b, '15 Sep', 'blue');
+  if (ss && ss.go_live) {
+    const sd = shDateShort(ss.go_live);
+    html += testCard('Swing + Small-strong (50/50)', ss.mix_50_50, sd, 'green') +
+      testCard('Swing + Small-strong (70/30)', ss.mix_70_30, sd, 'teal');
+  }
+  if (t10 && t10.go_live) {
+    let pk = null, nw = null;
+    daily.forEach(function (r) { if (r.date >= t10.go_live && r.t10_book !== null && r.t10_book !== undefined) {
+      if (pk === null || r.t10_book > pk) pk = r.t10_book; nw = r.t10_book; } });
+    html += testCard('Swing with sector strength', {value: t10.value, return_pct: t10.return_pct, worst_fall_pct: t10.worst_fall_pct,
+      fall_from_peak_pct: (pk && nw) ? (nw / pk - 1) * 100 : null}, shDateShort(t10.go_live), 'purple');
+  }
+  if (s.book_c) html += card('Book C — 30% Swing, 70% fund', s.book_c, last.book_c, '15 Sep', 'teal');
+  if (s.book_d) html += card('Book D — fund half only', s.book_d, last.book_d, '15 Sep', 'gold');
+  html += card('Live bot', s.live, null, '15 Sep', 'amber') +
+    card('Midcap 150 buy-and-hold (MID150BEES)', s.buy_hold, last.buy_hold, '15 Sep', 'purple');
+  document.getElementById('shScores').innerHTML = html;
 }
 
 // One line chart on a canvas. series: [{vals:[..], color, label}]; shade: bool per row.
@@ -6065,16 +6124,20 @@ function renderShCharts(c) {
       return v / base * 100;
     });
   }
-  const shade = rows.map(function (r) { return r.gate_entries_allowed === false; });
-  const nOff = shade.filter(function (x) { return x; }).length;
+  // Shade the days the hold gate was off: those are the days that move the books (Swing sells, the fund half and
+  // the basket go to cash or the sleeve). New-buys-off days are counted in the caption.
+  const shade = rows.map(function (r) { return r.gate_above_21_day_average === false; });
+  const nHoldOff = shade.filter(function (x) { return x; }).length;
+  const nBuysOff = rows.filter(function (r) { return r.gate_entries_allowed === false; }).length;
   const sn = document.getElementById('shCmpShadeNote');
-  if (sn) sn.textContent = 'Shaded days: market gate off (no new buys) — ' + nOff + ' of ' + rows.length + ' days.';
+  if (sn) sn.textContent = 'Shaded: hold gate off (Midcap 150 below its 21-day average) — ' + nHoldOff + ' of ' + rows.length +
+    ' days. New buys were off on ' + nBuysOff + ' of ' + rows.length + ' days (hold gate off, or the Super Indicator bearish).';
   const f100 = function (v) { return (+v).toFixed(1); };
   shLineChart('shCmpCanvas1', 'shCmpX1', 'shCmpLegend1', rows, [
     {vals: idx('book_a'), color: col('--green', '#34d399'), label: 'Swing'},
     {vals: idx('book_b'), color: col('--accent', '#818cf8'), label: 'Blend'},
     {vals: idx('book_c'), color: col('--teal', '#3ddbd9'), label: 'Book C (30/70)'},
-    {vals: idx('book_d'), color: col('--gold', '#ffd54f'), label: 'Book D (fund only)'},
+    {vals: idx('book_d'), color: col('--gold', '#ffd54f'), label: 'Book D (fund half only)'},
     {vals: idx('buy_hold'), color: col('--purple', '#b388ff'), label: 'Midcap 150 buy-and-hold'}
   ].filter(function (sr) { return sr.vals.some(function (v) { return v !== null; }); }), shade, f100);
   const a = idx('book_a').map(function (v) { return v === null ? null : v - 100; });
@@ -6084,58 +6147,20 @@ function renderShCharts(c) {
     {vals: live, color: col('--amber', '#fbbf24'), label: 'Live bot'},
     {vals: a, color: col('--green', '#34d399'), label: 'Swing'}
   ], null, fp);
+  renderShTestCharts(c);
 }
 
-function renderShBookB(c) {
-  const b = c.book_b_breakdown || {};
-  const last = c.daily[c.daily.length - 1];
-  const tot = (b.v3_half || 0) + (b.etf_half || 0);
-  const share = function (v) { return tot ? (v / tot * 100).toFixed(1) + '%' : '—'; };
-  const holds = b.etf_half_holdings_at_6_75_lakh_scale || {};
-  const holdTxt = Object.keys(holds).length ? Object.keys(holds).map(function (k) {
-    return shEsc(k) + ' ' + shInr(holds[k].value); }).join(', ') : 'cash only';
-  document.getElementById('shBookB').innerHTML =
-    '<table class="sh-tbl"><thead><tr><th>Half</th><th class="num">Value</th><th class="num">Share</th><th>What it holds</th></tr></thead><tbody>' +
-    '<tr><td>Swing half (Swing × ' + (b.v3_scale_of_book_a === null || b.v3_scale_of_book_a === undefined ? '—' :
-      (+b.v3_scale_of_book_a).toFixed(4)) + ')</td><td class="num">' + shInr(b.v3_half) + '</td><td class="num">' +
-      share(b.v3_half || 0) + '</td><td class="sh-reason">Swing\'s stocks, sleeve and cash, scaled</td></tr>' +
-    '<tr><td>Fund half (MID150BEES when the gate is on)</td><td class="num">' + shInr(b.etf_half) + '</td><td class="num">' +
-      share(b.etf_half || 0) + '</td><td class="sh-reason">Now: ' + shEsc(b.etf_half_holding || '—') + ' — ' + holdTxt + '</td></tr>' +
-    '<tr><td><b>Blend</b></td><td class="num"><b>' + shInr(last.book_b) + '</b></td><td class="num">100%</td>' +
-      '<td class="sh-reason">' + shEsc(b.rebalance_rule || '') + ' · ' + shEsc((c.labels || {}).book_b || '') + '</td></tr>' +
-    '</tbody></table>';
-}
-
-// ─── Swing + Small-strong (comparison.json test_books.small_strong; inbox 032) ─────
-// Plain string building only (no nested template literals, no nullish or
-// optional-chaining operators): the dashboard has to parse on older Android Chrome.
-let _ssHoldRows = [], _ssSortKey = 'value', _ssSortAsc = false;
-function ssNum(v) { return v === null || v === undefined || isNaN(v); }
-function renderShSmallStrong(c) {
-  const wrap = document.getElementById('shSS');
+function renderShTestCharts(c) {
+  const wrap = document.getElementById('shTestCharts');
+  const tb = c.test_books || {};
+  const starts = [];
+  if (tb.small_strong && tb.small_strong.go_live) starts.push(tb.small_strong.go_live);
+  if (tb.t10 && tb.t10.go_live) starts.push(tb.t10.go_live);
   if (!wrap) return;
-  const b = (c && c.test_books) ? c.test_books.small_strong : null;
-  if (!b || !b.go_live) { wrap.style.display = 'none'; return; }
+  if (!starts.length) { wrap.style.display = 'none'; return; }
   wrap.style.display = 'block';
-  const lines = [['mix_50_50', 'Swing + Small-strong (50/50)', 'green'], ['mix_70_30', 'Swing + Small-strong (70/30)', 'teal'],
-                 ['basket', 'Small-strong basket alone', 'amber']];
-  document.getElementById('shSSCards').innerHTML = lines.map(function (ln) {
-    const s = b[ln[0]] || {};
-    let inv;
-    if (ln[0] === 'basket') {
-      inv = ssNum(s.pct_invested) ? '—' : s.pct_invested + '% in stocks, ' + (s.names || 0) + ' names';
-    } else {
-      inv = ssNum(s.basket_half_share_pct) ? '—' : 'basket half ' + s.basket_half_share_pct + '% of the mix, ' +
-        (ssNum(s.basket_half_invested_pct) ? '—' : s.basket_half_invested_pct) + '% of it in stocks';
-    }
-    return shCard(ln[1], shInr(s.value),
-      shPct(s.return_pct) + ' since ' + shDateShort(b.go_live) + ' · worst fall ' + shPct(s.worst_fall_pct) +
-      ' · from peak ' + shPct(s.fall_from_peak_pct) + ' · this month ' + shPct(s.month_pct) + '<br>' + shEsc(inv),
-      ln[2], shPctCol(s.return_pct));
-  }).join('');
-  const watch = (b.watch_lines || []).map(function (w) { return '<span class="sh-pill warn">WATCH</span> ' + shEsc(w); }).join('<br>');
-  document.getElementById('shSSNote').innerHTML = shEsc(b.research_note || '') + '<br>' + shEsc(b.note || '') + (watch ? '<br>' + watch : '');
-  const rows = (c.daily || []).filter(function (r) { return r.date >= b.go_live; });
+  starts.sort();
+  const rows = (c.daily || []).filter(function (r) { return r.date >= starts[0]; });
   const css = getComputedStyle(document.documentElement);
   const col = function (v, fb) { const s = css.getPropertyValue(v).trim(); return s || fb; };
   function idx(key) {
@@ -6159,16 +6184,88 @@ function renderShSmallStrong(c) {
     {vals: idx('ss_mix_50_50'), color: col('--green', '#34d399'), label: 'Swing + Small-strong (50/50)'},
     {vals: idx('ss_mix_70_30'), color: col('--teal', '#3ddbd9'), label: 'Swing + Small-strong (70/30)'},
     {vals: idx('ss_basket'), color: col('--amber', '#fbbf24'), label: 'Small-strong basket alone'},
-    {vals: idx('ss_swing'), color: col('--blue', '#60a5fa'), label: 'Swing'},
-    {vals: idx('book_b'), color: col('--accent', '#818cf8'), label: 'Blend'},
-    {vals: idx('buy_hold'), color: col('--purple', '#b388ff'), label: 'Midcap 150 buy-and-hold'}
+    {vals: idx('t10_book'), color: col('--purple', '#b388ff'), label: 'Swing with sector strength'},
+    {vals: idx('t10_swing'), color: col('--blue', '#60a5fa'), label: 'Swing (from ' + shDateShort(starts[0]) + ')'},
+    {vals: idx('buy_hold'), color: col('--muted', '#94a3b8'), label: 'Midcap 150 buy-and-hold'}
   ].filter(function (sr) { return sr.vals.some(function (v) { return v !== null; }); });
-  if (rows.length) {
-    const shade = rows.map(function (r) { return r.gate_entries_allowed === false; });
-    shLineChart('shSSCanvas1', 'shSSX1', 'shSSLegend1', rows, series, shade, function (v) { return (+v).toFixed(1); });
-    shLineChart('shSSCanvas2', 'shSSX2', 'shSSLegend2', rows, series.map(function (sr) {
-      return {vals: dd(sr.vals), color: sr.color, label: sr.label}; }), null, function (v) { return (+v).toFixed(1) + '%'; });
-  }
+  if (!rows.length || !series.length) return;
+  const shade = rows.map(function (r) { return r.gate_above_21_day_average === false; });
+  shLineChart('shSSCanvas1', 'shSSX1', 'shSSLegend1', rows, series, shade, function (v) { return (+v).toFixed(1); });
+  shLineChart('shSSCanvas2', 'shSSX2', 'shSSLegend2', rows, series.map(function (sr) {
+    return {vals: dd(sr.vals), color: sr.color, label: sr.label}; }), null, function (v) { return (+v).toFixed(1) + '%'; });
+}
+
+function renderShBookB(c) {
+  const b = c.book_b_breakdown || {};
+  const last = c.daily[c.daily.length - 1];
+  const tot = (b.v3_half || 0) + (b.etf_half || 0);
+  const share = function (v) { return tot ? (v / tot * 100).toFixed(1) + '%' : '—'; };
+  const holds = b.etf_half_holdings_at_6_75_lakh_scale || {};
+  const holdTxt = Object.keys(holds).length ? Object.keys(holds).map(function (k) {
+    return shEsc(k) + ' ' + shInr(holds[k].value); }).join(', ') : 'cash only';
+  document.getElementById('shBookB').innerHTML =
+    '<table class="sh-tbl"><thead><tr><th>Half</th><th class="num">Value</th><th class="num">Share</th><th>What it holds</th></tr></thead><tbody>' +
+    '<tr><td>Swing half (Swing × ' + (b.v3_scale_of_book_a === null || b.v3_scale_of_book_a === undefined ? '—' :
+      (+b.v3_scale_of_book_a).toFixed(4)) + ')</td><td class="num">' + shInr(b.v3_half) + '</td><td class="num">' +
+      share(b.v3_half || 0) + '</td><td class="sh-reason">Swing\'s stocks, sleeve and cash, scaled</td></tr>' +
+    '<tr><td>Fund half (MID150BEES when the hold gate is on; its own defensive sleeve when it is off)</td><td class="num">' + shInr(b.etf_half) + '</td><td class="num">' +
+      share(b.etf_half || 0) + '</td><td class="sh-reason">Now: ' + shEsc(b.etf_half_holding || '—') + ' — ' + holdTxt + '</td></tr>' +
+    '<tr><td><b>Blend</b></td><td class="num"><b>' + shInr(last.book_b) + '</b></td><td class="num">100%</td>' +
+      '<td class="sh-reason">' + shEsc(b.rebalance_rule || '') + ' · ' + shEsc((c.labels || {}).book_b || '') + '</td></tr>' +
+    '</tbody></table>';
+}
+
+// ─── Swing + Small-strong (comparison.json test_books.small_strong; inbox 032, 033) ─────
+let _ssHoldRows = [], _ssSortKey = 'value', _ssSortAsc = false;
+function ssNum(v) { return v === null || v === undefined || isNaN(v); }
+function ssGateSource(t) {
+  t = String(t || '');
+  if (t.indexOf('dry-run') >= 0) return 'from the 3:01 pm gate decision (the 3:01 pm run is still in its trial setting)';
+  if (t.indexOf('15:01') >= 0) return 'from the 3:01 pm gate decision';
+  return t;
+}
+function renderShSmallStrong(c) {
+  const wrap = document.getElementById('shSS');
+  const outer = document.getElementById('shSSWrap');
+  if (!wrap) return;
+  const b = (c && c.test_books) ? c.test_books.small_strong : null;
+  if (!b || !b.go_live) { wrap.style.display = 'none'; if (outer) outer.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  if (outer) outer.style.display = 'block';
+  const lines = [['mix_50_50', 'Swing + Small-strong (50/50)', 'green'], ['mix_70_30', 'Swing + Small-strong (70/30)', 'teal'],
+                 ['basket', 'Small-strong basket alone', 'amber']];
+  document.getElementById('shSSCards').innerHTML = lines.map(function (ln) {
+    const s = b[ln[0]] || {};
+    let inv;
+    if (ln[0] === 'basket') {
+      inv = ssNum(s.pct_invested) ? '—' : s.pct_invested + '% in stocks, ' + (s.names || 0) + ' names';
+    } else {
+      inv = ssNum(s.basket_half_share_pct) ? '—' : 'basket half ' + s.basket_half_share_pct + '% of the mix, ' +
+        (ssNum(s.basket_half_invested_pct) ? '—' : s.basket_half_invested_pct) + '% of it in stocks';
+    }
+    const today = ssNum(s.day_change_inr) ? '' : ' · today ' + shInr(s.day_change_inr, true);
+    return shCard(ln[1], shInr(s.value),
+      shPct(s.return_pct) + ' since ' + shDateShort(b.go_live) + today + ' · worst fall ' + shPct(s.worst_fall_pct) +
+      ' · from peak ' + shPct(s.fall_from_peak_pct) + ' · this month ' + shPct(s.month_pct) + '<br>' + shEsc(inv),
+      ln[2], shPctCol(s.return_pct));
+  }).join('');
+  document.getElementById('shSSNote').innerHTML = shEsc(b.research_note || '') + '<br>' + shEsc(b.note || '');
+  // watch lines and waiting orders: always shown, so "none" is visibly different from "missing"
+  const det = b.watch_lines_detail || [];
+  const wl = (b.watch_lines || []);
+  const watch = wl.length ? wl.map(function (w, i) {
+    const d = det[i] && det[i].first_crossed ? ' (since ' + shEsc(det[i].first_crossed) + ')' : '';
+    return '<span class="sh-pill warn">WATCH</span> ' + shEsc(w) + d; }).join('<br>') : 'None crossed';
+  const pl = b.pending_list || {};
+  const pend = [];
+  if (pl.buy && pl.buy.length) pend.push('buy ' + pl.buy.map(shEsc).join(', '));
+  if (pl.sell && pl.sell.length) pend.push('sell ' + pl.sell.map(shEsc).join(', '));
+  if (pl.trim && pl.trim.length) pend.push('trim ' + pl.trim.map(shEsc).join(', '));
+  document.getElementById('shSSWatch').innerHTML = '<table class="sh-tbl"><tbody>' +
+    '<tr><td>Watch lines</td><td>' + watch + '<div class="sh-reason">Shown when crossed: the 50/50 mix down 15% from its peak; ' +
+    'the basket half down 32%; the hold gate off in the first half of a month while the basket is fully invested.</div></td></tr>' +
+    '<tr><td>Orders waiting for tomorrow\'s open</td><td>' + (pend.length ? pend.join('; ') :
+      (b.pending_orders ? 'yes (names not recorded)' : 'none')) + '</td></tr></tbody></table>';
   const m = b.last_month_end;
   const list = function (xs) { return xs && xs.length ? xs.map(shEsc).join(', ') : 'none'; };
   const sold = m && m.sold && m.sold.length ? m.sold.map(function (x) {
@@ -6176,8 +6273,8 @@ function renderShSmallStrong(c) {
   document.getElementById('shSSMonth').innerHTML = m ?
     '<table class="sh-tbl"><tbody>' +
     '<tr><td>Date</td><td>' + shEsc(m.date) + (m.late_run ? ' <span class="sh-pill warn">LATE RUN</span>' : '') + '</td></tr>' +
-    '<tr><td>Market gate</td><td><span class="sh-pill ' + (m.gate ? 'on' : 'off') + '">' + (m.gate ? 'ON' : 'OFF') +
-      '</span> <span class="sh-reason">' + shEsc(m.gate_source || '') + '</span></td></tr>' +
+    '<tr><td>Hold gate at the rebuild</td><td><span class="sh-pill ' + (m.gate ? 'on' : 'off') + '">' + (m.gate ? 'ON' : 'OFF') +
+      '</span> <span class="sh-reason">' + shEsc(ssGateSource(m.gate_source)) + '</span></td></tr>' +
     '<tr><td>Stocks that qualified</td><td>' + (ssNum(m.qualifiers) ? '—' : m.qualifiers) + '</td></tr>' +
     '<tr><td>Bought</td><td>' + list(m.bought) + '</td></tr>' +
     '<tr><td>Kept</td><td>' + (m.kept ? m.kept.length : 0) + ' names</td></tr>' +
@@ -6185,9 +6282,51 @@ function renderShSmallStrong(c) {
     '<tr><td>Trimmed back to 8%</td><td>' + list(m.trimmed) + '</td></tr>' +
     '<tr><td>Next rebuild</td><td>' + shEsc(b.next_rebuild || '—') + '</td></tr>' +
     '</tbody></table>' :
-    '<div class="sh-note">No month-end rebuild yet: the basket is in cash until ' + shEsc(b.next_rebuild || 'the next month-end') + '.</div>';
+    '<div class="sh-note">No rebuild yet: the basket is in cash until ' + shEsc(b.next_rebuild || 'the next month-end') + '.</div>';
   _ssHoldRows = (b.holdings || []).slice();
   renderShSSHold();
+}
+
+// ─── Swing with sector strength (comparison.json test_books.t10; inbox 033 section 2.1) ─────
+// No verdict and no signal-level results (research/t10_forward/DESIGN.md section 4).
+function renderShT10(c) {
+  const outer = document.getElementById('shT10Wrap');
+  const el = document.getElementById('shT10');
+  if (!el) return;
+  const t = (c && c.test_books) ? c.test_books.t10 : null;
+  if (!t || !t.go_live) { if (outer) outer.style.display = 'none'; return; }
+  if (outer) outer.style.display = 'block';
+  const rows = (c.daily || []).filter(function (r) { return r.date >= t.go_live && r.t10_book !== null && r.t10_book !== undefined; });
+  let peak = null, now = null;
+  rows.forEach(function (r) { if (peak === null || r.t10_book > peak) peak = r.t10_book; now = r.t10_book; });
+  const fromPeak = (peak && now) ? (now / peak - 1) * 100 : null;
+  let html = '<div class="sh-score-grid">' +
+    shCard('Swing with sector strength', shInr(t.value), shPct(t.return_pct) + ' since ' + shDateShort(t.go_live) +
+      ' · worst fall ' + shPct(t.worst_fall_pct) + ' · from peak ' + shPct(fromPeak) + ' · ' + (t.open_positions || 0) +
+      ' open, ' + (t.closed_trades || 0) + ' closed', 'purple', shPctCol(t.return_pct)) +
+    shCard('Swing over the same days', shInr(t.swing_rebased_value), shPct(t.swing_return_pct) +
+      ' · worst fall ' + shPct(t.swing_worst_fall_pct) + ' · both rebased to ₹13.5 lakh on ' + shDateShort(t.go_live), 'green',
+      shPctCol(t.swing_return_pct)) + '</div>';
+  html += '<div class="sh-note">' + shEsc(t.note || '') + ' Same rules as Swing; when signals compete for a slot, the stock in the ' +
+    'stronger sector goes first. Its line is on the paper-tests chart above.</div>';
+  const H = t.holdings || [];
+  html += '<div class="section-header"><div class="section-title"><span class="icon">📋</span>Open positions</div></div>';
+  html += H.length ? '<table class="sh-tbl"><thead><tr><th>Stock</th><th>Sector</th><th>Entry date</th><th class="num">Entry price</th>' +
+    '<th class="num">Price now</th><th class="num">Gain</th><th class="num">Value</th></tr></thead><tbody>' +
+    H.map(function (h) {
+      return '<tr><td><b>' + shEsc(h.symbol) + '</b></td><td>' + shEsc(h.sector) + '</td><td>' + shEsc(h.entry_date) +
+        '</td><td class="num">' + shInr(h.entry_price) + '</td><td class="num">' + shInr(h.price_now) +
+        '</td><td class="num" style="color:' + shPctCol(h.gain_pct) + '">' + shPct(h.gain_pct) + '</td><td class="num">' +
+        shInr(h.value) + '</td></tr>'; }).join('') + '</tbody></table>'
+    : '<div class="sh-note">No open positions' + (t.holdings ? '' : ' recorded yet') + '.</div>';
+  const D = t.differences || [];
+  html += '<div class="section-header"><div class="section-title"><span class="icon">↔️</span>Where it bought differently from Swing</div></div>';
+  html += D.length ? '<table class="sh-tbl"><thead><tr><th>Date</th><th>Stock</th><th>Sector</th><th>Bought by</th><th>The other book</th></tr></thead><tbody>' +
+    D.slice().reverse().map(function (d) {
+      return '<tr><td>' + shEsc(d.date) + '</td><td><b>' + shEsc(d.symbol) + '</b></td><td>' + shEsc(d.sector) + '</td><td>' +
+        shEsc(d.bought_by) + '</td><td class="sh-reason">' + shEsc(d.other_book) + '</td></tr>'; }).join('') + '</tbody></table>'
+    : '<div class="sh-note">' + (t.differences ? 'No differences yet: both books bought the same stocks.' : 'Not recorded yet.') + '</div>';
+  el.innerHTML = html;
 }
 function renderShSSHold() {
   const el = document.getElementById('shSSHold');
@@ -6280,20 +6419,30 @@ function renderShBookCD(c) {
 function renderShMonthly(c) {
   const m = c.monthly || {};
   const ref = c.backtest_reference || {};
-  const books = [['book_a', 'Swing'], ['book_b', 'Blend'], ['book_c', 'Book C (30/70)'], ['book_d', 'Book D (fund only)'],
+  const tb = c.test_books || {};
+  const ssLive = tb.small_strong && tb.small_strong.go_live ? shDateShort(tb.small_strong.go_live) : null;
+  const t10Live = tb.t10 && tb.t10.go_live ? shDateShort(tb.t10.go_live) : null;
+  const books = [['book_a', 'Swing'], ['book_b', 'Blend'],
+    ['ss_mix_50_50', 'Swing + Small-strong (50/50)' + (ssLive ? ', from ' + ssLive : '')],
+    ['ss_mix_70_30', 'Swing + Small-strong (70/30)' + (ssLive ? ', from ' + ssLive : '')],
+    ['ss_basket', 'Small-strong basket alone' + (ssLive ? ', from ' + ssLive : '')],
+    ['t10_book', 'Swing with sector strength' + (t10Live ? ', from ' + t10Live : '')],
+    ['book_c', 'Book C (30/70)'], ['book_d', 'Book D (fund half only)'],
     ['live', 'Live bot'], ['buy_hold', 'Buy-and-hold']].filter(function (bk) {
-    return bk[0] === 'book_c' || bk[0] === 'book_d' ? !!(m[bk[0]] && m[bk[0]].length) : true; });
+    return ['book_a', 'book_b', 'live', 'buy_hold'].indexOf(bk[0]) >= 0 ? true : !!(m[bk[0]] && m[bk[0]].length); });
   const months = [];
   books.forEach(function (bk) { (m[bk[0]] || []).forEach(function (r) { if (months.indexOf(r.month) < 0) months.push(r.month); }); });
   months.sort();
   let html = '<table class="sh-tbl"><thead><tr><th>Book</th>' + months.map(function (mo) {
     return '<th class="num">' + mo + '</th>'; }).join('') + '<th class="num">Median month</th><th class="num">Worst month</th><th class="num">Worst fall</th></tr></thead><tbody>';
+  const testFall = {ss_mix_50_50: (tb.small_strong || {}).mix_50_50, ss_mix_70_30: (tb.small_strong || {}).mix_70_30,
+                    ss_basket: (tb.small_strong || {}).basket, t10_book: tb.t10 ? {worst_fall_pct: tb.t10.worst_fall_pct} : null};
   books.forEach(function (bk) {
     const rows = m[bk[0]] || [];
     const by = {};
     rows.forEach(function (r) { by[r.month] = r; });
-    const s = (c.summary || {})[bk[0]] || {};
-    html += '<tr><td>' + bk[1] + '</td>' + months.map(function (mo) {
+    const s = testFall[bk[0]] ? {max_drawdown_pct: testFall[bk[0]].worst_fall_pct} : ((c.summary || {})[bk[0]] || {});
+    html += '<tr><td>' + shEsc(bk[1]) + '</td>' + months.map(function (mo) {
       const r = by[mo];
       if (!r) return '<td class="num">—</td>';
       return '<td class="num" style="color:' + shPctCol(r.return_pct) + '">' + shPct(r.return_pct) +
@@ -6305,14 +6454,26 @@ function renderShMonthly(c) {
         '<td class="num">' + shPct(rf.median_month_pct, 2) + '</td><td class="num">' + shPct(rf.worst_month_pct, 2) +
         '</td><td class="num">' + shPct(rf.max_drawdown_pct, 2) + '</td></tr>';
     }
+    if (bk[0] === 'ss_mix_50_50' && tb.small_strong) {
+      html += '<tr class="sh-ref"><td colspan="' + (months.length + 4) + '">Research range (past data, already seen): ' +
+        shEsc(tb.small_strong.research_note || '') + '</td></tr>';
+    }
   });
   const own = books.filter(function (bk) { return ref[bk[0]] && ref[bk[0]].period; });
-  html += '</tbody></table><div class="sh-note">* part month. Backtest rows: ' + shEsc(ref.period || '') + '.' +
+  html += '</tbody></table><div class="sh-note">* part month (the first and the current month of each book). Mark-to-market: ' +
+    'month-end value against the previous month-end, open positions included. Backtest rows: ' + shEsc(ref.period || '') + '.' +
     (own.length ? ' † ' + own.map(function (bk) { return bk[1]; }).join(' and ') + ': ' + shEsc(ref[own[0][0]].period) + '.' : '') +
     '</div>';
   document.getElementById('shMonthly').innerHTML = html;
 }
 
+function setShSkips(btn) {
+  const t = document.getElementById('shSkipList');
+  if (!t) return;
+  const open = t.style.display !== 'none';
+  t.style.display = open ? 'none' : 'block';
+  btn.textContent = open ? 'Show' : 'Hide';
+}
 function renderShDecisions(c) {
   const d = c.decisions || {};
   const rows = [];
@@ -6325,24 +6486,45 @@ function renderShDecisions(c) {
     rows.push(['Sleeve ' + f.side, f.symbol, (+f.units).toFixed(2) + ' at ' + shInr(f.price), 'Defensive sleeve rebalance']); });
   if (d.book_b_fund_half) {
     rows.push(['Blend fund half', 'MID150BEES', d.book_b_fund_half === 'ETF' ? 'bought' : 'sold',
-      d.book_b_fund_half === 'ETF' ? 'Market gate turned on' : 'Midcap 150 fell below its 21-day average']); }
-  (d.skipped || []).forEach(function (s) { rows.push(['Skipped', s.symbol, '', s.reason]); });
+      d.book_b_fund_half === 'ETF' ? 'Hold gate turned on (and the Super Indicator allowed it)' : 'Midcap 150 fell below its 21-day average']); }
+  const skips = d.skipped || [];
   const el = document.getElementById('shDecisions');
-  if (!rows.length) {
-    el.innerHTML = '<div class="empty-state">No decisions on ' + shEsc(d.date || c.as_of || 'the last run') +
-      ' — ' + (d.signals ? d.signals + ' signals' : 'no VCP signals') + '.</div>';
-    return;
+  let html = '';
+  if (rows.length) {
+    html += '<table class="sh-tbl"><thead><tr><th>Action</th><th>Stock</th><th>Size</th><th>Reason</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        return '<tr><td>' + shEsc(r[0]) + '</td><td><b>' + shEsc(r[1]) + '</b></td><td class="num">' + shEsc(r[2]) +
+          '</td><td class="sh-reason">' + shEsc(r[3]) + '</td></tr>'; }).join('') + '</tbody></table>';
+  } else {
+    html += '<div class="sh-note">No buys or sells on ' + shEsc(d.date || c.as_of || 'the last run') + '.</div>';
   }
-  el.innerHTML = '<table class="sh-tbl"><thead><tr><th>Action</th><th>Stock</th><th>Size</th><th>Reason</th></tr></thead><tbody>' +
-    rows.map(function (r) {
-      return '<tr><td>' + shEsc(r[0]) + '</td><td><b>' + shEsc(r[1]) + '</b></td><td class="num">' + shEsc(r[2]) +
-        '</td><td class="sh-reason">' + shEsc(r[3]) + '</td></tr>'; }).join('') +
-    '</tbody></table><div class="sh-note">Decisions of ' + shEsc(d.date || '') + ' at ' + shEsc((c.status || {}).decided_at_ist || '') + ' IST.</div>';
+  if (skips.length) {
+    const by = {};
+    skips.forEach(function (s) { const r = String(s.reason || 'other'); by[r] = (by[r] || []).concat([s.symbol]); });
+    const reasons = Object.keys(by).sort(function (a, b) { return by[b].length - by[a].length; });
+    const words = function (r) { return r === 'Market gate off' ? 'new buys are off' : r.charAt(0).toLowerCase() + r.slice(1); };
+    html += '<div class="sh-note"><b>' + skips.length + ' signals skipped</b>: ' + reasons.map(function (r) {
+      return by[r].length + ' because ' + shEsc(words(r)); }).join('; ') +
+      ' <button class="inv-period-btn" onclick="setShSkips(this)">Show</button></div>' +
+      '<div id="shSkipList" style="display:none">' + reasons.map(function (r) {
+        return '<div class="sh-note"><b>' + shEsc(r) + '</b> (' + by[r].length + '): ' + by[r].map(shEsc).join(', ') + '</div>'; }).join('') + '</div>';
+  }
+  html += '<div class="sh-note">Decisions of ' + shEsc(d.date || '') + ' at ' + shEsc((c.status || {}).decided_at_ist || '') +
+    ' IST · ' + (d.signals || 0) + ' signals.</div>';
+  el.innerHTML = html;
 }
 
 // Signal drift (comparison.json "signal_drift"): the decide run's VCP list against
 // the same scan on that day's settled close, and how stocks bought at 2:40 pm
 // that were no longer signals at the close did over the next 20 sessions.
+function setShDriftTable(btn) {
+  const t = document.getElementById('shDriftTable');
+  if (!t) return;
+  const open = t.style.display !== 'none';
+  t.style.display = open ? 'none' : 'block';
+  btn.textContent = open ? 'Show the day table' : 'Hide the day table';
+}
+
 function renderShDrift(c) {
   const el = document.getElementById('shDrift');
   if (!el) return;
@@ -6365,14 +6547,15 @@ function renderShDrift(c) {
   html += '<div class="sh-note">Bought and still a signal at the close: ' + shEsc(side(bk)) + '.' +
     (bd.symbols && bd.symbols.length ? ' Dropped after buying: ' + shEsc(bd.symbols.join(', ')) + '.' : '') + '</div>';
   const rows = (d.per_day || []).slice().reverse();
-  html += '<table class="sh-tbl"><thead><tr><th>Decide day</th><th class="num">2:40 pm</th><th class="num">Close</th>' +
+  html += '<button class="inv-period-btn" onclick="setShDriftTable(this)">Show the day table</button>' +
+    '<div id="shDriftTable" style="display:none"><table class="sh-tbl"><thead><tr><th>Decide day</th><th class="num">2:40 pm</th><th class="num">Close</th>' +
     '<th class="num">Kept</th><th class="num">Dropped</th><th class="num">Added</th><th class="num">Bought</th>' +
     '<th class="num">Bought, dropped</th></tr></thead><tbody>' +
     rows.map(function (r) {
       return '<tr><td>' + shEsc(r.date) + '</td><td class="num">' + r.decide + '</td><td class="num">' + r.close +
         '</td><td class="num">' + r.kept + '</td><td class="num">' + r.dropped + '</td><td class="num">' + r.added +
         '</td><td class="num">' + r.bought + '</td><td class="num">' + r.bought_dropped + '</td></tr>';
-    }).join('') + '</tbody></table><div class="sh-note">' + shEsc(d.note || '') + '</div>';
+    }).join('') + '</tbody></table></div><div class="sh-note">' + shEsc(d.note || '') + '</div>';
   el.innerHTML = html;
 }
 
@@ -6391,6 +6574,66 @@ function renderShLiveVs(c) {
       const cls = r[1] === 'Both' ? 'on' : (r[1] === 'Live only' ? 'warn' : 'off');
       return '<tr><td><b>' + shEsc(r[0]) + '</b></td><td><span class="sh-pill ' + cls + '">' + r[1] +
         '</span></td><td class="sh-reason">' + shEsc(r[2]) + '</td></tr>'; }).join('') + '</tbody></table>';
+}
+
+function renderShTrueup(c) {
+  const el = document.getElementById('shTrueup');
+  if (!el) return;
+  const t = c.trueup || {};
+  if (!t.days) { el.innerHTML = '<div class="sh-note">No decision day trued up yet.</div>'; return; }
+  const lt = t.latest || {};
+  let html = '<div class="sh-score-grid">' +
+    shCard('Days recorded', String(t.days), 'decision days compared with the official close', 'blue') +
+    shCard('Average gap', shPct(t.average_gap_pct_all, 2), 'run price against the official close, all days', 'purple') +
+    shCard('Average size of the gap', shPct(t.average_absolute_gap_pct_all, 2).replace('+', ''), 'ignoring direction', 'amber') +
+    '</div>';
+  const R = lt.rows || [];
+  html += '<div class="sh-note">Latest: ' + shEsc(lt.date || '—') + ' (decided ' + shEsc(lt.decided_at_ist || '—') +
+    ', trued up ' + shEsc(lt.trued_up_at_ist || '—') + ') · ' + (R.length ? R.length + ' decision(s)' : 'no buy or sell that day') + '.</div>';
+  if (R.length) {
+    const keys = Object.keys(R[0]);
+    html += '<table class="sh-tbl"><thead><tr>' + keys.map(function (k) { return '<th>' + shEsc(k.replace(/_/g, ' ')) + '</th>'; }).join('') +
+      '</tr></thead><tbody>' + R.map(function (r) {
+        return '<tr>' + keys.map(function (k) { return '<td>' + shEsc(r[k] === null || r[k] === undefined ? '—' : r[k]) + '</td>'; }).join('') + '</tr>';
+      }).join('') + '</tbody></table>';
+  }
+  html += '<div class="sh-note">' + shEsc(lt.note || '') + '</div>';
+  el.innerHTML = html;
+}
+
+let _shTrades = [], _shTradeFilter = 'stock';
+function setShTradeFilter(f, btn) {
+  _shTradeFilter = f;
+  const g = document.getElementById('shTradeFilter');
+  if (g) { const bs = g.querySelectorAll('button'); for (let i = 0; i < bs.length; i++) bs[i].classList.remove('active'); }
+  if (btn) btn.classList.add('active');
+  renderShTradeTables();
+}
+
+function renderShSleeveResult(sl, trades) {
+  const el = document.getElementById('shSleeveResult');
+  const cl = document.getElementById('shSleeveClosed');
+  if (!el || !sl || !sl.enabled) { if (el) el.innerHTML = ''; if (cl) cl.innerHTML = ''; return; }
+  const r = +sl.sleeve_realised_inr || 0, u = +sl.sleeve_unrealised_inr || 0, tot = r + u;
+  const cap = _shCapital || 1350000;
+  const item = function (label, val, style) {
+    return '<div class="sizing-summary-item"><div class="sizing-summary-label">' + label + '</div>' +
+      '<div class="sizing-summary-val"' + (style ? ' style="' + style + '"' : '') + '>' + val + '</div></div>'; };
+  const colr = function (v) { return 'color:' + (v > 0 ? 'var(--green)' : (v < 0 ? 'var(--red)' : 'var(--muted)')); };
+  el.innerHTML = item('Sleeve result since start: closed', shInr(r, true), colr(r)) +
+    item('Open', shInr(u, true), colr(u)) +
+    item('Total', shInr(tot, true) + ' <span style="font-size:11px;color:var(--muted)">(' + (tot >= 0 ? '+' : '') +
+      (tot / cap * 100).toFixed(2) + '% of ₹' + (cap / 1e5).toFixed(1).replace(/\.0$/, '') + 'L)</span>', colr(tot));
+  const S = (trades || []).filter(function (t) { return t.book === 'sleeve'; })
+    .sort(function (a, b) { return String(b.exit_date || '').localeCompare(String(a.exit_date || '')); });
+  if (cl) cl.innerHTML = S.length ? '<div class="sh-note"><b>Closed sleeve trades</b></div><table class="sh-tbl"><thead><tr><th>Leg</th>' +
+    '<th>Bought</th><th>Sold</th><th class="num">Days</th><th class="num">Result</th><th>Why sold</th></tr></thead><tbody>' +
+    S.map(function (t) {
+      return '<tr><td><b>' + shEsc(t.symbol) + '</b></td><td>' + shEsc(t.entry_date) + '</td><td>' + shEsc(t.exit_date) +
+        '</td><td class="num">' + (t.hold_days === null || t.hold_days === undefined ? '—' : t.hold_days) +
+        '</td><td class="num" style="' + colr(t.pnl_inr) + '">' + shInr(t.pnl_inr, true) + ' (' + shPct(t.pnl_pct, 2) +
+        ')</td><td class="sh-reason">' + shEsc(t.exit_reason === 'Below 200-DMA' ? 'closed below its 200-day average' : t.exit_reason) +
+        '</td></tr>'; }).join('') + '</tbody></table>' : '<div class="sh-note">No closed sleeve trades yet.</div>';
 }
 
 // The sleeve is the answer to "the gate is BELOW and the book is flat — so
@@ -6421,9 +6664,9 @@ function renderShadowSleeve(sl) {
   strip.innerHTML =
     item('Sleeve', money(sl.sleeve_value_inr), 'color:var(--gold)') +
     item('% of NAV', pct1(sl.sleeve_pct_of_nav), 'color:var(--gold)') +
-    item('Stock book', money(sl.equity_deployed_inr)) +
+    item('Stock book (today\'s price)', money(sl.equity_deployed_inr)) +
     item('Cash', money(sl.cash_inr)) +
-    item('NAV', money(nav)) +
+    item('NAV (total equity)', money(nav)) +
     item('Cap', pct1(sl.cap_pct_of_nav), 'font-size:15px') +
     item('Legs held', (sl.legs_on_trend != null ? sl.legs_on_trend : '—') +
          ' / ' + (sl.menu_size || 0), 'font-size:15px');
@@ -6601,10 +6844,10 @@ function renderShadowHeader(state, siz) {
     ? (eqv.error || 'live logs no comparable gate')
     : `live SI ${eqv.live_si || '—'} · shadow ${eqv.shadow_si || '—'}`;
   document.getElementById('shGateStrip').innerHTML =
-    card('MC150 vs MA21', ma, g.liquidates ? 'breach → book sold at the close' : 'regime gate',
+    card('Hold gate (MC150 vs MA21)', ma, g.liquidates ? 'off: Swing sells everything at the close' : 'on: Swing keeps its stocks',
          ma.startsWith('ABOVE') ? G : R) +
     card('SI Gate', si, 'must also allow new entries', si.startsWith('BULLISH') ? G : R) +
-    card('New Entries', g.entries_allowed ? 'Open' : 'Blocked',
+    card('New buys', g.entries_allowed ? 'On' : 'Off',
          `${siz.slots_used || 0}/${siz.max_slots || 7} slots used`, g.entries_allowed ? G : A) +
     card('Decay Monitor', dec.state || '—', dec.note || '',
          dec.state && dec.state !== 'NORMAL' ? A : W) +
@@ -6630,48 +6873,71 @@ function renderShadowHeader(state, siz) {
 }
 
 function renderShadowPerf(trades) {
-  const T = trades.slice().sort((a, b) => (b.exit_date || '').localeCompare(a.exit_date || ''));
-  const wins = T.filter(t => (t.pnl_inr || 0) >= 0);
-  const total = T.reduce((s, t) => s + (t.pnl_inr || 0), 0);
-  // Sleeve sells (book "sleeve") have no stop, so no R: average R over the
-  // trades that carry one, while P&L, win rate and count cover every exit.
-  const TR = T.filter(t => t.r_multiple != null);
-  const avgR = TR.length ? TR.reduce((s, t) => s + t.r_multiple, 0) / TR.length : null;
-  const avgHold = T.length ? Math.round(T.reduce((s, t) => s + (t.hold_days || 0), 0) / T.length) : null;
-  const dates = T.map(t => t.exit_date).filter(Boolean).sort();
+  _shTrades = trades.slice();
+  const ALL = trades.slice().sort(function (a, b) { return String(b.exit_date || '').localeCompare(String(a.exit_date || '')); });
+  const T = ALL.filter(function (t) { return t.book !== 'sleeve'; });          // stock trades
+  const SL = ALL.filter(function (t) { return t.book === 'sleeve'; });         // sleeve exits
+  const sum = function (xs) { return xs.reduce(function (s, t) { return s + (t.pnl_inr || 0); }, 0); };
+  const wins = T.filter(function (t) { return (t.pnl_inr || 0) >= 0; });
+  const total = sum(T);
+  const TR = T.filter(function (t) { return t.r_multiple !== null && t.r_multiple !== undefined; });
+  const avgR = TR.length ? TR.reduce(function (s, t) { return s + t.r_multiple; }, 0) / TR.length : null;
+  const avgHold = function (xs) { return xs.length ? Math.round(xs.reduce(function (s, t) { return s + (t.hold_days || 0); }, 0) / xs.length) : null; };
+  const dates = T.map(function (t) { return t.exit_date; }).filter(Boolean).sort();
   const capL = (_shCapital / 1e5).toFixed(1).replace(/\.0$/, '');
-
-  shSet('shTotalInr', T.length ? shInr(total, true) : '—',
-        total >= 0 ? 'var(--green)' : 'var(--red)');
-  shSet('shTotalPct', T.length
-    ? `${total >= 0 ? '+' : ''}${(total / _shCapital * 100).toFixed(2)}% on ₹${capL}L` : 'No exits yet');
+  shSet('shTotalInr', T.length ? shInr(total, true) : '—', total >= 0 ? 'var(--green)' : 'var(--red)');
+  shSet('shTotalPct', T.length ? (total >= 0 ? '+' : '') + (total / _shCapital * 100).toFixed(2) + '% on ₹' + capL + 'L' : 'No stock exits yet');
   shSet('shWinRate', T.length ? (wins.length / T.length * 100).toFixed(1) + '%' : '—');
-  shSet('shWinLoss', `${wins.length} W / ${T.length - wins.length} L`);
-  shSet('shAvgR', avgR == null ? '—' : `${avgR >= 0 ? '+' : ''}${avgR.toFixed(2)}R`,
-        avgR == null ? undefined : avgR >= 0 ? 'var(--green)' : 'var(--red)');
-  shSet('shAvgHold', avgHold == null ? 'avg hold —' : `avg hold ${avgHold}d`);
+  shSet('shWinLoss', wins.length + ' W / ' + (T.length - wins.length) + ' L');
+  shSet('shAvgR', avgR === null ? '—' : (avgR >= 0 ? '+' : '') + avgR.toFixed(2) + 'R',
+        avgR === null ? undefined : (avgR >= 0 ? 'var(--green)' : 'var(--red)'));
+  const ah = avgHold(T);
+  shSet('shAvgHold', ah === null ? 'avg hold —' : 'avg hold ' + ah + 'd');
   shSet('shTradeCount', String(T.length));
-  shSet('shDateRange', dates.length ? dates[0] + ' → ' + dates[dates.length - 1] : 'No exits yet');
-
-  // Monthly bars — same markup as the live Performance tab.
-  const byMonth = {};
-  T.forEach(t => {
-    const m = t.month || (t.exit_date || '').slice(0, 7);
-    if (m) byMonth[m] = (byMonth[m] || 0) + (t.pnl_inr || 0);
+  shSet('shDateRange', dates.length ? dates[0] + ' → ' + dates[dates.length - 1] : 'No stock exits yet');
+  const sl = sum(SL), sh = avgHold(SL);
+  const ps = document.getElementById('shPerfSleeve');
+  if (ps) {
+    const item = function (label, val, style) {
+      return '<div class="sizing-summary-item"><div class="sizing-summary-label">' + label + '</div>' +
+        '<div class="sizing-summary-val" style="font-size:15px;' + (style || '') + '">' + val + '</div></div>'; };
+    ps.innerHTML = item('Defensive sleeve: closed result', SL.length ? shInr(sl, true) : '—',
+                        'color:' + (sl > 0 ? 'var(--green)' : (sl < 0 ? 'var(--red)' : 'var(--muted)'))) +
+      item('Sleeve exits', String(SL.length)) + item('Sleeve average hold', sh === null ? '—' : sh + 'd');
+  }
+  const pt = document.getElementById('shPerfTotal');
+  if (pt) pt.innerHTML = 'Total closed result, stocks plus sleeve: <b style="color:' + (total + sl >= 0 ? 'var(--green)' : 'var(--red)') +
+    '">' + shInr(total + sl, true) + '</b> (' + ((total + sl) >= 0 ? '+' : '') + ((total + sl) / _shCapital * 100).toFixed(2) +
+    '% on ₹' + capL + 'L). Win rate and R count stock trades only: a sleeve leg has no stop, so no R.';
+  // closed trades by month, stock and sleeve stacked
+  const bm = {};
+  ALL.forEach(function (t) {
+    const m = t.month || String(t.exit_date || '').slice(0, 7);
+    if (!m) return;
+    if (!bm[m]) bm[m] = {stock: 0, sleeve: 0};
+    bm[m][t.book === 'sleeve' ? 'sleeve' : 'stock'] += (t.pnl_inr || 0);
   });
-  const months = Object.keys(byMonth).sort();
-  const maxAbs = Math.max(...months.map(m => Math.abs(byMonth[m])), 1);
+  const months = Object.keys(bm).sort();
+  const maxAbs = Math.max.apply(null, months.map(function (m) { return Math.abs(bm[m].stock) + Math.abs(bm[m].sleeve); }).concat([1]));
   const chartEl = document.getElementById('shMonthChart');
   chartEl.style.alignItems = 'flex-end';
-  chartEl.innerHTML = months.length ? months.map(m => {
-    const v = byMonth[m], pos = v >= 0;
-    return `<div class="chart-bar-wrap">
-      <div class="chart-bar-val ${pos ? 'pos' : 'neg'}">${shInr(v, true)}</div>
-      <div class="chart-bar ${pos ? 'pos' : 'neg'}" style="height:${Math.max(3, Math.abs(v) / maxAbs * 65)}px"></div>
-      <div class="chart-bar-label">${m.slice(5)}</div>
-    </div>`;
-  }).join('') : '<div class="empty-state" style="width:100%">No shadow trades yet</div>';
+  chartEl.innerHTML = months.length ? months.map(function (m) {
+    const v = bm[m].stock + bm[m].sleeve, pos = v >= 0;
+    const h = function (x) { return Math.max(x ? 3 : 0, Math.abs(x) / maxAbs * 65); };
+    return '<div class="chart-bar-wrap">' +
+      '<div class="chart-bar-val ' + (pos ? 'pos' : 'neg') + '">' + shInr(v, true) + '</div>' +
+      '<div class="chart-bar ' + (bm[m].stock >= 0 ? 'pos' : 'neg') + '" title="Stocks ' + shInr(bm[m].stock, true) + '" style="height:' + h(bm[m].stock) + 'px"></div>' +
+      '<div class="chart-bar sh-bar-sleeve" title="Sleeve ' + shInr(bm[m].sleeve, true) + '" style="height:' + h(bm[m].sleeve) + 'px"></div>' +
+      '<div class="chart-bar-label">' + m.slice(5) + '</div></div>';
+  }).join('') + '<div class="sh-note" style="width:100%">Lower bar part: stocks (green/red). Upper, gold: the sleeve.</div>'
+    : '<div class="empty-state" style="width:100%">No shadow trades yet</div>';
+  renderShTradeTables();
+}
 
+function renderShTradeTables() {
+  const T = (_shTrades || []).filter(function (t) {
+    return _shTradeFilter === 'all' ? true : (_shTradeFilter === 'sleeve' ? t.book === 'sleeve' : t.book !== 'sleeve'); })
+    .sort(function (a, b) { return String(b.exit_date || '').localeCompare(String(a.exit_date || '')); });
   document.getElementById('shTradeLog').innerHTML = T.length ? T.map(t => {
     const cls = (t.pnl_inr || 0) >= 0 ? 'td-pos' : 'td-neg';
     const rs = t.book === 'sleeve'
@@ -6693,7 +6959,7 @@ function renderShadowPerf(trades) {
       <td class="td-muted" style="font-size:10px">${shEsc(t.exit_reason)}</td>
       <td>${rs}</td>
     </tr>`;
-  }).join('') : '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">No shadow trades closed yet</td></tr>';
+  }).join('') : '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">No closed trades of this kind yet</td></tr>';
 
   // Phone view: one card per exit, P&L on top where the eye lands first.
   const cards = document.getElementById('shTradeCards');
@@ -6720,7 +6986,7 @@ function renderShadowPerf(trades) {
         <span>${shEsc(t.exit_reason)}${r}</span>
       </div>
     </div>`;
-  }).join('') : '<div class="empty-state">No shadow trades closed yet</div>';
+  }).join('') : '<div class="empty-state">No closed trades of this kind yet</div>';
 }
 
 function renderShadowEquity() {
@@ -6898,15 +7164,15 @@ function renderShadowSizing(siz, snap) {
     `<div class="sizing-summary-item"><div class="sizing-summary-label">${label}</div>` +
     `<div class="sizing-summary-val" style="font-size:15px;${style || ''}">${val}</div></div>`;
   document.getElementById('shRiskStrip').innerHTML =
-    item('NAV (Capital Base)', fmt(siz.capital_base)) +
+    item('Sizing base (start capital plus closed results)', fmt(siz.capital_base)) +
     item('20d Equity MA', `${s.equity_curve_ma20 != null ? fmt(s.equity_curve_ma20) : '—'} ${badge(ec)}`) +
     // Two drawdowns. The risk layer's grades the stock book alone (scope
     // "book"), so it sits at 0% while the book is flat and a sleeve leg is
     // losing; the account's is the whole NAV, sleeve and cash included.
-    item('Stock-Book HWM', `${s.high_water_mark != null ? fmt(s.high_water_mark) : '—'} ${badge(ddm)}`) +
-    item('Stock-Book DD', s.drawdown_pct_from_peak != null ? s.drawdown_pct_from_peak.toFixed(2) + '%' : '—',
+    item('Stock-book closed-results peak', `${s.high_water_mark != null ? fmt(s.high_water_mark) : '—'} ${badge(ddm)}`) +
+    item('Stock book below that peak', s.drawdown_pct_from_peak != null ? s.drawdown_pct_from_peak.toFixed(2) + '%' : '—',
          ddm < 1 ? 'color:var(--amber)' : '') +
-    item('Account DD', s.account_drawdown_pct != null
+    item('Whole account below its peak', s.account_drawdown_pct != null
          ? `${s.account_drawdown_pct.toFixed(2)}% <span style="font-size:10px;color:var(--muted)">of ${fmt(s.account_high_water_mark)}</span>`
          : '—', (s.account_drawdown_pct || 0) > 0 ? 'color:var(--red)' : '') +
     item('5-Day Circuit Breaker', siz.fast_trigger_breached ? 'ON ⚡' : 'off',
@@ -6919,11 +7185,17 @@ function renderShadowSizing(siz, snap) {
   const unreal = P.reduce((a, p) => a + (p.unrealized_pnl || 0), 0);
   const heatPct = siz.heat_pct || 0, cap = siz.heat_cap_pct || 7;
   document.getElementById('shSizingSummary').innerHTML =
-    item('Capital Deployed', fmt(deployed)) +
+    item('Stock book at cost', fmt(deployed)) +
     item('Portfolio Heat', `${fmt(siz.heat_inr || 0)} <span style="font-size:11px;color:var(--muted)">(${heatPct.toFixed(1)}% of ${cap}% cap)</span>`,
          heatPct > cap * 0.85 ? 'color:var(--amber)' : '') +
     item('Slots Used', `${siz.slots_used || 0} / ${siz.max_slots || 7}`) +
-    item('Open Unrealised P&amp;L', shInr(unreal, true), `color:${unreal >= 0 ? 'var(--green)' : 'var(--red)'}`);
+    item('Open result, stocks (latest mark)', shInr(unreal, true), `color:${unreal >= 0 ? 'var(--green)' : 'var(--red)'}`);
+  const rn = document.getElementById('shRiskNote');
+  if (rn) rn.innerHTML = 'Sizing uses the <b>sizing base</b> (₹13.5 lakh plus every closed result and cash interest), never open ' +
+    'profits, so a position is not sized up on a gain that has not been taken. The <b>stock-book closed-results peak</b> is the ' +
+    'highest that base has been from stock trades alone; the 8% cut from peak is measured against it. The <b>whole account</b> ' +
+    'line is total equity (stocks at today\'s price, sleeve and cash) against its own peak. The open result here is marked at the ' +
+    'latest run; the equity curve\'s open result also counts the sleeve\'s open result and uses the 2:40 pm decision prices.';
 
   document.getElementById('shSizingLegend').innerHTML =
     `<b>How a shadow entry is sized:</b> risk = ${siz.base_risk_pct}% of NAV × equity-ladder × drawdown
@@ -6982,8 +7254,8 @@ function renderShadowGates(days) {
       <td style="color:var(--text-strong);font-family:var(--font-head);font-weight:700">${fmtPerfDate(d.date)}</td>
       ${cell(d.ma_allowed, d.ma_status)}
       ${cell(d.si_allowed, String(d.si_status).split(' —')[0])}
-      ${cell(d.entries_allowed, d.entries_allowed ? 'Open' : 'Blocked')}
-      <td class="td-muted" style="font-size:10px">${d.liquidates ? 'Liquidate / stay flat' : 'Hold'}</td>
+      ${cell(d.entries_allowed, d.entries_allowed ? 'New buys on' : 'New buys off')}
+      <td class="td-muted" style="font-size:10px">${d.liquidates ? 'Hold gate off: sell everything / stay in cash' : 'Hold gate on: keep holding'}</td>
     </tr>`).join('')
     : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px">No gate history yet</td></tr>';
 

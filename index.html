@@ -1422,6 +1422,11 @@
   .ss-tag { font-size: 10px; color: var(--muted); font-weight: 400; white-space: nowrap; }
   .ss-tag.live { color: var(--green); }
   .ss-asof { margin: 2px 0 10px; }
+  .ss-bar { display: flex; height: 14px; border-radius: 7px; overflow: hidden; margin: 10px 0 6px; background: var(--border); }
+  .ss-bar i { display: block; height: 100%; }
+  .ss-bar-legend { margin-bottom: 12px; }
+  .sh-tbl tr.ss-sub td { color: var(--muted); }
+  .sh-tbl tr.ss-both td { background: rgba(var(--amber-rgb),0.08); }
   .ss-win-btn { margin-left: auto; background: transparent; color: var(--accent); border: 1px solid var(--border);
     border-radius: 8px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
   .ss-disclaimer { font-size: 12px; margin: 10px 0 16px; }
@@ -2867,6 +2872,16 @@
     <div id="ssBody" style="display:none">
       <div class="sh-score-grid sh-status-strip" id="ssStatus"></div>
       <div class="sh-note ss-asof" id="ssAsOf"></div>
+
+      <div class="section-header"><div class="section-title"><span class="icon">🧩</span>Where the money is: both halves</div></div>
+      <div id="ssAlloc"></div>
+      <div class="section-header"><div class="section-title"><span class="icon">📋</span>Swing half — holdings</div></div>
+      <div class="sh-table-wrap ss-hold-wrap" id="ssSwingHalf"></div>
+      <div class="sh-note" id="ssHalfNote"></div>
+      <details class="sh-sec" id="ssCombinedWrap">
+        <summary>All stocks in the 50/50 mix — both halves added together</summary>
+        <div class="sh-table-wrap ss-hold-wrap" id="ssCombined"></div>
+      </details>
 
       <div class="section-header"><div class="section-title"><span class="icon">📋</span>Basket holdings</div></div>
       <div id="ssHoldFigures"></div>
@@ -6508,7 +6523,7 @@ function renderSSTab(c) {
   if (!empty || !body) return;
   if (!b || !b.go_live) { empty.style.display = 'block'; body.style.display = 'none'; return; }
   empty.style.display = 'none'; body.style.display = 'block';
-  const parts = [renderSSStatus, renderSSHold, renderSSLive, renderSSRebuilds, renderSSClosed];
+  const parts = [renderSSStatus, renderSSHalves, renderSSHold, renderSSLive, renderSSRebuilds, renderSSClosed];
   parts.forEach(function (f) { try { f(); } catch (e) { console.warn('[ss tab]', f.name, e); } });
   ssLoadResearch();
   if (!_ssTimer) {
@@ -6587,8 +6602,8 @@ function renderSSHold() {
   const H = b.holdings || [];
   if (!H.length) {
     fig.innerHTML = '';
-    el.innerHTML = '<div class="sh-note">No holdings: the basket is in cash' + (b.next_rebuild ? ' until the ' +
-      shEsc(b.next_rebuild) + ' rebuild' : '') + '.</div>';
+    el.innerHTML = '<div class="sh-note">' + ((b.basket || {}).names ? 'Holdings not recorded yet.' :
+      'No holdings: the basket is in cash' + (b.next_rebuild ? ' until the ' + shEsc(b.next_rebuild) + ' rebuild' : '') + '.') + '</div>';
     document.getElementById('ssTotals').innerHTML = '';
     return;
   }
@@ -6617,6 +6632,7 @@ function renderSSHold() {
   const sumPnl = rows.reduce(function (a, r) { return a + (r.pnl || 0); }, 0);
   const sumEntry = rows.reduce(function (a, r) { return a + (r.shares || 0) * r.entry_price; }, 0);
   const sumVal = rows.reduce(function (a, r) { return a + r.value; }, 0);
+  const hasQty = rows.some(function (r) { return r.shares !== null; });     // inbox 035: no ₹0 before the fields exist
   el.innerHTML = '<table class="sh-tbl ss-hold"><thead><tr>' + cols.map(function (cl) {
     return '<th class="ss-sort' + (cl[2] ? ' num' : '') + (cl[0] === k ? ' ss-on' : '') + '" data-k="' + cl[0] + '">' + cl[1] + '</th>'; }).join('') +
     '</tr></thead><tbody>' + rows.map(function (r) {
@@ -6630,9 +6646,9 @@ function renderSSHold() {
         '<td class="num">' + shInr(r.value) + '</td><td class="num">' + (r.share === null ? '—' : r.share.toFixed(1) + '%') + '</td>' +
         '<td class="num">' + r.days + '</td></tr>'; }).join('') +
     '<tr class="ss-total"><td><b>Total</b></td><td>' + rows.length + ' names</td><td></td><td></td>' +
-      '<td class="num">' + shInr(sumEntry) + '</td><td></td>' +
-      '<td class="num" style="color:' + shPctCol(sumPnl) + '"><b>' + ssRs(sumPnl) + '</b></td>' +
-      '<td class="num" style="color:' + shPctCol(sumPnl) + '">' + ssSigned(sumEntry ? sumPnl / sumEntry * 100 : null, 2) + '</td>' +
+      '<td class="num">' + (hasQty ? shInr(sumEntry) : ssNR()) + '</td><td></td>' +
+      '<td class="num" style="color:' + shPctCol(sumPnl) + '"><b>' + (hasQty ? ssRs(sumPnl) : ssNR()) + '</b></td>' +
+      '<td class="num" style="color:' + shPctCol(sumPnl) + '">' + (hasQty ? ssSigned(sumEntry ? sumPnl / sumEntry * 100 : null, 2) : '') + '</td>' +
       '<td class="num"><b>' + shInr(sumVal) + '</b></td><td class="num">100%</td><td></td></tr>' +
     '</tbody></table>';
   const ths = el.querySelectorAll('th.ss-sort');
@@ -6644,9 +6660,14 @@ function renderSSHold() {
     });
   }
   const inv = t.invested_at_cost_inr, ent = t.invested_at_entry_price_inr;
+  if (!b.basket_totals) {
+    document.getElementById('ssTotals').innerHTML = '<div class="sh-note">Basket totals (invested at cost, unrealised, realised, charges): ' +
+      'not recorded yet. They arrive with the next 2:40 pm run.</div>';
+    return;
+  }
   document.getElementById('ssTotals').innerHTML = '<table class="sh-tbl"><tbody>' +
     '<tr><td>Invested at cost (with buy charges and slippage)</td><td class="num">' + shInr(inv) + '</td>' +
-      '<td class="sh-reason">' + shInr(ent) + ' at entry prices + ' + shInr((inv || 0) - (ent || 0)) + ' charges and slippage</td></tr>' +
+      '<td class="sh-reason">' + shInr(ent) + ' at entry prices + ' + shInr(inv - ent) + ' charges and slippage</td></tr>' +
     '<tr><td>Value now (book, ' + ssRunHHMM(b) + ' run)</td><td class="num">' + shInr(t.value_inr) + '</td><td class="sh-reason">' +
       (nLive ? 'live estimate ' + shInr(sumVal) : 'no live estimate now') + '</td></tr>' +
     '<tr><td>Unrealised gain or loss (after buy charges)</td><td class="num" style="color:' + shPctCol(t.unrealised_inr) + '">' +
@@ -6824,9 +6845,113 @@ function ssYearAxis(xId, rows) {
     return '<span>' + new Date(rows[i].date + 'T00:00:00').toLocaleDateString('en-IN', {month: 'short', year: 'numeric'}) + '</span>'; }).join('');
 }
 
+// Inbox 035: where the money is, both halves. Swing half = Swing's 2:40 pm book × the stored scale
+// (test_books.small_strong.swing_half, written by the run); the page derives nothing but sums.
+function ssNR() { return '<span class="sh-reason">not recorded yet</span>'; }
+function renderSSHalves() {
+  const b = ssBook();
+  const m = b.mix_50_50 || {}, sh = b.swing_half, bk = b.basket || {}, t = b.basket_totals || {};
+  const alloc = document.getElementById('ssAlloc'), tbl = document.getElementById('ssSwingHalf');
+  const comb = document.getElementById('ssCombined'), note = document.getElementById('ssHalfNote');
+  const mix = m.value;
+  if (m.swing_half_inr === null || m.swing_half_inr === undefined || !mix) {
+    alloc.innerHTML = '<div class="sh-note">The split between the two halves is not recorded yet: it arrives with the next 2:40 pm run.</div>';
+    tbl.innerHTML = ''; comb.innerHTML = ''; note.textContent = '';
+    return;
+  }
+  const pct = function (v) { return (v / mix * 100).toFixed(1) + '%'; };
+  const bStocks = (t.value_inr === null || t.value_inr === undefined) ? null : t.value_inr;
+  const segs = [];
+  if (sh) {
+    segs.push(['Swing: stocks', sh.stocks_inr, ssCol('--green', '#34d399')]);
+    segs.push(['Swing: sleeve', sh.sleeve_inr, ssCol('--teal', '#3ddbd9')]);
+    segs.push(['Swing: cash', sh.cash_inr, ssCol('--muted', '#94a3b8')]);
+  } else {
+    segs.push(['Swing half', m.swing_half_inr, ssCol('--green', '#34d399')]);
+  }
+  if (bStocks !== null) {
+    segs.push(['Basket: stocks', bStocks, ssCol('--amber', '#fbbf24')]);
+    segs.push(['Basket: cash', bk.cash || 0, ssCol('--purple', '#b388ff')]);
+  } else {
+    segs.push(['Basket half', m.basket_half_inr, ssCol('--amber', '#fbbf24')]);
+  }
+  const tot = segs.reduce(function (a, s) { return a + (s[1] || 0); }, 0);
+  alloc.innerHTML = '<div class="sh-score-grid">' +
+    shCard('Swing half', shInr(m.swing_half_inr), pct(m.swing_half_inr) + ' of the mix' + (sh ? ' · ' + sh.holdings.length + ' stocks, ' +
+      sh.sleeve.length + ' sleeve funds and cash' : ''), 'green') +
+    shCard('Small-strong basket half', shInr(m.basket_half_inr), pct(m.basket_half_inr) + ' of the mix · ' + (bk.names || 0) + ' stocks', 'amber') +
+    '</div><div class="ss-bar">' + segs.filter(function (s) { return s[1] > 0; }).map(function (s) {
+      return '<i style="width:' + (s[1] / tot * 100).toFixed(2) + '%;background:' + s[2] + '" title="' + shEsc(s[0]) + '"></i>'; }).join('') +
+    '</div><div class="sh-legend ss-bar-legend">' + segs.map(function (s) {
+      return '<span><i style="background:' + s[2] + '"></i>' + shEsc(s[0]) + ' ' + shInr(s[1]) + ' (' + pct(s[1] || 0) + ')</span>'; }).join('') + '</div>';
+  if (!sh) {
+    tbl.innerHTML = '<div class="sh-note">The Swing half\'s holdings are not recorded yet: they arrive with the next 2:40 pm run.</div>';
+    comb.innerHTML = '';
+    note.textContent = 'Swing\'s results before 12 Nov are not part of this mix; it starts from Swing\'s value on 12 Nov.';
+    return;
+  }
+  const runT = String(sh.priced_at_ist || '').slice(11, 16) || ssRunHHMM(b);
+  const H = sh.holdings.slice().sort(function (a, c2) { return c2.value_inr - a.value_inr; });
+  let html = '<table class="sh-tbl ss-hold"><thead><tr><th>Stock</th><th>Sector</th><th class="num">Quantity in the half</th><th>Entry date</th>' +
+    '<th class="num">Entry price</th><th class="num">Price now</th><th class="num">Gain or loss (₹)</th><th class="num">Gain or loss (%)</th>' +
+    '<th class="num">Value in the half</th><th class="num">% of the mix</th><th>Phase</th><th>Stop or exit rule</th></tr></thead><tbody>';
+  html += H.length ? H.map(function (h) {
+    return '<tr><td><b>' + shEsc(h.symbol) + '</b></td><td>' + shEsc(h.sector) + '</td><td class="num">' + (+h.shares_in_half).toFixed(2) +
+      '</td><td>' + shEsc(h.entry_date) + '</td><td class="num">' + shInr(h.entry_price) + '</td><td class="num">₹' +
+      (+h.price_now).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '<div class="ss-tag">run ' + shEsc(runT) +
+      '</div></td><td class="num" style="color:' + shPctCol(h.pnl_inr) + '">' + ssRs(h.pnl_inr) + '</td><td class="num" style="color:' +
+      shPctCol(h.gain_pct) + '">' + ssSigned(h.gain_pct, 2) + '</td><td class="num">' + shInr(h.value_inr) + '</td><td class="num">' +
+      (+h.pct_of_mix).toFixed(1) + '%</td><td>' + (h.phase === null || h.phase === undefined ? '—' : h.phase) + '</td><td class="sh-reason">' +
+      shEsc(h.exit_rule) + '</td></tr>'; }).join('')
+    : '<tr><td colspan="12" class="sh-reason">No stocks in Swing today: its half is in the sleeve and cash.</td></tr>';
+  html += sh.sleeve.map(function (lg) {
+    return '<tr class="ss-sub"><td><b>' + shEsc(lg.symbol) + '</b></td><td>Sleeve fund</td><td class="num">' + (+lg.units_in_half).toFixed(2) +
+      '</td><td></td><td></td><td class="num">' + (lg.price === null || lg.price === undefined ? '—' : '₹' + (+lg.price).toFixed(2)) +
+      '</td><td class="num" style="color:' + shPctCol(lg.pnl_inr) + '">' + ssRs(lg.pnl_inr) + '</td><td></td><td class="num">' + shInr(lg.value_inr) +
+      '</td><td class="num">' + (+lg.pct_of_mix).toFixed(1) + '%</td><td></td><td class="sh-reason">held while above its 200-day average</td></tr>'; }).join('');
+  html += '<tr class="ss-sub"><td><b>Cash</b></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="num">' + shInr(sh.cash_inr) +
+    '</td><td class="num">' + pct(sh.cash_inr) + '</td><td></td><td></td></tr>';
+  const pnl = H.reduce(function (a, h) { return a + h.pnl_inr; }, 0) + sh.sleeve.reduce(function (a, l) { return a + l.pnl_inr; }, 0);
+  html += '<tr class="ss-total"><td><b>Total</b></td><td>' + H.length + ' stocks</td><td></td><td></td><td></td><td></td><td class="num" style="color:' +
+    shPctCol(pnl) + '"><b>' + ssRs(pnl) + '</b></td><td></td><td class="num"><b>' + shInr(sh.rows_total_inr) + '</b></td><td class="num">' +
+    pct(sh.rows_total_inr) + '</td><td></td><td></td></tr></tbody></table>';
+  tbl.innerHTML = html;
+  note.innerHTML = 'The paper mix holds Swing scaled to its half: Swing\'s book × ' + (+sh.scale).toFixed(4) + ' (the Swing half ' +
+    shInr(sh.half_value_inr) + ' ÷ Swing ' + shInr(sh.swing_value_inr) + ' at the ' + shEsc(runT) + ' run on ' + shEsc(sh.date) +
+    '); fractional shares, as in the research engine. Stocks at that run\'s prices; sleeve and cash as the run leaves them, after its sleeve ' +
+    'rebalance, so the rows add to ' + shInr(sh.rows_total_inr) + ' (' + ssRs(-sh.gap_inr) + ' against the half: that rebalance\'s costs). ' +
+    'Swing\'s results before 12 Nov are not part of this mix; it starts from Swing\'s value on 12 Nov.';
+  // combined view: every stock in the mix, both halves added together
+  const all = {};
+  H.forEach(function (h) { all[h.symbol] = {symbol: h.symbol, sector: h.sector, swing: h.value_inr, basket: 0}; });
+  (b.holdings || []).forEach(function (h) {
+    if (!all[h.symbol]) all[h.symbol] = {symbol: h.symbol, sector: h.sector, swing: 0, basket: 0};
+    all[h.symbol].basket = h.value;
+  });
+  const rows = Object.keys(all).map(function (k) { const r = all[k]; r.total = r.swing + r.basket; return r; })
+    .sort(function (a, c2) { return c2.total - a.total; });
+  const both = rows.filter(function (r) { return r.swing > 0 && r.basket > 0; });
+  comb.innerHTML = (both.length ? '<div class="sh-note"><span class="sh-pill warn">IN BOTH HALVES</span> ' + both.map(function (r) {
+      return shEsc(r.symbol) + ' ' + shInr(r.total) + ' (' + pct(r.total) + ' of the mix)'; }).join(', ') + '</div>' : '') +
+    '<table class="sh-tbl ss-hold"><thead><tr><th>Stock</th><th>Sector</th><th class="num">In the Swing half</th><th class="num">In the basket</th>' +
+    '<th class="num">Together</th><th class="num">% of the mix</th></tr></thead><tbody>' + rows.map(function (r) {
+      const flag = r.swing > 0 && r.basket > 0;
+      return '<tr' + (flag ? ' class="ss-both"' : '') + '><td><b>' + shEsc(r.symbol) + '</b>' + (flag ? ' <span class="sh-pill warn">BOTH</span>' : '') +
+        '</td><td>' + shEsc(r.sector) + '</td><td class="num">' + (r.swing ? shInr(r.swing) : '—') + '</td><td class="num">' +
+        (r.basket ? shInr(r.basket) : '—') + '</td><td class="num"><b>' + shInr(r.total) + '</b></td><td class="num">' + pct(r.total) + '</td></tr>'; }).join('') +
+    '</tbody></table><div class="sh-note">Stocks only, at the ' + shEsc(runT) + ' run\'s prices; the sleeve funds and cash are in the tables above.</div>';
+}
+
 // 2.5 rebuild history
 function renderSSRebuilds() {
-  const b = ssBook(), R = b.rebuilds || [];
+  const b = ssBook();
+  let R = b.rebuilds || [];
+  if (!b.rebuilds && b.last_month_end) {             // inbox 035: before the run writes the rebuilds key
+    const lm = b.last_month_end;
+    R = [{date: lm.date, late_run: lm.late_run, gate: lm.gate, gate_source: lm.gate_source, qualifiers: lm.qualifiers,
+          bought: lm.bought, kept: lm.kept, sold: lm.sold, trimmed: lm.trimmed, basket_return_pct: null, return_to: null}];
+  }
+  const invested = ((b.basket || {}).pct_invested || 0) > 0;
   const el = document.getElementById('ssRebuilds');
   const list = function (xs) { return xs && xs.length ? xs.map(shEsc).join(', ') : 'none'; };
   el.innerHTML = R.length ? '<table class="sh-tbl"><thead><tr><th>Date</th><th>Hold gate</th><th class="num">Qualified</th>' +
@@ -6838,12 +6963,13 @@ function renderSSRebuilds() {
         '<td class="num">' + (r.qualifiers === null || r.qualifiers === undefined ? '—' : r.qualifiers) + '</td>' +
         '<td class="num">' + (r.bought || []).length + '</td><td class="num">' + (r.kept || []).length + '</td>' +
         '<td class="num">' + (r.sold || []).length + '</td><td class="num">' + (r.trimmed || []).length + '</td>' +
-        '<td class="num" style="color:' + shPctCol(r.basket_return_pct) + '">' + ssSigned(r.basket_return_pct, 2) +
-          '<div class="ss-tag">to ' + shEsc(r.return_to === 'latest run' ? 'the latest run' : r.return_to) + '</div></td>' +
+        '<td class="num" style="color:' + shPctCol(r.basket_return_pct) + '">' + (r.return_to ? ssSigned(r.basket_return_pct, 2) +
+          '<div class="ss-tag">to ' + shEsc(r.return_to === 'latest run' ? 'the latest run' : r.return_to) + '</div>' : ssNR()) + '</td>' +
         '<td><details><summary>Show</summary><div class="sh-reason">Bought: ' + list(r.bought) + '<br>Kept: ' + list(r.kept) +
           '<br>Sold: ' + sold + '<br>Trimmed back to 8%: ' + list(r.trimmed) + '<br>Gate: ' + shEsc(ssGateSource(r.gate_source)) +
           '</div></details></td></tr>'; }).join('') + '</tbody></table>'
-    : '<div class="sh-note">No rebuild yet: the basket is in cash until ' + shEsc(b.next_rebuild || 'the next month-end') + '.</div>';
+    : '<div class="sh-note">' + (invested ? 'Rebuild details not recorded yet.' :
+      'No rebuild yet: the basket is in cash until ' + shEsc(b.next_rebuild || 'the next month-end') + '.') + '</div>';
 }
 
 // 2.6 closed basket trades

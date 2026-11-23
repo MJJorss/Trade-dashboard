@@ -8333,12 +8333,12 @@ function resBanner() {
   let h = '<span class="res-season">' + resEsc(m.season || 'Results') + '</span>'
     + '<span>Latest filing captured: <b>' + resWhen(m.latest_filing_captured) + '</b></span>'
     + '<span>Last checked: <b>' + resWhen(m.run_time) + '</b></span>'
+    + '<span>SEBI filing deadline: <b>' + resWhen(m.filing_deadline) + '</b></span>'
     + '<span><b>' + (c.reported || 0) + '</b> reported · <b>' + (c.in_universe || 0) + '</b> above ₹'
     + Number(m.min_mcap_cr || 1000).toLocaleString('en-IN') + ' Cr · <b>' + (c.non_financial || 0)
     + '</b> companies · <b>' + (c.financial || 0) + '</b> banks &amp; finance'
     + (c.bse_only ? ' · <b>' + c.bse_only + '</b> BSE only' : '')
-    + (c.sme ? ' · <b>' + c.sme + '</b> SME' : '') + '</span>'
-    + '<span>Filing deadline ' + resWhen(m.filing_deadline) + '</span>';
+    + (c.sme ? ' · <b>' + c.sme + '</b> SME' : '') + '</span>';
   // Amber when the data is more than 2 days old while results are being filed.
   const now = resIstNow();
   const qe = resParseDay(m.quarter_end), dl = resParseDay(m.filing_deadline), run = resParseDay(m.run_time);

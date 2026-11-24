@@ -1938,6 +1938,10 @@
   @media (min-width: 700px) {
     .res-table-wrap { max-height: calc(100vh - 140px); overflow: auto; }
   }
+  /* FCIS quality list (reuses the Results table's look) */
+  .fq-meta { font-size: 10.5px; color: var(--muted); margin: -4px 0 8px; }
+  .fq-foot { font-size: 10.5px; color: var(--muted); line-height: 1.5; margin: -6px 0 18px; }
+  .fq-stale { color: var(--muted); font-size: 9.5px; margin-left: 2px; }
   .res-table td.res-flags { white-space: normal; min-width: 170px; max-width: 240px; }
   .res-table td.res-flags .res-flag { white-space: normal; }
   .res-table th { cursor: pointer; white-space: nowrap; user-select: none; }
@@ -2178,6 +2182,25 @@
     <div class="stock-list" id="radarList">
       <div class="loading-state"><div class="spinner"></div></div>
     </div>
+
+    <!-- Quality filings, last 90 days (fcis_quality.json, built nightly by
+         trade-alerts fcis_quality.py). Its own filters; the 7-day sections
+         above are untouched. -->
+    <div class="section-header">
+      <div class="section-title"><span class="icon">🗂️</span>Quality filings, last 90 days (score 65+, latest filing per stock)</div>
+      <div class="filter-group" id="fqFilter">
+        <button class="filter-btn active" onclick="fqSetCap('all',this)">All</button>
+        <button class="filter-btn" onclick="fqSetCap('large',this)">Large</button>
+        <button class="filter-btn" onclick="fqSetCap('mid',this)">Mid</button>
+        <button class="filter-btn" onclick="fqSetCap('small',this)" title="Small and micro caps">Small</button>
+        <button class="filter-btn" id="fqNearBtn" onclick="fqToggleNear(this)" title="Latest close within 10% of the 252-day high">Within 10% of high</button>
+      </div>
+    </div>
+    <div id="fqMeta" class="fq-meta"></div>
+    <div class="res-table-wrap" id="fqWrap">
+      <div class="loading-state"><div class="spinner"></div><div class="loading-text">Loading quality list…</div></div>
+    </div>
+    <div class="fq-foot" id="fqFoot"></div>
   </div>
 
   <!-- ══ PORTFOLIO TAB ══════════════════════════════ -->
@@ -3753,6 +3776,7 @@ async function loadAllData() {
 
   await Promise.allSettled([
     loadFCIS(),
+    loadFcisQuality(),
     loadPortfolio(),
     loadChartink(),
     loadRS(),
@@ -4004,6 +4028,162 @@ function renderStockList(containerId, items, type) {
         `<span style="color:${clr};margin-left:4px;">${dayStr}</span>`;
     });
   });
+}
+
+// ─── FCIS quality list (last 90 days) ─────────────────
+// fcis_quality.json: every stock's latest scored filing, kept when it scored
+// 65+ in the last 90 days; prices as of the nightly build (no live prices).
+// Score is shown as a plain number: the 80+ band has done worse than 65-79.
+var _fq = null, _fqCap = 'all', _fqNear = false, _fqSort = {key: 'days', dir: 1}, _fqOpen = null;
+var FQ_COLS = [
+  {key: 'symbol', label: 'Symbol'},
+  {key: 'filed', label: 'Filed'},
+  {key: 'days', label: 'Days', num: true},
+  {key: 'score', label: 'Score', num: true},
+  {key: 'chg_pct', label: 'Since filing %', num: true, pct: true},
+  {key: 'excess_pct', label: 'vs Midcap', num: true, pct: true, colour: true},
+  {key: 'below_high_pct', label: 'Below high %', num: true, pct: true},
+  {key: 'sector', label: 'Sector'},
+  {key: 'cap', label: 'Cap'},
+  {key: 'rs', label: 'RS'}
+];
+
+function fqEsc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c];
+  });
+}
+
+async function loadFcisQuality() {
+  var wrap = document.getElementById('fqWrap');
+  try {
+    _fq = JSON.parse(await ghFetch('fcis_quality.json'));
+  } catch (e) {
+    _fq = null;
+    wrap.innerHTML = '<div class="empty-state">Quality list not built yet</div>';
+    document.getElementById('fqMeta').textContent = '';
+    document.getElementById('fqFoot').textContent = '';
+    return;
+  }
+  renderFcisQuality();
+  // Footnote figures come from the return tracker's stats, so they stay current.
+  var foot = 'Watchlist, not a buy signal.';
+  try {
+    var s = JSON.parse(await ghFetch('fcis_validation_stats.json'));
+    var b20 = (((s.slices || {}).h20 || {}).by_score_band || {})['65-79'] || {};
+    var b60 = (((s.slices || {}).h60 || {}).by_score_band || {})['65-79'] || {};
+    var mon = function (d) {
+      var t = new Date(String(d) + 'T00:00:00');
+      return isNaN(t) ? '' : t.toLocaleString('en-GB', {month: 'short'});
+    };
+    var span = s.date_from && s.date_to
+      ? mon(s.date_from) + '–' + mon(s.date_to) + ' ' + String(s.date_to).slice(0, 4) : '';
+    var f = function (v) { return (v >= 0 ? '+' : '') + Number(v).toFixed(1) + '%'; };
+    if (b20.mean_excess_return_pct != null && b60.mean_excess_return_pct != null) {
+      foot += ' FCIS 65–79 averaged ' + f(b20.mean_excess_return_pct) + ' vs index after 20 days and '
+        + f(b60.mean_excess_return_pct) + ' after 60 days (' + (span ? span + ', ' : '') + 'small sample).';
+    }
+  } catch (e) { /* footnote keeps its first sentence */ }
+  document.getElementById('fqFoot').textContent = foot + ' Source: fcis_validation_stats.json.';
+}
+
+function fqSetCap(cap, btn) {
+  _fqCap = cap;
+  document.querySelectorAll('#fqFilter .filter-btn').forEach(function (b) {
+    if (b.id !== 'fqNearBtn') b.classList.remove('active');
+  });
+  btn.classList.add('active');
+  renderFcisQuality();
+}
+
+function fqToggleNear(btn) {
+  _fqNear = !_fqNear;
+  btn.classList.toggle('active', _fqNear);
+  renderFcisQuality();
+}
+
+function fqSortBy(key) {
+  if (_fqSort.key === key) _fqSort.dir = -_fqSort.dir;
+  else {
+    var col = FQ_COLS.filter(function (c) { return c.key === key; })[0] || {};
+    // numbers open biggest first (below-high: nearest the high first); days and text ascending
+    _fqSort = {key: key, dir: col.num && key !== 'days' ? -1 : 1};
+  }
+  renderFcisQuality();
+}
+
+function fqToggleRow(sym) {
+  _fqOpen = _fqOpen === sym ? null : sym;
+  renderFcisQuality();
+}
+
+function renderFcisQuality() {
+  if (!_fq) return;
+  var wrap = document.getElementById('fqWrap');
+  var rows = (_fq.rows || []).filter(function (r) {
+    var cap = String(r.cap || '').toLowerCase();
+    if (_fqCap === 'small' && cap !== 'small' && cap !== 'micro') return false;
+    if (_fqCap !== 'all' && _fqCap !== 'small' && cap !== _fqCap) return false;
+    if (_fqNear && !(r.below_high_pct != null && r.below_high_pct >= -10)) return false;
+    return true;
+  });
+  var k = _fqSort.key, dir = _fqSort.dir;
+  rows.sort(function (a, b) {
+    var x = a[k], y = b[k];
+    if (x == null && y == null) return 0;
+    if (x == null) return 1;
+    if (y == null) return -1;
+    if (typeof x === 'number' && typeof y === 'number') return (x - y) * dir || a.symbol.localeCompare(b.symbol);
+    return String(x).localeCompare(String(y)) * dir;
+  });
+  var asOf = _fq.as_of || '';
+  document.getElementById('fqMeta').textContent = rows.length + ' of ' + (_fq.count || 0)
+    + ' stocks · prices as of ' + asOf + ' close · vs ' + (_fq.benchmark || 'Nifty Midcap 150')
+    + ' · tap a row for the filing';
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="empty-state">No stocks match these filters</div>';
+    return;
+  }
+  var pct = function (v) { return v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(1); };
+  var h = '<table class="res-table trade-table"><thead><tr>';
+  FQ_COLS.forEach(function (c) {
+    var on = c.key === k;
+    h += '<th class="' + (c.num ? 'res-num ' : '') + (on ? 'res-sorted' : '') + '" onclick="fqSortBy(\'' + c.key + '\')">'
+      + c.label + (on ? (dir > 0 ? ' ▲' : ' ▼') : '') + '</th>';
+  });
+  h += '</tr></thead><tbody>';
+  rows.forEach(function (r) {
+    var open = _fqOpen === r.symbol;
+    var stale = r.last_day && asOf && r.last_day < asOf;
+    h += '<tr class="res-row' + (open ? ' open' : '') + '" onclick="fqToggleRow(\'' + fqEsc(r.symbol) + '\')">';
+    FQ_COLS.forEach(function (c) {
+      var v = r[c.key], cls = c.num ? 'res-num' : '', txt;
+      if (c.key === 'symbol') txt = '<span class="res-name">' + fqEsc(v) + '</span>';
+      else if (c.key === 'filed') txt = fqEsc(String(v || '').slice(5).split('-').reverse().join('/'));
+      else if (c.key === 'score') txt = v == null ? '—' : String(Math.round(v));
+      else if (c.pct) {
+        txt = pct(v);
+        if (c.colour && v != null) cls += v >= 0 ? ' res-pos' : ' res-neg';
+        if (c.key === 'chg_pct' && stale) txt += '<span class="fq-stale" title="Latest price ' + fqEsc(r.last_day) + '">†</span>';
+      }
+      else if (c.key === 'days') txt = v == null ? '—' : String(v);
+      else txt = fqEsc(v || '—');
+      h += '<td class="' + cls + '">' + txt + '</td>';
+    });
+    h += '</tr>';
+    if (open) {
+      h += '<tr class="res-detail"><td colspan="' + FQ_COLS.length + '"><div class="res-detail-inner">'
+        + '<div class="res-comment">' + fqEsc(r.headline || r.category || '') + '</div>'
+        + '<div class="res-scored">' + fqEsc(r.category || '') + ' · filed ' + fqEsc(r.filed) + (r.filed_time ? ' ' + fqEsc(r.filed_time) : '')
+        + ' · ₹' + Number(r.entry_close).toLocaleString('en-IN') + ' (' + fqEsc(r.entry_day) + ') → ₹'
+        + Number(r.last_close).toLocaleString('en-IN') + ' (' + fqEsc(r.last_day) + ')'
+        + ' · Midcap ' + pct(r.midcap_chg_pct) + '%</div>'
+        + (r.link ? '<div style="margin-top:6px"><a href="' + fqEsc(r.link) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:var(--accent);font-size:12px">Open filing ↗</a></div>' : '')
+        + '</div></td></tr>';
+    }
+  });
+  h += '</tbody></table>';
+  wrap.innerHTML = h;
 }
 
 function filterFcis(filter, btn) {

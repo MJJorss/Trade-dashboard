@@ -781,34 +781,6 @@
 
   /* ─── VOLUME PILL (Chartink cards) ──────────────── */
   /* ── MJ Investment Index badge ─────────────────── */
-  .mj-index-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background: rgba(var(--gold-rgb),0.10);
-    border: 1px solid rgba(var(--gold-rgb),0.30);
-    color: var(--gold);
-    font-size: 9px;
-    font-weight: 700;
-    font-family: var(--font-head, sans-serif);
-    letter-spacing: 0.3px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    white-space: nowrap;
-  }
-  .rs-mj-index-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    background: rgba(var(--gold-rgb),0.10);
-    border: 1px solid rgba(var(--gold-rgb),0.28);
-    color: var(--gold);
-    font-size: 8px;
-    font-weight: 700;
-    padding: 1px 5px;
-    border-radius: 3px;
-    white-space: nowrap;
-  }
 
   .ck-vol {
     display: flex; align-items: center; gap: 6px;
@@ -1159,7 +1131,7 @@
      device-pixel width and ran off the screen on any high-DPR phone.
      max-width is the belt-and-braces guard: even if a script sets an
      oversized intrinsic width, the element can never exceed its container. */
-  #equityCanvas, #heatCanvas, #invEquityCanvas {
+  #equityCanvas, #heatCanvas {
     width: 100%;
     max-width: 100%;
     display: block;
@@ -1938,6 +1910,23 @@
   @media (min-width: 700px) {
     .res-table-wrap { max-height: calc(100vh - 140px); overflow: auto; }
   }
+  /* Sector chips (shadow/sector_strength.json: T10 rank, coloured by third) */
+  .sec-chip { display: inline-block; padding: 1px 7px; border-radius: 9px; font-size: 10px; white-space: nowrap;
+    border: 1px solid; line-height: 1.5; }
+  .sec-chip.top    { color: var(--green); background: rgba(var(--green-rgb),0.10); border-color: rgba(var(--green-rgb),0.30); }
+  .sec-chip.middle { color: var(--muted); background: rgba(var(--ink-rgb),0.05); border-color: rgba(var(--ink-rgb),0.16); }
+  .sec-chip.bottom { color: var(--red); background: rgba(var(--red-rgb),0.10); border-color: rgba(var(--red-rgb),0.30); }
+  .sec-chip.none   { color: var(--muted); border-style: dashed; border-color: rgba(var(--ink-rgb),0.22); }
+  .inv-sectors { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 14px; }
+  .inv-sec { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; padding: 3px 8px;
+    border: 1px solid var(--border); border-radius: 10px; background: var(--card); }
+  .inv-sec .cap { font-family: var(--font-mono); color: var(--muted); }
+  .inv-sec .cap.full { color: var(--amber); font-weight: 700; }
+  .inv-note { font-size: 10px; color: var(--muted); }
+  .ss-link-btn { margin: 4px 0 14px; }
+  /* Benchmarks on equity charts (benchmarks.json) */
+  .bm-tbl td.num, .bm-tbl th.num { text-align: right; font-family: var(--font-mono); }
+  .bm-foot { font-size: 10px; color: var(--muted); margin: 4px 0 12px; }
   /* FCIS quality list (reuses the Results table's look) */
   .fq-meta { font-size: 10.5px; color: var(--muted); margin: -4px 0 8px; }
   .fq-foot { font-size: 10.5px; color: var(--muted); line-height: 1.5; margin: -6px 0 18px; }
@@ -2051,7 +2040,7 @@
   <button class="tab-btn" onclick="switchTab('rs',this)">
     <span class="tab-icon">📈</span>RS Universe
   </button>
-  <button class="tab-btn" onclick="switchTab('investment',this)">
+  <button class="tab-btn" id="invTabBtn" onclick="switchTab('investment',this)">
     <span class="tab-icon">🌱</span>Investment
   </button>
   <button class="tab-btn" onclick="switchTab('results',this)">
@@ -2386,7 +2375,8 @@
       <div><span style="color:var(--accent)">trade_history.json</span> → Performance (closed trades, P&amp;L, monthly breakdown)</div>
       <div><span style="color:var(--accent)">master_universe.json</span> → RS Universe (HIGH / MID / LOW), sectors for other tabs</div>
       <div><span style="color:var(--accent)">rs_volume.json</span> → RS Universe (price, volume, pullback zone)</div>
-      <div><span style="color:var(--accent)">investment_index.json · investment_equity_history.json</span> → Investment</div>
+      <div><span style="color:var(--accent)">shadow/comparison.json · shadow/sector_strength.json</span> → Investment (the Small-strong basket)</div>
+      <div><span style="color:var(--accent)">benchmarks.json</span> → Midcap 150 and Smallcap 250 lines on every equity chart</div>
       <div><span style="color:var(--accent)">ipo_breakout_signals.json</span> → IPO</div>
       <div><span style="color:var(--accent)">shadow/*.json</span> → Shadow (paper book, gate log, comparison)</div>
     </div>
@@ -2469,7 +2459,17 @@
         </div>
       </div>
       <div class="equity-x-labels" id="eqXLabels"></div>
+      <div class="sh-legend" id="eqBmLegend"></div>
     </div>
+    <div class="equity-card">
+      <div class="equity-card-head"><div>
+        <div class="equity-card-title">📉 Fall from the previous peak (%) — the book and both indices</div>
+        <div class="sh-legend" id="eqDDLegend"></div>
+      </div></div>
+      <div class="equity-chart-wrap"><canvas id="eqDDCanvas" height="150"></canvas></div>
+      <div class="equity-x-labels" id="eqDDX"></div>
+    </div>
+    <div class="sh-table-wrap" id="eqBmTbl"></div>
 
     <!-- Drawdown KPIs -->
     <div class="dd-kpi-strip">
@@ -2664,6 +2664,16 @@
           <div class="equity-x-labels" id="shCmpX1"></div>
           <div class="sh-note" id="shCmpShadeNote">Shaded days: hold gate off.</div>
         </div>
+
+    <div class="equity-card">
+      <div class="equity-card-head"><div>
+        <div class="equity-card-title">📉 Fall from the previous peak (%) — every book and both indices</div>
+        <div class="sh-legend" id="shCmpDDLegend"></div>
+      </div></div>
+      <div class="equity-chart-wrap"><canvas id="shCmpDDCanvas" height="150"></canvas></div>
+      <div class="equity-x-labels" id="shCmpDDX"></div>
+    </div>
+    <div class="sh-table-wrap" id="shCmpBmTbl"></div>
         <div id="shTestCharts" style="display:none">
           <div class="equity-card">
             <div class="equity-card-head"><div>
@@ -2681,6 +2691,7 @@
             <div class="equity-chart-wrap"><canvas id="shSSCanvas2" height="200"></canvas></div>
             <div class="equity-x-labels" id="shSSX2"></div>
           </div>
+          <div class="sh-table-wrap" id="shSSBmTbl"></div>
         </div>
         <div class="equity-card">
           <div class="equity-card-head"><div>
@@ -2756,7 +2767,18 @@
           </div>
         </div>
         <div class="equity-x-labels" id="shEqXLabels"></div>
+        <div class="sh-legend" id="shEqBmLegend"></div>
       </div>
+
+    <div class="equity-card">
+      <div class="equity-card-head"><div>
+        <div class="equity-card-title">📉 Fall from the previous peak (%) — the book and both indices</div>
+        <div class="sh-legend" id="shEqDDLegend"></div>
+      </div></div>
+      <div class="equity-chart-wrap"><canvas id="shEqDDCanvas" height="150"></canvas></div>
+      <div class="equity-x-labels" id="shEqDDX"></div>
+    </div>
+    <div class="sh-table-wrap" id="shEqBmTbl"></div>
 
       <div class="dd-kpi-strip">
         <div class="stat-card red">
@@ -2905,15 +2927,9 @@
         <summary>All stocks in the 50/50 mix — both halves added together</summary>
         <div class="sh-table-wrap ss-hold-wrap" id="ssCombined"></div>
       </details>
-
-      <div class="section-header"><div class="section-title"><span class="icon">📋</span>Basket holdings</div></div>
-      <div id="ssHoldFigures"></div>
-      <div class="sh-table-wrap ss-hold-wrap" id="ssHold"></div>
-      <div class="sh-note">Gain or loss per stock = quantity × (price now − entry price), before costs; the basket's costs are in the totals
-        below. The paper book holds fractional shares, as the research engine does. Prices tagged "live, delayed" come from this
-        site's quote service (refreshed every minute in market hours while this tab is open); "run" prices are the 2:40 pm run's.
-        Sort by any column.</div>
-      <div class="sh-table-wrap" id="ssTotals"></div>
+      <div class="section-header"><div class="section-title"><span class="icon">🧺</span>The basket half</div></div>
+      <div class="sh-note">The basket's holdings, sectors, totals, rebuilds and closed trades are on the Investment tab.</div>
+      <button class="filter-btn ss-link-btn" onclick="switchTab('investment', document.getElementById('invTabBtn'))">Basket details → Investment tab</button>
 
       <div class="section-header"><div class="section-title"><span class="icon">📈</span>Live paper book since go-live</div></div>
       <div class="equity-card">
@@ -2934,6 +2950,7 @@
         <div class="equity-x-labels" id="ssLiveX2"></div>
       </div>
       <div class="sh-table-wrap" id="ssLiveTbl"></div>
+      <div class="sh-table-wrap" id="ssLiveBmTbl"></div>
 
       <div class="section-header"><div class="section-title"><span class="icon">📚</span>The research history (past data)</div>
         <button class="ss-win-btn" id="ssWinBtn" onclick="ssToggleWindow()">Show 2007-2019</button></div>
@@ -2955,6 +2972,7 @@
           <div class="equity-chart-wrap"><canvas id="ssHistCanvas2" height="200"></canvas></div>
           <div class="equity-x-labels" id="ssHistX2"></div>
         </div>
+        <div class="sh-table-wrap" id="ssHistBmTbl"></div>
         <div class="section-header"><div class="section-title"><span class="icon">🗓️</span>Year by year</div></div>
         <div class="sh-table-wrap" id="ssYearly"></div>
         <div class="section-header"><div class="section-title"><span class="icon">🧮</span>Summary</div></div>
@@ -2963,110 +2981,55 @@
       <div class="notice ss-disclaimer">Past data, already seen before the book was built; not a forecast. The live book started on
         12 Nov 2026 and is judged only on its own results. The research curves end on 4 Sep 2026 and are a different run from the
         live book, so the two are shown apart, never joined.</div>
-
-      <div class="section-header"><div class="section-title"><span class="icon">🔁</span>Rebuild history</div></div>
-      <div class="sh-table-wrap" id="ssRebuilds"></div>
-
-      <div class="section-header"><div class="section-title"><span class="icon">🧾</span>Closed basket trades</div></div>
-      <div class="sh-table-wrap" id="ssClosed"></div>
     </div>
   </div>
 
   <div class="tab-panel" id="tab-investment">
-
-    <!-- Header strip -->
-    <div class="inv-header-strip">
-      <div>
-        <div style="font-family:var(--font-head);font-weight:800;font-size:16px;color:var(--text-strong);">🌱 MJ Investment Index</div>
-        <div id="invRebalanceDate" style="font-size:10px;color:var(--muted);margin-top:3px;">Loading…</div>
+    <div class="notice sh-notice"><div class="sh-notice-body"><strong>🌱 Investment book — the Small-strong basket (paper, no real orders).</strong>
+      25 small caps (₹1,000–5,000 Cr) in the strongest sectors, near their 52-week high, 4% each, at most 6 per sector, rebuilt at
+      each month-end while the hold gate is on (research #55, locked spec). It is the basket half of the Swing + Small-strong book.
+      The MJ Investment Index it replaces was retired on 28 Nov 2026.</div></div>
+    <div class="empty-state" id="invEmpty">Loading the basket…</div>
+    <div id="invBody" style="display:none">
+      <div class="sh-score-grid sh-status-strip" id="invStatus"></div>
+      <div class="section-header"><div class="section-title"><span class="icon">📋</span>Basket holdings</div></div>
+      <div id="ssHoldFigures"></div>
+      <div class="sh-table-wrap ss-hold-wrap" id="ssHold"></div>
+      <div class="sh-note">Gain or loss per stock = quantity × (price now − entry price), before costs; the basket's costs are in the totals
+        below. The paper book holds fractional shares, as the research engine does. Prices tagged "live, delayed" come from this
+        site's quote service (refreshed every minute in market hours while this tab is open); "run" prices are the 2:40 pm run's.
+        Sector: the T10 sector-strength rank the basket ranks by (green top third, grey middle, red bottom third).
+        Market cap: the basket's own AMFI list. Sort by any column.</div>
+      <div class="section-header"><div class="section-title"><span class="icon">🧭</span>Sectors in the basket</div></div>
+      <div id="invSectors"></div>
+      <div class="sh-table-wrap" id="ssTotals"></div>
+      <div class="section-header"><div class="section-title"><span class="icon">📈</span>The basket since go-live</div></div>
+      <div class="equity-card">
+        <div class="equity-card-head"><div>
+          <div class="equity-card-title">📈 Basket value (₹) — indices rebased to the basket's start</div>
+          <div class="sh-legend" id="invBkLegend1"></div>
+        </div></div>
+        <div class="equity-chart-wrap"><canvas id="invBkCanvas1" height="200"></canvas></div>
+        <div class="equity-x-labels" id="invBkX1"></div>
       </div>
-      <div style="display:flex;gap:20px;flex-wrap:wrap;">
-        <div class="inv-kpi"><div class="inv-kpi-label">Slots Filled</div><div class="inv-kpi-value" id="invSlots">—</div></div>
-        <div class="inv-kpi"><div class="inv-kpi-label">Deployed</div><div class="inv-kpi-value" id="invDeployed">—</div></div>
-        <div class="inv-kpi"><div class="inv-kpi-label" title="Unrealised P&amp;L of the holdings open now; the equity curve below is the whole index since inception">Open holdings P&amp;L</div><div class="inv-kpi-value" id="invPnl">—</div></div>
+      <div class="equity-card">
+        <div class="equity-card-head"><div>
+          <div class="equity-card-title">📉 Fall from the previous peak (%)</div>
+          <div class="sh-legend" id="invBkLegend2"></div>
+        </div></div>
+        <div class="equity-chart-wrap"><canvas id="invBkCanvas2" height="160"></canvas></div>
+        <div class="equity-x-labels" id="invBkX2"></div>
       </div>
+      <div class="sh-table-wrap" id="invBkTbl"></div>
+      <div class="section-header"><div class="section-title"><span class="icon">🎯</span>Rebuild candidates</div></div>
+      <div class="sh-table-wrap" id="invCands"></div>
+      <div class="section-header"><div class="section-title"><span class="icon">🔁</span>Rebuild history</div></div>
+      <div class="sh-table-wrap" id="ssRebuilds"></div>
+      <div class="section-header"><div class="section-title"><span class="icon">🧾</span>Closed trades</div></div>
+      <div class="sh-table-wrap" id="ssClosed"></div>
     </div>
-
-    <!-- Equity Curve (real ₹ NAV, backend-driven from investment_equity_history.json — -->
-    <!-- retired the old client-side localStorage Base-100 reconstruction entirely) -->
-    <div class="inv-section-label" style="margin-top:4px;">Index Performance — Equity Curve</div>
-    <div class="equity-card">
-      <div class="equity-card-head">
-        <div>
-          <div class="equity-card-title">📈 Total Equity — Realised + Unrealised</div>
-          <div class="equity-headline">
-            <div class="equity-headline-value" id="invEqCurrentVal">—</div>
-            <div class="equity-headline-change" id="invEqCurrentChange"></div>
-          </div>
-          <div style="font-size:10px;color:var(--muted);margin-top:2px;" id="invEqSinceInception"></div>
-        </div>
-        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <span class="freshness-badge" id="invEqFreshBadge" style="display:none"></span>
-          <div class="equity-period-group" id="invEqPeriodGroup">
-            <button class="inv-period-btn active" onclick="setInvEqPeriod('1M',this)">1M</button>
-            <button class="inv-period-btn" onclick="setInvEqPeriod('3M',this)">3M</button>
-            <button class="inv-period-btn" onclick="setInvEqPeriod('6M',this)">6M</button>
-            <button class="inv-period-btn" onclick="setInvEqPeriod('ALL',this)">ALL</button>
-          </div>
-        </div>
-      </div>
-      <div class="equity-chart-wrap">
-        <canvas id="invEquityCanvas" height="200"></canvas>
-        <div class="equity-tooltip" id="invEqTooltip"></div>
-        <div class="loading-state" id="invEqLoading" style="display:none"><div class="spinner"></div></div>
-        <div class="empty-state" id="invEqEmpty" style="display:none">
-          📈 Equity history will appear after the first rebalance cycle
-        </div>
-      </div>
-      <div class="equity-x-labels" id="invEqXLabels"></div>
-    </div>
-
-    <!-- Drawdown KPIs -->
-    <div class="dd-kpi-strip">
-      <div class="stat-card red">
-        <div class="stat-label">Current Drawdown ₹</div>
-        <div class="stat-value" id="invDdCurrentInr">—</div>
-        <div class="stat-sub" id="invDdCurrentPct">—</div>
-      </div>
-      <div class="stat-card red">
-        <div class="stat-label">Current Drawdown %</div>
-        <div class="stat-value" id="invDdCurrentPctBig">—</div>
-        <div class="stat-sub">from most recent peak</div>
-      </div>
-      <div class="stat-card amber">
-        <div class="stat-label">Max Drawdown ₹</div>
-        <div class="stat-value" id="invDdMaxInr">—</div>
-        <div class="stat-sub" id="invDdMaxDate">—</div>
-      </div>
-      <div class="stat-card amber">
-        <div class="stat-label">Max Drawdown %</div>
-        <div class="stat-value" id="invDdMaxPct">—</div>
-        <div class="stat-sub">all-time, since inception</div>
-      </div>
-    </div>
-
-    <!-- This rebalance changes -->
-    <div class="inv-changes-box" id="invChanges" style="display:none">
-      <div style="font-family:var(--font-head);font-weight:700;font-size:11px;color:var(--green);margin-bottom:8px;">🔄 THIS REBALANCE</div>
-      <div id="invChangesBody" style="font-size:11px;color:var(--text);line-height:1.9;"></div>
-    </div>
-
-    <!-- Holdings -->
-    <div class="inv-section-label">Holdings — Top 20</div>
-    <div class="inv-holdings-grid" id="invHoldingsGrid">
-      <div class="loading-state" style="grid-column:1/-1"><div class="spinner"></div><div class="loading-text">Loading investment index…</div></div>
-    </div>
-
-    <!-- Watchlist next 10 -->
-    <div class="inv-section-label">Watchlist — Next 10 Waiting to Enter</div>
-    <div class="inv-watch-grid" id="invWatchGrid"></div>
-
-    <div id="invFooter" style="font-size:10px;color:var(--muted);text-align:center;margin-top:18px;"></div>
   </div>
 
-  <!-- ══ RESULTS TAB ════════════════════════════════ -->
-  <!-- Every company that has reported this quarter (results.json, written by
-       results_scanner.py at 9 pm and 8 am IST on weekdays). -->
   <div class="tab-panel" id="tab-results">
     <div class="res-banner" id="resBanner">Loading results…</div>
 
@@ -3771,8 +3734,9 @@ async function loadAllData() {
   updateMarketStatus();
   _ghCache = {};              // a refresh downloads every file afresh, once
 
-  // Concall growth-trigger badges are read by several tabs, so load them first.
-  await loadCatalystCards();
+  // Concall growth-trigger badges are read by several tabs, so load them first;
+  // the index lines and sector ranks are read by several charts and tables.
+  await Promise.allSettled([loadCatalystCards(), bmLoad(), secLoad()]);
 
   await Promise.allSettled([
     loadFCIS(),
@@ -3784,7 +3748,6 @@ async function loadAllData() {
     loadEquity(),
     loadSizing(),
     loadShadow(),
-    loadInvestment(),
     loadResults(),
     loadRadar(),
     loadIpo()
@@ -4468,7 +4431,6 @@ function renderPositionCard(pos, idx, live) {
 
 // ─── CHARTINK SIGNALS ─────────────────────────────────────────────────────────
 let allCkData       = [];
-let allMjIndexMap   = {};   // symbol → slot_rank (1-based), populated from investment_index.json
 let ckTierFilter    = 'all';
 let ckScannerFilter = 'all';
 let ckRsFilter      = 'ALL';  // ALL | HIGH | MID | LOW
@@ -4666,10 +4628,7 @@ function renderChartink() {
         : `<div class="ck-time">${firstSeen}</div>`;
       const appearBadge = appearances > 1
         ? `<span style="font-size:9px;color:var(--green);margin-left:4px" title="${appearances} scan runs">×${appearances}</span>` : '';
-      // MJ Index badge — use pre-computed field from JSON (set by chartink_alert.py)
-      // Fall back to runtime allMjIndexMap if field absent (backwards compat)
-      var _mjRank = s.mj_index_rank != null ? s.mj_index_rank : (allMjIndexMap[s.symbol] || null);
-      var mjBadgeHtml = _mjRank ? '<span class="mj-index-badge" title="In MJ Investment Index">🏦 MJ Index #' + _mjRank + '</span>' : '';
+      var mjBadgeHtml = '';   // the MJ Investment Index was retired on 28 Nov 2026
 
       // Show JSON price + chg_pct instantly (pre-computed by chartink_alert.py)
       const jsonPrice  = s.current_price || s.price || s.close || null;
@@ -5026,11 +4985,7 @@ function renderRS(capFilter) {
       qtHtml = '<span class="tag" style="background:rgba(var(--accent-rgb),0.08);color:var(--accent);border:1px solid rgba(var(--accent-rgb),0.2);font-size:9px">SB</span>';
     }
 
-    // MJ Investment Index badge
-    var _rsMjRank = allMjIndexMap[name.toUpperCase()] || null;
-    var rsMjHtml  = _rsMjRank
-      ? '<span class="rs-mj-index-badge" title="In MJ Investment Index top-20">🏦 #' + _rsMjRank + '</span>'
-      : '';
+    var rsMjHtml = '';   // the MJ Investment Index was retired on 28 Nov 2026
 
     // RS tier badge (shown when viewing MID/LOW/All tiers)
     var rsTier = (s.rs_tier || s.rs || '').toUpperCase();
@@ -5103,7 +5058,7 @@ function switchTab(name, btn) {
   // paused entirely while a tab is backgrounded, so the redraw would never
   // land for someone who switches tabs and comes back.
   setTimeout(redrawVisibleCharts, 0);
-  if (name === 'ss' && typeof ssFetchLive === 'function') ssFetchLive();
+  if (name === 'investment' && typeof ssFetchLive === 'function') ssFetchLive();
 }
 
 /* ─── Chart redraw plumbing ────────────────────────────────────────────────
@@ -5117,16 +5072,13 @@ function chartShown(id) {
 function redrawVisibleCharts() {
   try {
     if (typeof redrawSSCharts === 'function') redrawSSCharts();
+    if (typeof renderInvChart === 'function' && _ssComp && chartShown('invBkCanvas1')) renderInvChart();
     if (typeof _eqSnapshots !== 'undefined' && _eqSnapshots && _eqSnapshots.length
         && chartShown('equityCanvas')) {
       drawEquityChart(_eqSnapshots, typeof _eqPeriod !== 'undefined' ? _eqPeriod : '1M');
       if (typeof drawHeatChart === 'function') {
         drawHeatChart(_eqSnapshots, typeof _eqPeriod !== 'undefined' ? _eqPeriod : '1M');
       }
-    }
-    if (typeof _invEqSnapshots !== 'undefined' && _invEqSnapshots && _invEqSnapshots.length
-        && chartShown('invEquityCanvas')) {
-      drawInvEquityChart(_invEqSnapshots, typeof _invEqPeriod !== 'undefined' ? _invEqPeriod : '1M');
     }
     if (typeof _shSnapshots !== 'undefined' && _shSnapshots && _shSnapshots.length
         && chartShown('shEquityCanvas')) {
@@ -5169,7 +5121,7 @@ function initChartObserver() {
     }
     if (changed) setTimeout(redrawVisibleCharts, 0);
   });
-  ['equityCanvas', 'heatCanvas', 'invEquityCanvas'].forEach(id => {
+  ['equityCanvas', 'heatCanvas'].forEach(id => {
     const el = document.getElementById(id);
     if (el) ro.observe(el);
   });
@@ -5754,7 +5706,10 @@ function drawEquityChart(snapshots, period) {
   const vals = filtered.map(s => s.total_equity);
   let runningPeak = -Infinity;
   const peaks = filtered.map(s => { if (s.total_equity > runningPeak) runningPeak = s.total_equity; return runningPeak; });
-  const minV = Math.min(...vals), maxV = Math.max(...vals, ...peaks);
+  const eqDates = filtered.map(s => String(s.timestamp).slice(0, 10));
+  const eqBm = bmSeries(eqDates, vals[0]);
+  const eqBmVals = [].concat.apply([], eqBm.map(b => b.vals.filter(v => v !== null)));
+  const minV = Math.min(...vals, ...eqBmVals), maxV = Math.max(...vals, ...peaks, ...eqBmVals);
   const rng = Math.max(maxV - minV, 1);
   const lo = minV - rng*0.08, hi = maxV + rng*0.08;
   const xOf = i => PAD.left + (filtered.length > 1 ? (i/(filtered.length-1)) * cW : cW/2);
@@ -5802,6 +5757,11 @@ function drawEquityChart(snapshots, period) {
   ctx.moveTo(xOf(0), yOf(vals[0]));
   filtered.forEach((s,i) => { if (i>0) ctx.lineTo(xOf(i), yOf(vals[i])); });
   ctx.stroke();
+
+  // Midcap 150 / Smallcap 250, rebased to the book's first value (dashed)
+  bmDraw(ctx, eqBm, xOf, yOf);
+  bmLegend('eqBmLegend', eqBm);
+  bmPanel('eq', eqDates, 'Live book', vals, lineCol);
 
   // End dot with glow
   const lx = xOf(filtered.length-1), ly = yOf(vals[vals.length-1]);
@@ -6209,6 +6169,136 @@ async function loadShadow() {
   try { comp = await shGet('comparison.json'); } catch (e) { comp = null; }
   renderShadowComparison(comp);
   try { renderSSTab(comp); } catch (e) { console.warn('[ss tab] not rendered', e); }
+  try { renderInvTab(comp); } catch (e) { console.warn('[investment tab] not rendered', e); }
+}
+
+// ─── Benchmarks on every equity chart (benchmarks.json, built nightly) ─────
+// NSE's daily closes of the Nifty Midcap 150 and Smallcap 250 (price indices:
+// NSE's daily file has no TRI). Each chart rebases both to the book's value on
+// the book's first date, and draws them dashed.
+var _bm = null, _bmP = null;
+var BM_LINES = [['NIFTY MIDCAP 150', 'Midcap 150 (price index)', '#f472b6'],
+                ['NIFTY SMALLCAP 250', 'Smallcap 250 (price index)', '#22d3ee']];
+function bmLoad() {
+  if (!_bmP) {
+    _bmP = ghFetch('benchmarks.json').then(function (t) { _bm = JSON.parse(t); return _bm; })
+      .catch(function () { _bm = null; return null; });
+  }
+  return _bmP;
+}
+function bmClose(name, day) {
+  const sr = _bm && _bm.series ? _bm.series[name] : null;
+  if (!sr || !sr.length || !day || day < sr[0][0]) return null;
+  let lo = 0, hi = sr.length - 1;
+  while (lo < hi) {                       // the last close on or before `day`
+    const mid = (lo + hi + 1) >> 1;
+    if (sr[mid][0] <= day) lo = mid; else hi = mid - 1;
+  }
+  return sr[lo][1];
+}
+// dates: 'YYYY-MM-DD' per point; startVal: the book's value at dates[0].
+function bmSeries(dates, startVal) {
+  if (!_bm || !_bm.series || !dates.length || startVal === null || startVal === undefined) return [];
+  return BM_LINES.map(function (ln) {
+    const base = bmClose(ln[0], dates[0]);
+    if (!base) return null;
+    return {vals: dates.map(function (d) { const c = bmClose(ln[0], d); return c ? startVal * c / base : null; }),
+            color: ln[2], label: (_bm.labels && _bm.labels[ln[0]]) || ln[1], dash: true, bench: true, key: ln[0]};
+  }).filter(Boolean);
+}
+function bmDD(vals) {
+  let peak = null;
+  return vals.map(function (v) {
+    if (v === null || v === undefined || isNaN(v)) return null;
+    if (peak === null || v > peak) peak = v;
+    return (v / peak - 1) * 100;
+  });
+}
+function bmStats(vals) {
+  const v = vals.filter(function (x) { return x !== null && x !== undefined && !isNaN(x); });
+  if (v.length < 1) return null;
+  const dd = bmDD(v);
+  return {ret: (v[v.length - 1] / v[0] - 1) * 100, worst: Math.min.apply(null, dd), now: dd[dd.length - 1]};
+}
+// The summary under a chart: return since start, worst fall, fall from peak
+// now, and each book's return gap to both indices (percentage points).
+function bmSummary(elId, books, benches, since) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const bs = benches.map(function (b) { return {b: b, st: bmStats(b.vals)}; });
+  const f = function (v) { return v === null || v === undefined || isNaN(v) ? '—' : (v > 0 ? '+' : '') + v.toFixed(2) + '%'; };
+  const fp = function (v) { return v === null || v === undefined || isNaN(v) ? '—' : (v > 0 ? '+' : '') + v.toFixed(2) + ' pts'; };
+  const head = '<tr><th>Line</th><th class="num">Return since ' + shEsc(since ? shDateShort(since) : 'start') + '</th>' +
+    '<th class="num">Worst fall</th><th class="num">Fall from peak now</th>' +
+    bs.map(function (x) { return '<th class="num">vs ' + shEsc(x.b.label.replace(' (price index)', '')) + '</th>'; }).join('') + '</tr>';
+  const row = function (label, st, isBench, color) {
+    return '<tr><td><i class="bm-dot" style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:' +
+      color + '"></i>' + shEsc(label) + '</td><td class="num" style="color:' + shPctCol(st && st.ret) + '">' + f(st && st.ret) +
+      '</td><td class="num">' + f(st && st.worst) + '</td><td class="num">' + f(st && st.now) + '</td>' +
+      bs.map(function (x) {
+        if (isBench || !st || !x.st) return '<td class="num">—</td>';
+        const gap = st.ret - x.st.ret;
+        return '<td class="num" style="color:' + shPctCol(gap) + '">' + fp(gap) + '</td>';
+      }).join('') + '</tr>';
+  };
+  el.innerHTML = '<table class="sh-tbl bm-tbl"><thead>' + head + '</thead><tbody>' +
+    books.map(function (b) { return row(b.label, bmStats(b.vals), false, b.color); }).join('') +
+    bs.map(function (x) { return row(x.b.label, x.st, true, x.b.color); }).join('') + '</tbody></table>' +
+    (benches.length ? '' : '<div class="bm-foot">Index lines not available yet (benchmarks.json is built at 9 pm).</div>');
+}
+// Dashed index lines on a hand-drawn chart (Performance, Swing shadow).
+function bmDraw(ctx, benches, xOf, yOf) {
+  benches.forEach(function (b) {
+    ctx.save(); ctx.setLineDash([5, 4]); ctx.strokeStyle = b.color; ctx.lineWidth = 1.5; ctx.beginPath();
+    let started = false;
+    b.vals.forEach(function (v, i) {
+      if (v === null || isNaN(v)) return;
+      if (!started) { ctx.moveTo(xOf(i), yOf(v)); started = true; } else { ctx.lineTo(xOf(i), yOf(v)); }
+    });
+    ctx.stroke(); ctx.restore();
+  });
+}
+function bmLegend(elId, benches) {
+  const el = document.getElementById(elId);
+  if (el) el.innerHTML = benches.map(function (b) {
+    return '<span><i style="background:' + b.color + '"></i>' + shEsc(b.label) + ' (dashed)</span>'; }).join('');
+}
+// The drawdown panel and summary under a hand-drawn ₹ chart.
+function bmPanel(prefix, dates, label, vals, color) {
+  const benches = bmSeries(dates, vals[0]);
+  const rows = dates.map(function (d) { return {date: d}; });
+  const pct = function (v) { return (+v).toFixed(1) + '%'; };
+  shLineChart(prefix + 'DDCanvas', prefix + 'DDX', prefix + 'DDLegend', rows,
+    [{vals: bmDD(vals), color: color, label: label}].concat(benches.map(function (b) {
+      return {vals: bmDD(b.vals), color: b.color, label: b.label, dash: true}; })), null, pct);
+  bmSummary(prefix + 'BmTbl', [{label: label, vals: vals, color: color}], benches, dates[0]);
+}
+
+// ─── Sector chips (shadow/sector_strength.json: the T10 ranking the basket uses) ──
+var _sec = null, _secRank = {}, _secN = 0;
+async function secLoad() {
+  try {
+    _sec = await shGet('sector_strength.json');
+    const names = Object.keys(_sec.sectors || {}).filter(function (k) { return _sec.sectors[k].t10_pct !== null && _sec.sectors[k].t10_pct !== undefined; });
+    names.sort(function (a, b) { return _sec.sectors[b].t10_pct - _sec.sectors[a].t10_pct; });
+    _secRank = {}; names.forEach(function (k, i) { _secRank[k] = i + 1; });
+    _secN = names.length;
+  } catch (e) { _sec = null; _secRank = {}; _secN = 0; }
+}
+function secOf(symbol, sector) {
+  if (sector) return sector;
+  const st = _sec && _sec.stocks ? _sec.stocks[String(symbol || '').toUpperCase()] : null;
+  return st ? st[0] : '';
+}
+function secChip(sector, symbol) {
+  const name = secOf(symbol, sector);
+  if (!name) return '<span class="sec-chip none">Sector unknown</span>';
+  const info = _sec && _sec.sectors ? _sec.sectors[name] : null;
+  const rank = _secRank[name];
+  const tier = info && info.tercile ? info.tercile : 'middle';
+  const tip = info ? 'T10 ' + (info.t10_pct > 0 ? '+' : '') + info.t10_pct + '% · ' + tier + ' third · as of ' + (_sec.as_of || '') : 'no T10 rank';
+  return '<span class="sec-chip ' + shEsc(tier) + '" title="' + shEsc(tip) + '">' + shEsc(name) +
+    (rank ? ' · #' + rank + '/' + _secN : '') + '</span>';
 }
 
 // ─── Step 3: Swing vs Blend vs live vs buy-and-hold (comparison.json) ──────
@@ -6376,7 +6466,8 @@ function shLineChart(canvasId, xId, legendId, rows, series, shade, fmt) {
     ctx.fillText(fmt(v), PAD.left - 6, yy);
   }
   series.forEach(function (sr) {
-    ctx.strokeStyle = sr.color; ctx.lineWidth = 2; ctx.beginPath();
+    ctx.strokeStyle = sr.color; ctx.lineWidth = sr.dash ? 1.5 : 2; ctx.beginPath();
+    ctx.setLineDash(sr.dash ? [5, 4] : []);
     let started = false;
     sr.vals.forEach(function (v, i) {
       if (v === null || isNaN(v)) return;
@@ -6384,6 +6475,7 @@ function shLineChart(canvasId, xId, legendId, rows, series, shade, fmt) {
     });
     ctx.stroke();
   });
+  ctx.setLineDash([]);
   const step = Math.max(1, Math.floor(n / 5));
   const idx = [];
   for (let i = 0; i < n; i += step) idx.push(i);
@@ -6418,20 +6510,26 @@ function renderShCharts(c) {
   if (sn) sn.textContent = 'Shaded: hold gate off (Midcap 150 below its 21-day average) — ' + nHoldOff + ' of ' + rows.length +
     ' days. New buys were off on ' + nBuysOff + ' of ' + rows.length + ' days (hold gate off, or the Super Indicator bearish).';
   const f100 = function (v) { return (+v).toFixed(1); };
-  shLineChart('shCmpCanvas1', 'shCmpX1', 'shCmpLegend1', rows, [
+  const cmpBooks = [
     {vals: idx('book_a'), color: col('--green', '#34d399'), label: 'Swing'},
     {vals: idx('book_b'), color: col('--accent', '#818cf8'), label: 'Blend'},
     {vals: idx('book_c'), color: col('--teal', '#3ddbd9'), label: 'Book C (30/70)'},
     {vals: idx('book_d'), color: col('--gold', '#ffd54f'), label: 'Book D (fund half only)'},
     {vals: idx('buy_hold'), color: col('--purple', '#b388ff'), label: 'Midcap 150 buy-and-hold'}
-  ].filter(function (sr) { return sr.vals.some(function (v) { return v !== null; }); }), shade, f100);
+  ].filter(function (sr) { return sr.vals.some(function (v) { return v !== null; }); });
+  const cmpBm = bmSeries(rows.map(function (r) { return r.date; }), 100);
+  shLineChart('shCmpCanvas1', 'shCmpX1', 'shCmpLegend1', rows, cmpBooks.concat(cmpBm), shade, f100);
+  shLineChart('shCmpDDCanvas', 'shCmpDDX', 'shCmpDDLegend', rows, cmpBooks.concat(cmpBm).map(function (sr) {
+    return {vals: bmDD(sr.vals), color: sr.color, label: sr.label, dash: sr.dash}; }), null, function (v) { return (+v).toFixed(1) + '%'; });
+  bmSummary('shCmpBmTbl', cmpBooks, cmpBm, rows.length ? rows[0].date : null);
   const a = idx('book_a').map(function (v) { return v === null ? null : v - 100; });
   const live = rows.map(function (r) { return (r.live_pct === null || r.live_pct === undefined) ? null : r.live_pct; });
   const fp = function (v) { return (v > 0 ? '+' : '') + (+v).toFixed(1) + '%'; };
   shLineChart('shCmpCanvas2', 'shCmpX2', 'shCmpLegend2', rows, [
     {vals: live, color: col('--amber', '#fbbf24'), label: 'Live bot'},
     {vals: a, color: col('--green', '#34d399'), label: 'Swing'}
-  ], null, fp);
+  ].concat(cmpBm.map(function (b) {
+    return {vals: b.vals.map(function (v) { return v === null ? null : v - 100; }), color: b.color, label: b.label, dash: true}; })), null, fp);
   renderShTestCharts(c);
 }
 
@@ -6474,10 +6572,12 @@ function renderShTestCharts(c) {
     {vals: idx('buy_hold'), color: col('--muted', '#94a3b8'), label: 'Midcap 150 buy-and-hold'}
   ].filter(function (sr) { return sr.vals.some(function (v) { return v !== null; }); });
   if (!rows.length || !series.length) return;
+  const testBm = bmSeries(rows.map(function (r) { return r.date; }), 100);
   const shade = rows.map(function (r) { return r.gate_above_21_day_average === false; });
-  shLineChart('shSSCanvas1', 'shSSX1', 'shSSLegend1', rows, series, shade, function (v) { return (+v).toFixed(1); });
-  shLineChart('shSSCanvas2', 'shSSX2', 'shSSLegend2', rows, series.map(function (sr) {
-    return {vals: dd(sr.vals), color: sr.color, label: sr.label}; }), null, function (v) { return (+v).toFixed(1) + '%'; });
+  shLineChart('shSSCanvas1', 'shSSX1', 'shSSLegend1', rows, series.concat(testBm), shade, function (v) { return (+v).toFixed(1); });
+  shLineChart('shSSCanvas2', 'shSSX2', 'shSSLegend2', rows, series.concat(testBm).map(function (sr) {
+    return {vals: dd(sr.vals), color: sr.color, label: sr.label, dash: sr.dash}; }), null, function (v) { return (+v).toFixed(1) + '%'; });
+  bmSummary('shSSBmTbl', series, testBm, rows[0].date);
 }
 
 function renderShBookB(c) {
@@ -6765,13 +6865,14 @@ function ssHoldRows() {
     const px = q ? q.price : h.price_now;
     const sh = (h.shares === null || h.shares === undefined) ? null : +h.shares;
     const noQuote = String(h.price_time_ist || '').indexOf('no quote') === 0;
-    return {symbol: h.symbol, sector: h.sector, shares: sh, entry_date: h.entry_date, entry_price: h.entry_price, px: px,
+    return {symbol: h.symbol, sector: h.sector, mcap: (h.mcap_cr === null || h.mcap_cr === undefined) ? null : +h.mcap_cr,
+            shares: sh, entry_date: h.entry_date, entry_price: h.entry_price, px: px,
             pnl: sh === null ? null : sh * (px - h.entry_price), pct: (px / h.entry_price - 1) * 100,
             value: sh === null ? h.value * px / h.price_now : sh * px, days: h.days_held,
             tag: q ? 'live, delayed' : (noQuote ? 'entry price' : 'run ' + runT), live: !!q};
   });
   const tot = rows.reduce(function (a, r) { return a + r.value; }, 0);
-  rows.forEach(function (r) { r.share = tot ? r.value / tot * 100 : null; });
+  rows.forEach(function (r) { r.share = tot ? r.value / tot * 100 : null; r.note = invNote(r.symbol, r.pct); });
   return rows;
 }
 function renderSSHold() {
@@ -6808,7 +6909,8 @@ function renderSSHold() {
   });
   const cols = [['symbol', 'Stock', 0], ['sector', 'Sector', 0], ['shares', 'Quantity', 1], ['entry_date', 'Entry date', 0],
                 ['entry_price', 'Entry price', 1], ['px', 'Price now', 1], ['pnl', 'Gain or loss (₹)', 1], ['pct', 'Gain or loss (%)', 1],
-                ['value', 'Value now', 1], ['share', '% of the basket', 1], ['days', 'Days held', 1]];
+                ['value', 'Value now', 1], ['share', '% of the basket', 1], ['days', 'Days held', 1],
+                ['mcap', 'Market cap (₹ Cr, AMFI)', 1], ['note', 'Note', 0]];
   const sumPnl = rows.reduce(function (a, r) { return a + (r.pnl || 0); }, 0);
   const sumEntry = rows.reduce(function (a, r) { return a + (r.shares || 0) * r.entry_price; }, 0);
   const sumVal = rows.reduce(function (a, r) { return a + r.value; }, 0);
@@ -6816,7 +6918,7 @@ function renderSSHold() {
   el.innerHTML = '<table class="sh-tbl ss-hold"><thead><tr>' + cols.map(function (cl) {
     return '<th class="ss-sort' + (cl[2] ? ' num' : '') + (cl[0] === k ? ' ss-on' : '') + '" data-k="' + cl[0] + '">' + cl[1] + '</th>'; }).join('') +
     '</tr></thead><tbody>' + rows.map(function (r) {
-      return '<tr><td><b>' + shEsc(r.symbol) + '</b></td><td>' + shEsc(r.sector) + '</td>' +
+      return '<tr><td><b>' + shEsc(r.symbol) + '</b></td><td>' + secChip(r.sector, r.symbol) + '</td>' +
         '<td class="num">' + (r.shares === null ? '—' : r.shares.toFixed(2)) + '</td><td>' + shEsc(r.entry_date) + '</td>' +
         '<td class="num">' + shInr(r.entry_price) + '</td>' +
         '<td class="num">₹' + r.px.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2}) +
@@ -6824,12 +6926,14 @@ function renderSSHold() {
         '<td class="num" style="color:' + shPctCol(r.pnl) + '">' + ssRs(r.pnl) + '</td>' +
         '<td class="num" style="color:' + shPctCol(r.pct) + '">' + ssSigned(r.pct, 2) + '</td>' +
         '<td class="num">' + shInr(r.value) + '</td><td class="num">' + (r.share === null ? '—' : r.share.toFixed(1) + '%') + '</td>' +
-        '<td class="num">' + r.days + '</td></tr>'; }).join('') +
+        '<td class="num">' + r.days + '</td>' +
+        '<td class="num">' + (r.mcap === null ? '—' : Math.round(r.mcap).toLocaleString('en-IN')) + '</td>' +
+        '<td class="sh-reason">' + shEsc(r.note || '') + '</td></tr>'; }).join('') +
     '<tr class="ss-total"><td><b>Total</b></td><td>' + rows.length + ' names</td><td></td><td></td>' +
       '<td class="num">' + (hasQty ? shInr(sumEntry) : ssNR()) + '</td><td></td>' +
       '<td class="num" style="color:' + shPctCol(sumPnl) + '"><b>' + (hasQty ? ssRs(sumPnl) : ssNR()) + '</b></td>' +
       '<td class="num" style="color:' + shPctCol(sumPnl) + '">' + (hasQty ? ssSigned(sumEntry ? sumPnl / sumEntry * 100 : null, 2) : '') + '</td>' +
-      '<td class="num"><b>' + shInr(sumVal) + '</b></td><td class="num">100%</td><td></td></tr>' +
+      '<td class="num"><b>' + shInr(sumVal) + '</b></td><td class="num">100%</td><td></td><td></td><td></td></tr>' +
     '</tbody></table>';
   const ths = el.querySelectorAll('th.ss-sort');
   for (let i = 0; i < ths.length; i++) {
@@ -6862,7 +6966,7 @@ function renderSSHold() {
 async function ssFetchLive() {
   const b = ssBook();
   if (!b || !(b.holdings || []).length) return;
-  const panel = document.getElementById('tab-ss');
+  const panel = document.getElementById('tab-investment');   // the holdings table lives there (28 Nov 2026)
   if (document.hidden || !panel || !panel.classList.contains('active')) return;
   if (!ssMarketOpen()) {                           // outside market hours: no calls, run prices
     if (Object.keys(_ssLive).length) { _ssLive = {}; _ssLiveAt = null; renderSSHold(); }
@@ -6915,15 +7019,17 @@ function renderSSLive() {
                  ['buy_hold', 'Midcap 150 buy-and-hold (MID150BEES)', '--purple', '#b388ff']];
   const series = lines.map(function (ln) { return {key: ln[0], vals: ssIdx(rows, ln[0]), color: ssCol(ln[2], ln[3]), label: ln[1]}; })
     .filter(function (s) { return s.vals.some(function (v) { return v !== null; }); });
+  const liveBm = bmSeries(rows.map(function (r) { return r.date; }), 100);
   const tbl = document.getElementById('ssLiveTbl');
   if (rows.length < 2 || !series.length) {
     tbl.innerHTML = '<div class="sh-note">One day so far: the chart starts once there are two runs.</div>';
     return;
   }
   const shade = rows.map(function (r) { return r.gate_above_21_day_average === false; });
-  shLineChart('ssLiveCanvas1', 'ssLiveX1', 'ssLiveLegend1', rows, series, shade, function (v) { return (+v).toFixed(1); });
-  shLineChart('ssLiveCanvas2', 'ssLiveX2', 'ssLiveLegend2', rows, series.map(function (s) {
-    return {vals: ssDD(s.vals), color: s.color, label: s.label}; }), null, function (v) { return (+v).toFixed(1) + '%'; });
+  shLineChart('ssLiveCanvas1', 'ssLiveX1', 'ssLiveLegend1', rows, series.concat(liveBm), shade, function (v) { return (+v).toFixed(1); });
+  shLineChart('ssLiveCanvas2', 'ssLiveX2', 'ssLiveLegend2', rows, series.concat(liveBm).map(function (s) {
+    return {vals: ssDD(s.vals), color: s.color, label: s.label, dash: s.dash}; }), null, function (v) { return (+v).toFixed(1) + '%'; });
+  bmSummary('ssLiveBmTbl', series, liveBm, rows[0].date);
   tbl.innerHTML = '<table class="sh-tbl"><thead><tr><th>Line</th><th class="num">Return since ' + shDateShort(rows[0].date) +
     '</th><th class="num">Worst fall</th><th class="num">Today</th></tr></thead><tbody>' + series.map(function (s) {
       const v = s.vals, n = v.length, d = ssDD(v);
@@ -6948,7 +7054,8 @@ function ssToggleWindow() {
 const SS_HIST_LINES = [['mix_fuller', '50/50 mix, fuller labels — realistic: no sector-label hindsight', '--green', '#34d399'],
                        ['mix_today', '50/50 mix, today\'s labels — the live book\'s labels, with some hindsight', '--teal', '#3ddbd9'],
                        ['v3', 'Plain v3', '--blue', '#60a5fa'],
-                       ['tri', 'Midcap 150 TRI (before exit tax)', '--purple', '#b388ff']];
+                       ['tri', 'Midcap 150 TRI (before exit tax)', '--pink-x', '#f472b6'],
+                       ['tri_sc250', 'Smallcap 250 TRI (before exit tax)', '--cyan-x', '#22d3ee']];
 function renderSSHistory() {
   const body = document.getElementById('ssHistBody'), miss = document.getElementById('ssHistMissing');
   const btn = document.getElementById('ssWinBtn');
@@ -6973,13 +7080,14 @@ function renderSSHistory() {
     ((w.lines[ln[0]] || {}).weekly || []).forEach(function (p) { m[p[0]] = p[1]; });
     let lastV = null;
     const vals = rows.map(function (r) { if (m[r.date] !== undefined) lastV = m[r.date]; return lastV; });
-    return {vals: vals, color: ssCol(ln[2], ln[3]), label: ln[1]};
-  });
+    return {key: ln[0], vals: vals, color: ssCol(ln[2], ln[3]), label: ln[1], dash: ln[0].indexOf('tri') === 0};
+  }).filter(function (sr) { return sr.vals.some(function (v) { return v !== null; }); });
   shLineChart('ssHistCanvas1', 'ssHistX1', 'ssHistLegend1', rows, series.map(function (s) {
-    return {vals: s.vals.map(function (v) { return v === null ? null : Math.log10(v); }), color: s.color, label: s.label}; }),
+    return {vals: s.vals.map(function (v) { return v === null ? null : Math.log10(v); }), color: s.color, label: s.label, dash: s.dash}; }),
     null, function (v) { return ssInrShort(Math.pow(10, v)); });
   shLineChart('ssHistCanvas2', 'ssHistX2', 'ssHistLegend2', rows, series.map(function (s) {
-    return {vals: ssDD(s.vals), color: s.color, label: s.label}; }), null, function (v) { return (+v).toFixed(0) + '%'; });
+    return {vals: ssDD(s.vals), color: s.color, label: s.label, dash: s.dash}; }), null, function (v) { return (+v).toFixed(0) + '%'; });
+  bmSummary('ssHistBmTbl', series.filter(function (sr) { return !sr.dash; }), series.filter(function (sr) { return sr.dash; }), rows[0].date);
   ssYearAxis('ssHistX1', rows);
   ssYearAxis('ssHistX2', rows);
   // yearly table
@@ -6989,16 +7097,19 @@ function renderSSHistory() {
   function cell(k, y) { const v = (Y[k] || {})[y]; return '<td class="num" style="color:' + shPctCol(v) + '">' + ssSigned(v) + '</td>'; }
   function beat(k, y) { const v = (Y[k] || {})[y], t = (Y.tri || {})[y]; return (v === undefined || t === undefined) ? '—' : (v > t ? 'yes' : 'no'); }
   document.getElementById('ssYearly').innerHTML = '<table class="sh-tbl"><thead><tr><th>Year</th><th class="num">50/50 fuller</th>' +
-    '<th class="num">50/50 today\'s</th><th class="num">Plain v3</th><th class="num">Midcap 150 TRI</th><th>Beat the index?</th></tr></thead><tbody>' +
+    '<th class="num">50/50 today\'s</th><th class="num">Plain v3</th><th class="num">Midcap 150 TRI</th>' +
+    (Y.tri_sc250 ? '<th class="num">Smallcap 250 TRI</th>' : '') + '<th>Beat the index?</th></tr></thead><tbody>' +
     years.map(function (y) {
       const part = y === yr0 ? ' <span class="sh-reason">(from ' + shDateShort(w.from) + ')</span>' : (y === yr1 && w.to.slice(5) !== '12-31' ?
         ' <span class="sh-reason">(to ' + shDateShort(w.to) + ')</span>' : '');
       return '<tr><td>' + y + part + '</td>' + cell('mix_fuller', y) + cell('mix_today', y) + cell('v3', y) + cell('tri', y) +
+        (Y.tri_sc250 ? cell('tri_sc250', y) : '') +
         '<td>fuller ' + beat('mix_fuller', y) + ' · today\'s ' + beat('mix_today', y) + '</td></tr>'; }).join('') + '</tbody></table>';
   // summary table
   const S = w.summary || {};
   const order = [['mix_fuller', '50/50 mix, fuller labels'], ['mix_today', '50/50 mix, today\'s labels'], ['v3', 'Plain v3'],
-                 ['tri', 'Midcap 150 TRI, before exit tax'], ['tri_after_tax', 'Midcap 150 TRI, after exit tax']];
+                 ['tri', 'Midcap 150 TRI, before exit tax'], ['tri_after_tax', 'Midcap 150 TRI, after exit tax'],
+                 ['tri_sc250', 'Smallcap 250 TRI, before exit tax']];
   document.getElementById('ssSummary').innerHTML = '<table class="sh-tbl"><thead><tr><th>Book</th><th class="num">Return a year</th>' +
     '<th class="num">Worst fall</th><th class="num">Years beating the index</th><th class="num">Rolling 3-year periods beating the index</th></tr></thead><tbody>' +
     order.filter(function (o) { return S[o[0]]; }).map(function (o) {
@@ -7152,18 +7263,129 @@ function renderSSRebuilds() {
       'No rebuild yet: the basket is in cash until ' + shEsc(b.next_rebuild || 'the next month-end') + '.') + '</div>';
 }
 
+
+// ─── Investment tab: the Small-strong basket (shadow comparison.json) ─────
+function invNote(sym, pct) {
+  const b = ssBook() || {};
+  const R = b.rebuilds && b.rebuilds.length ? b.rebuilds[b.rebuilds.length - 1] : b.last_month_end;
+  if (!R) return '';
+  if ((R.trimmed || []).indexOf(sym) >= 0) return 'trimmed to 8% on ' + shDateShort(R.date);
+  if ((R.kept || []).indexOf(sym) >= 0) return (pct > 0 ? 'kept winner' : 'kept') + ' at the ' + shDateShort(R.date) + ' rebuild';
+  return '';
+}
+function renderInvTab(c) {
+  const empty = document.getElementById('invEmpty'), body = document.getElementById('invBody');
+  if (!empty || !body) return;
+  const b = c && c.test_books ? c.test_books.small_strong : null;
+  if (!b || !b.go_live) {
+    empty.textContent = 'No basket data yet: it starts with the shadow\'s first Small-strong run.';
+    empty.style.display = 'block'; body.style.display = 'none'; return;
+  }
+  empty.style.display = 'none'; body.style.display = 'block';
+  const bk = b.basket || {}, st = c.status || {}, lm = b.last_month_end || {};
+  const gateNow = st.gate_above_21_day_average;
+  document.getElementById('invStatus').innerHTML =
+    shCard('Hold gate now', gateNow === true ? 'ON' : gateNow === false ? 'OFF' : '—',
+      'Midcap 150 ' + (gateNow === false ? 'below' : 'above') + ' its 21-day average at the ' + shEsc(st.date || '') + ' run' +
+      (lm.date ? ' · last month-end decision ' + (lm.gate ? 'ON' : 'OFF') + ' (' + shDateShort(lm.date) + ')' : ''),
+      gateNow === false ? 'red' : 'green') +
+    shCard('Invested', bk.pct_invested === undefined || bk.pct_invested === null ? '—' : (+bk.pct_invested).toFixed(1) + '%',
+      (bk.names || 0) + ' names · cash ' + shInr(bk.cash), 'blue') +
+    shCard('Basket value', shInr(bk.value), 'return ' + ssSigned(bk.return_pct, 2) + ' since ' + shDateShort(b.go_live) +
+      ' · worst fall ' + ssSigned(bk.worst_fall_pct, 2), 'amber') +
+    shCard('Rebuilds', lm.date ? shDateShort(lm.date) : '—', 'last month-end rebuild · next ' +
+      (b.next_rebuild ? shDateShort(b.next_rebuild) : '—'), 'purple');
+  renderInvSectors();
+  renderInvChart();
+  renderInvCands();
+}
+function renderInvSectors() {
+  const b = ssBook() || {};
+  const H = b.holdings || [];
+  const el = document.getElementById('invSectors');
+  if (!el) return;
+  if (!H.length) { el.innerHTML = '<div class="sh-note">No holdings.</div>'; return; }
+  const tot = H.reduce(function (a, h) { return a + (h.value || 0); }, 0);
+  const by = {};
+  H.forEach(function (h) {
+    const k = secOf(h.symbol, h.sector) || '';
+    by[k] = by[k] || {n: 0, v: 0, sym: h.symbol, sector: h.sector};
+    by[k].n += 1; by[k].v += h.value || 0;
+  });
+  const keys = Object.keys(by).sort(function (a, c2) { return by[c2].v - by[a].v; });
+  el.innerHTML = '<div class="inv-sectors">' + keys.map(function (k) {
+    const x = by[k];
+    return '<span class="inv-sec">' + secChip(k, x.sym) + '<span>' + x.n + ' name' + (x.n === 1 ? '' : 's') + ' · ' +
+      (tot ? (x.v / tot * 100).toFixed(1) : '—') + '%</span><span class="cap' + (x.n >= 6 ? ' full' : '') + '">' + x.n + '/6</span></span>';
+  }).join('') + '</div><div class="inv-note">At most 6 names per sector (the locked rule, research/wide_small_strong/SPEC.md); ' +
+    'a sector at 6/6 takes no new names at the next rebuild.</div>';
+}
+function invRows(c) {
+  const b = c && c.test_books ? c.test_books.small_strong : null;
+  if (!b) return [];
+  return (c.daily || []).filter(function (r) { return r.date >= b.go_live && r.ss_basket !== null && r.ss_basket !== undefined; });
+}
+function renderInvChart() {
+  const c = _ssComp;
+  const rows = invRows(c);
+  const tbl = document.getElementById('invBkTbl');
+  if (!tbl) return;
+  if (rows.length < 2) { tbl.innerHTML = '<div class="sh-note">One day so far: the chart starts once there are two runs.</div>'; return; }
+  // comparison.json's daily ss_basket is the basket scaled to Rs 13.5 lakh at go-live (for the
+  // shadow's comparison charts); scale it to the basket's own rupees (its latest value)
+  const raw = rows.map(function (r) { return r.ss_basket; });
+  const bv = ((ssBook() || {}).basket || {}).value;
+  const kb = bv && raw[raw.length - 1] ? bv / raw[raw.length - 1] : 1;
+  const vals = raw.map(function (v) { return v * kb; });
+  const dates = rows.map(function (r) { return r.date; });
+  const benches = bmSeries(dates, vals[0]);
+  const css = getComputedStyle(document.documentElement);
+  const col = css.getPropertyValue('--amber').trim() || '#fbbf24';
+  const lakh = function (v) { return '₹' + (v / 100000).toFixed(2) + 'L'; };
+  const series = [{vals: vals, color: col, label: 'Small-strong basket'}].concat(benches);
+  const shade = rows.map(function (r) { return r.gate_above_21_day_average === false; });
+  shLineChart('invBkCanvas1', 'invBkX1', 'invBkLegend1', rows, series, shade, lakh);
+  shLineChart('invBkCanvas2', 'invBkX2', 'invBkLegend2', rows, series.map(function (sr) {
+    return {vals: bmDD(sr.vals), color: sr.color, label: sr.label, dash: sr.dash}; }), null, function (v) { return (+v).toFixed(1) + '%'; });
+  bmSummary('invBkTbl', [{label: 'Small-strong basket', vals: vals, color: col}], benches, dates[0]);
+}
+function renderInvCands() {
+  const b = ssBook() || {};
+  const el = document.getElementById('invCands');
+  if (!el) return;
+  const name = function (x) { return Array.isArray(x) ? x[0] : (x && x.symbol) || x; };
+  const pend = b.pending_list || {};
+  const buys = (pend.buy || []).map(name), sells = (pend.sell || []).map(name), trims = (pend.trim || []).map(name);
+  const watch = (b.watch_lines_detail && b.watch_lines_detail.length ? b.watch_lines_detail : (b.watch_lines || [])).map(name);
+  const line = function (label, xs) {
+    return xs.length ? '<tr><td>' + label + '</td><td>' + xs.map(function (s) {
+      return '<b>' + shEsc(s) + '</b> ' + secChip('', s); }).join(' &nbsp; ') + '</td></tr>' : '';
+  };
+  const html = line('Buy at the next open', buys) + line('Sell at the next open', sells) + line('Trim at the next open', trims) +
+    line('Watch', watch);
+  el.innerHTML = html ? '<table class="sh-tbl"><tbody>' + html + '</tbody></table>'
+    : '<div class="sh-note">No candidates listed now. The next list comes with the ' + shEsc(b.next_rebuild ? shDateShort(b.next_rebuild) : 'next month-end') +
+      ' rebuild decision (2:40 pm run).</div>';
+}
+
 // 2.6 closed basket trades
 function renderSSClosed() {
-  const C = ssBook().closed_trades || [];
-  document.getElementById('ssClosed').innerHTML = C.length ? '<table class="sh-tbl"><thead><tr><th>Stock</th><th>Entry</th><th>Exit</th>' +
+  const b = ssBook(), C = b.closed_trades || [];
+  const realised = C.reduce(function (a, t) { return a + (t.pnl_inr || 0); }, 0);
+  const tot = (b.basket_totals || {}).realised_inr;
+  document.getElementById('ssClosed').innerHTML = (C.length ? '<div class="sh-note"><b>Total realised P&amp;L: ' + ssRs(realised) +
+    '</b> on ' + C.length + ' closed trade' + (C.length === 1 ? '' : 's') +
+    (tot !== undefined && tot !== null && Math.abs(tot - realised) > 1 ? ' · ' + ssRs(tot) + ' with trims of names still held' : '') +
+    '</div>' : '') + (C.length ? '<table class="sh-tbl"><thead><tr><th>Stock</th><th>Sector</th><th>Entry</th><th>Exit</th>' +
     '<th class="num">Days</th><th class="num">Gain or loss (₹)</th><th class="num">Gain or loss (%)</th><th>Reason</th></tr></thead><tbody>' +
     C.slice().reverse().map(function (t) {
-      return '<tr><td><b>' + shEsc(t.symbol) + '</b></td><td>' + shEsc(t.entry_date) + ' at ' + shInr(t.entry_price) + '</td><td>' +
+      return '<tr><td><b>' + shEsc(t.symbol) + '</b></td><td>' + secChip(t.sector, t.symbol) + '</td><td>' +
+        shEsc(t.entry_date) + ' at ' + shInr(t.entry_price) + '</td><td>' +
         shEsc(t.exit_date) + ' at ' + shInr(t.exit_price) + '</td><td class="num">' + t.days + '</td><td class="num" style="color:' +
         shPctCol(t.pnl_inr) + '">' + ssRs(t.pnl_inr) + '</td><td class="num" style="color:' + shPctCol(t.pnl_pct) + '">' + ssSigned(t.pnl_pct, 2) +
         '</td><td class="sh-reason">' + shEsc(t.reason) + '</td></tr>'; }).join('') + '</tbody></table>' +
     '<div class="sh-note">Gain or loss after charges and slippage on both sides.</div>'
-    : '<div class="sh-note">No basket sales yet.</div>';
+    : '<div class="sh-note">No closed trades yet: total realised P&amp;L ' + ssRs(tot || 0) + ' (trims of names still held).</div>');
 }
 
 function redrawSSCharts() {
@@ -7862,7 +8084,10 @@ function drawShEquityChart(period) {
   const vals = rows.map(s => s.total_equity);
   let run = -Infinity;
   const peaks = rows.map(s => (run = Math.max(run, s.total_equity)));
-  const minV = Math.min(...vals, _shCapital), maxV = Math.max(...vals, ...peaks, _shCapital);
+  const shDates = rows.map(s => String(s.timestamp).slice(0, 10));
+  const shBm = bmSeries(shDates, vals[0]);
+  const shBmVals = [].concat.apply([], shBm.map(b => b.vals.filter(v => v !== null)));
+  const minV = Math.min(...vals, _shCapital, ...shBmVals), maxV = Math.max(...vals, ...peaks, _shCapital, ...shBmVals);
   const rng = Math.max(maxV - minV, 1), lo = minV - rng * 0.08, hi = maxV + rng * 0.08;
   const xOf = i => PAD.left + (rows.length > 1 ? (i / (rows.length - 1)) * cW : cW / 2);
   const yOf = v => PAD.top + (1 - (v - lo) / (hi - lo)) * cH;
@@ -7899,6 +8124,9 @@ function drawShEquityChart(period) {
   ctx.moveTo(xOf(0), yOf(vals[0]));
   rows.forEach((s, i) => { if (i) ctx.lineTo(xOf(i), yOf(vals[i])); });
   ctx.stroke();
+  bmDraw(ctx, shBm, xOf, yOf);
+  bmLegend('shEqBmLegend', shBm);
+  bmPanel('shEq', shDates, 'Swing shadow', vals, col);
   const lx = xOf(rows.length - 1), ly = yOf(vals[vals.length - 1]);
   ctx.beginPath(); ctx.arc(lx, ly, 7, 0, Math.PI * 2); ctx.fillStyle = col + '33'; ctx.fill();
   ctx.beginPath(); ctx.arc(lx, ly, 3.5, 0, Math.PI * 2); ctx.fillStyle = col; ctx.fill();
@@ -8083,330 +8311,6 @@ function renderShadowGates(days) {
       </div>
     </div>`).join('')
     : '<div class="empty-state">No gate history yet</div>';
-}
-
-// ─── INVESTMENT EQUITY CURVE (backend-driven, investment_equity_history.json) ──
-// Retired the old client-side localStorage Base-100 NAV reconstruction (was
-// rebuilding an unrealised-only NAV in the browser every page load, with no
-// persistence beyond the device — see conversation notes). Mirrors the
-// intraday Performance tab's loadEquity()/renderDrawdownKpis()/
-// drawEquityChart() pattern, kept as SEPARATE functions (own element IDs,
-// own module state) rather than touching the working intraday code — no
-// shared function was modified.
-//
-// Snapshot field names differ from equity_curve.json by design (this repo's
-// investment_index.py writes date/realized_pnl_cumulative_inr/
-// unrealized_pnl_inr, not timestamp/realized_pnl/unrealized_pnl) — mapped
-// explicitly below rather than renaming either schema to match the other.
-let _invEqSnapshots = [];
-let _invEqPeriod    = '1M';
-
-async function loadInvEquity() {
-  const loadingEl = document.getElementById('invEqLoading');
-  const emptyEl   = document.getElementById('invEqEmpty');
-  const canvas    = document.getElementById('invEquityCanvas');
-  try {
-    const text = await ghFetch('investment_equity_history.json');
-    const data = JSON.parse(text);
-    const raw  = Array.isArray(data) ? data : (data.snapshots || []);
-    _invEqSnapshots = raw.slice().sort((a,b) => new Date(a.date) - new Date(b.date));
-    if (!_invEqSnapshots.length) throw new Error('empty');
-    canvas.style.display = 'block'; emptyEl.style.display = 'none'; loadingEl.style.display = 'none';
-    renderInvEquityFreshness(_invEqSnapshots[_invEqSnapshots.length - 1]);
-    renderInvDrawdownKpis(_invEqSnapshots);
-    drawInvEquityChart(_invEqSnapshots, _invEqPeriod);
-  } catch (e) {
-    canvas.style.display = 'none'; loadingEl.style.display = 'none'; emptyEl.style.display = 'block';
-    document.getElementById('invEqFreshBadge').style.display = 'none';
-    document.getElementById('invEqXLabels').innerHTML = '';
-    document.getElementById('invEqCurrentVal').textContent = '—';
-    document.getElementById('invEqCurrentChange').textContent = '';
-    document.getElementById('invEqSinceInception').textContent = '';
-    ['invDdCurrentInr','invDdCurrentPctBig','invDdMaxInr','invDdMaxPct'].forEach(id => document.getElementById(id).textContent = '—');
-    document.getElementById('invDdCurrentPct').textContent = '—';
-    document.getElementById('invDdMaxDate').textContent = '—';
-  }
-}
-
-function renderInvEquityFreshness(latest) {
-  const badge = document.getElementById('invEqFreshBadge');
-  const ts = new Date(latest.date);
-  const ageDays = (Date.now() - ts.getTime()) / 86400000;
-  // Rebalances run alternate Fridays (~14-day cadence) — generous 16-day
-  // window covers a normal cycle plus a holiday/weekend shift, unlike
-  // intraday's hourly freshness check which doesn't apply to this cadence.
-  const isFresh = ageDays < 16;
-  badge.style.display = 'inline-flex';
-  badge.className = 'freshness-badge ' + (isFresh ? 'fresh' : 'stale');
-  const label = ts.toLocaleDateString('en-IN', {day:'numeric', month:'short'});
-  badge.innerHTML = `<span class="dot"></span>${isFresh ? 'Fresh' : 'Stale'} · ${label}`;
-}
-
-// Drawdown always computed on the FULL all-time series, never period-filtered —
-// same principle as the intraday equity curve (max DD must reflect the true
-// all-time high, not just whatever's visible in the current chart window).
-function computeInvDrawdownStats(snapshots) {
-  let peak = -Infinity, maxDD_inr = 0, maxDD_pct = 0, maxDD_date = null;
-  snapshots.forEach(s => {
-    if (s.total_equity > peak) peak = s.total_equity;
-    const dd_inr = peak - s.total_equity;
-    const dd_pct = peak > 0 ? (dd_inr / peak * 100) : 0;
-    if (dd_pct > maxDD_pct) { maxDD_pct = dd_pct; maxDD_inr = dd_inr; maxDD_date = s.date; }
-  });
-  const latest = snapshots[snapshots.length - 1];
-  let runningPeak = -Infinity;
-  snapshots.forEach(s => { if (s.total_equity > runningPeak) runningPeak = s.total_equity; });
-  const curDD_inr = Math.max(0, runningPeak - latest.total_equity);
-  const curDD_pct = runningPeak > 0 ? (curDD_inr / runningPeak * 100) : 0;
-  return { curDD_inr, curDD_pct, maxDD_inr, maxDD_pct, maxDD_date };
-}
-
-function renderInvDrawdownKpis(snapshots) {
-  const s = computeInvDrawdownStats(snapshots);
-  document.getElementById('invDdCurrentInr').textContent    = '₹' + Math.round(s.curDD_inr).toLocaleString('en-IN');
-  document.getElementById('invDdCurrentPct').textContent    = s.curDD_pct.toFixed(2) + '% from peak';
-  document.getElementById('invDdCurrentPctBig').textContent = s.curDD_pct.toFixed(2) + '%';
-  document.getElementById('invDdMaxInr').textContent        = '₹' + Math.round(s.maxDD_inr).toLocaleString('en-IN');
-  document.getElementById('invDdMaxPct').textContent        = s.maxDD_pct.toFixed(2) + '%';
-  document.getElementById('invDdMaxDate').textContent       = s.maxDD_date
-    ? 'on ' + new Date(s.maxDD_date).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'})
-    : '—';
-
-  const latest = snapshots[snapshots.length - 1];
-  document.getElementById('invEqCurrentVal').textContent = '₹' + Math.round(latest.total_equity).toLocaleString('en-IN');
-  // Since-inception return uses the backend's own total_return_pct (against
-  // BASE_CAPITAL), distinct from the period-filtered change shown below it —
-  // "since inception" doesn't move when you switch the chart period.
-  if (typeof latest.total_return_pct === 'number') {
-    const incClr = latest.total_return_pct >= 0 ? 'var(--green)' : 'var(--red)';
-    document.getElementById('invEqSinceInception').innerHTML =
-      `Since inception: <span style="color:${incClr};font-weight:700">${latest.total_return_pct >= 0 ? '+' : ''}${latest.total_return_pct.toFixed(2)}%</span>` +
-      (typeof latest.base_capital === 'number' ? ` on ₹${(latest.base_capital/100000).toFixed(1)}L base` : '');
-  }
-}
-
-function filterInvEqByPeriod(snapshots, period) {
-  if (snapshots.length < 2 || period === 'ALL') return snapshots;
-  const days = {'1M':30, '3M':90, '6M':180}[period] || 30;
-  const cutoff = new Date(Date.now() - days * 86400000);
-  const f = snapshots.filter(s => new Date(s.date) >= cutoff);
-  return f.length >= 2 ? f : snapshots.slice(-2);
-}
-
-function setInvEqPeriod(period, btn) {
-  _invEqPeriod = period;
-  document.querySelectorAll('#invEqPeriodGroup .inv-period-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  drawInvEquityChart(_invEqSnapshots, period);
-}
-
-function drawInvEquityChart(snapshots, period) {
-  const canvas = document.getElementById('invEquityCanvas');
-  if (!canvas || !snapshots.length) return;
-  const filtered = filterInvEqByPeriod(snapshots, period);
-  const { ctx, W, H } = sizeCanvas(canvas, 200);
-
-  const PAD = {top:16, right:10, bottom:6, left:56};
-  const cW = W - PAD.left - PAD.right;
-  const cH = H - PAD.top - PAD.bottom;
-  const vals = filtered.map(s => s.total_equity);
-  let runningPeak = -Infinity;
-  const peaks = filtered.map(s => { if (s.total_equity > runningPeak) runningPeak = s.total_equity; return runningPeak; });
-  const minV = Math.min(...vals), maxV = Math.max(...vals, ...peaks);
-  const rng = Math.max(maxV - minV, 1);
-  const lo = minV - rng*0.08, hi = maxV + rng*0.08;
-  const xOf = i => PAD.left + (filtered.length > 1 ? (i/(filtered.length-1)) * cW : cW/2);
-  const yOf = v => PAD.top + (1 - (v-lo)/(hi-lo)) * cH;
-
-  // Grid
-  for (let g=0; g<=4; g++) {
-    const y = PAD.top + (g/4)*cH, val = hi - (g/4)*(hi-lo);
-    ctx.strokeStyle = themeColor('border'); ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(PAD.left,y); ctx.lineTo(W-PAD.right,y); ctx.stroke();
-    ctx.fillStyle = themeColor('muted'); ctx.font = '9px monospace'; ctx.textAlign = 'right';
-    ctx.fillText('₹' + (val/100000).toFixed(1) + 'L', PAD.left-6, y+3);
-  }
-
-  const isUp = filtered[filtered.length-1].total_equity >= filtered[0].total_equity;
-  const lineCol = isUp ? themeColor('green') : themeColor('red');
-
-  // Drawdown shading between running-peak line and equity line
-  ctx.beginPath();
-  filtered.forEach((s,i) => { const x=xOf(i), y=yOf(peaks[i]); i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y); });
-  for (let i=filtered.length-1; i>=0; i--) ctx.lineTo(xOf(i), yOf(vals[i]));
-  ctx.closePath();
-  ctx.fillStyle = themeRGBA('red',0.08);
-  ctx.fill();
-
-  // High-water mark line — dashed
-  ctx.setLineDash([3,4]); ctx.strokeStyle = themeRGBA('amber',0.5); ctx.lineWidth = 1;
-  ctx.beginPath();
-  filtered.forEach((s,i) => { const x=xOf(i), y=yOf(peaks[i]); i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y); });
-  ctx.stroke(); ctx.setLineDash([]);
-
-  // Equity gradient fill under the line
-  const grad = ctx.createLinearGradient(0,PAD.top,0,PAD.top+cH);
-  grad.addColorStop(0, isUp ? themeRGBA('green',0.18) : themeRGBA('red',0.18));
-  grad.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.beginPath();
-  ctx.moveTo(xOf(0), yOf(vals[0]));
-  filtered.forEach((s,i) => { if (i>0) ctx.lineTo(xOf(i), yOf(vals[i])); });
-  ctx.lineTo(xOf(filtered.length-1), PAD.top+cH);
-  ctx.lineTo(xOf(0), PAD.top+cH);
-  ctx.closePath(); ctx.fillStyle = grad; ctx.fill();
-
-  // Equity line
-  ctx.beginPath(); ctx.strokeStyle = lineCol; ctx.lineWidth = 2.25; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-  ctx.moveTo(xOf(0), yOf(vals[0]));
-  filtered.forEach((s,i) => { if (i>0) ctx.lineTo(xOf(i), yOf(vals[i])); });
-  ctx.stroke();
-
-  // End dot with glow
-  const lx = xOf(filtered.length-1), ly = yOf(vals[vals.length-1]);
-  ctx.beginPath(); ctx.arc(lx,ly,7,0,Math.PI*2); ctx.fillStyle = lineCol+'33'; ctx.fill();
-  ctx.beginPath(); ctx.arc(lx,ly,3.5,0,Math.PI*2); ctx.fillStyle = lineCol; ctx.fill();
-
-  // X labels
-  const labelDiv = document.getElementById('invEqXLabels');
-  const step = Math.max(1, Math.floor(filtered.length/5));
-  const idxs = [];
-  for (let i=0; i<filtered.length; i+=step) idxs.push(i);
-  if (idxs[idxs.length-1] !== filtered.length-1) idxs.push(filtered.length-1);
-  // The history can hold two snapshots on one date, which printed every date
-  // twice ("4 Sept 4 Sept 11 Sept…"). A repeat keeps its slot, so the spacing
-  // still lines up with the chart, but is left blank.
-  let prevLbl = null;
-  labelDiv.innerHTML = idxs.map(i => {
-    const lbl = new Date(filtered[i].date).toLocaleDateString('en-IN',{day:'numeric',month:'short'});
-    const out = `<span>${lbl === prevLbl ? '' : lbl}</span>`;
-    prevLbl = lbl;
-    return out;
-  }).join('');
-
-  // Headline period-change (distinct from the "since inception" line above)
-  const first = filtered[0], latest = filtered[filtered.length-1];
-  const chg = latest.total_equity - first.total_equity;
-  const chgPct = first.total_equity ? (chg / first.total_equity * 100) : 0;
-  const chgEl = document.getElementById('invEqCurrentChange');
-  chgEl.style.color = chg >= 0 ? 'var(--green)' : 'var(--red)';
-  chgEl.textContent = (chg >= 0 ? '+' : '-') + '₹' + Math.round(Math.abs(chg)).toLocaleString('en-IN') +
-                       ' (' + (chgPct >= 0 ? '+' : '') + chgPct.toFixed(2) + '%) · ' + period;
-
-  // Interactive tooltip (mouse + touch)
-  const tooltip = document.getElementById('invEqTooltip');
-  function showTooltipAt(clientX) {
-    const rect = canvas.getBoundingClientRect();
-    const relX = clientX - rect.left;
-    let nearest = 0, best = Infinity;
-    filtered.forEach((s,i) => { const d = Math.abs(xOf(i) - relX); if (d < best) { best = d; nearest = i; } });
-    const s = filtered[nearest];
-    const d = new Date(s.date);
-    const realized   = s.realized_pnl_cumulative_inr != null ? s.realized_pnl_cumulative_inr : 0;
-    const unrealized = s.unrealized_pnl_inr != null ? s.unrealized_pnl_inr : 0;
-    tooltip.innerHTML = `<div class="tt-date">${d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</div>
-      <div class="tt-val">₹${Math.round(s.total_equity).toLocaleString('en-IN')}</div>
-      <div style="color:var(--muted);margin-top:2px">Realized ₹${Math.round(realized).toLocaleString('en-IN')} · Unrealized ₹${Math.round(unrealized).toLocaleString('en-IN')}</div>`;
-    const tx = Math.min(Math.max(xOf(nearest) - 60, 4), W - 170);
-    tooltip.style.left = tx + 'px';
-    tooltip.style.top  = (yOf(vals[nearest]) - 58) + 'px';
-    tooltip.classList.add('show');
-  }
-  canvas.onmousemove = e => showTooltipAt(e.clientX);
-  canvas.onmouseleave = () => tooltip.classList.remove('show');
-  canvas.ontouchstart = canvas.ontouchmove = e => { showTooltipAt(e.touches[0].clientX); };
-  canvas.ontouchend = () => setTimeout(() => tooltip.classList.remove('show'), 1200);
-}
-
-window.addEventListener('resize', () => {
-  if (_invEqSnapshots.length) drawInvEquityChart(_invEqSnapshots, _invEqPeriod);
-});
-
-// ─── INVESTMENT INDEX ─────────────────────────────────
-async function loadInvestment() {
-  try {
-
-    const text = await ghFetch('investment_index.json');
-    const data = JSON.parse(text);
-    // Build MJ Index symbol→rank lookup for cross-tab badge
-    allMjIndexMap = {};
-    (data.holdings || []).forEach(function(h) {
-      if (h.symbol) allMjIndexMap[h.symbol.toUpperCase()] = h.slot_rank;
-    });
-    renderInvestment(data);
-    loadInvEquity();
-  } catch(e) {
-    document.getElementById('invHoldingsGrid').innerHTML =
-      `<div class="error-state" style="grid-column:1/-1">⚠️ ${e.message}</div>`;
-  }
-}
-
-function renderInvestment(data) {
-  // ── Header KPIs ──
-  document.getElementById('invRebalanceDate').textContent =
-    `Last rebalance: ${data.rebalance_date || '—'}  ·  Generated: ${data.generated_at || '—'}`;
-
-  document.getElementById('invSlots').textContent =
-    `${data.filled_slots != null ? data.filled_slots : '—'}/${data.total_slots != null ? data.total_slots : 20}`;
-
-  document.getElementById('invDeployed').textContent =
-    data.total_deployed ? '₹' + fmtInr(data.total_deployed) : '—';
-
-  const pnlPct = data.total_pnl_pct != null ? data.total_pnl_pct : 0;
-  const pnlEl  = document.getElementById('invPnl');
-  pnlEl.textContent = (pnlPct >= 0 ? '+' : '') + pnlPct.toFixed(2) + '%';
-  pnlEl.style.color = pnlPct >= 0 ? 'var(--green)' : 'var(--red)';
-
-  // ── This rebalance changes ──
-  const entries = (data.this_rebalance && data.this_rebalance.entries) ? data.this_rebalance.entries : [];
-  const exits   = (data.this_rebalance && data.this_rebalance.exits) ? data.this_rebalance.exits : [];
-  if (entries.length || exits.length) {
-    document.getElementById('invChanges').style.display = '';
-    let html = '';
-    if (entries.length) {
-      html += `<span style="color:var(--green);font-family:var(--font-head);font-weight:700">🟢 Entries (${entries.length}):</span> `;
-      html += entries.map(e =>
-        `<b style="color:var(--text-strong)">${e.symbol}</b> #${e.rank} ₹${fmtPrice(e.entry_price)} ${invRsTag(e.rs_tier)}`
-      ).join('  ·  ');
-      html += '<br>';
-    }
-    if (exits.length) {
-      html += `<span style="color:var(--red);font-family:var(--font-head);font-weight:700">🔴 Exits (${exits.length}):</span> `;
-      html += exits.map(e =>
-        `<b style="color:var(--text-strong)">${e.symbol}</b> — ${e.reason} (${e.days_held}d)`
-      ).join('  ·  ');
-    }
-    document.getElementById('invChangesBody').innerHTML = html;
-  }
-
-  // ── Holdings grid ──
-  const grid = document.getElementById('invHoldingsGrid');
-  const holdings = data.holdings || [];
-  if (!holdings.length) {
-    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1">No holdings yet — first rebalance pending</div>';
-  } else {
-    grid.innerHTML = '';
-    holdings.forEach((c, i) => {
-      const card = buildInvCard(c, i);
-      grid.appendChild(card);
-    });
-  }
-
-  // ── Watchlist ──
-  const wgrid = document.getElementById('invWatchGrid');
-  const wl = data.watchlist_next10 || [];
-  if (!wl.length) {
-    wgrid.innerHTML = '<div class="empty-state" style="grid-column:1/-1">No watchlist data</div>';
-  } else {
-    wgrid.innerHTML = '';
-    wl.forEach(w => wgrid.appendChild(buildInvWatchCard(w)));
-  }
-
-  // ── Footer ──
-  const w = data.weights || {};
-  const trigW = (w.growth_trigger && w.growth_trigger !== '0%') ? ` · Growth trigger ${w.growth_trigger}` : '';
-  document.getElementById('invFooter').textContent =
-    `Weights: EPS ${w.eps_sequential || '45%'} · Sales ${w.sales_sequential || '20%'} · RS ${w.rs_composite || '20%'} · MCap ${w.market_cap || '15%'}${trigW}  ·  Rebalances bi-weekly every Friday 2 PM IST`;
-  invRenderCatalyst(data.catalyst);
 }
 
 // ─── IPO BREAKOUT SCANNER ───────────────────────────────
@@ -8851,200 +8755,6 @@ function filterIpo(filter, btn) {
              : filter === 'REJECTED' ? allIpoData.filter(r => IPO_REJECTED.includes(r.status))
              : allIpoData.filter(r => r.status === filter);
   renderIpo(data);
-}
-
-function buildInvCard(c, i) {
-  const div = document.createElement('div');
-  const above = c.above_21dma;
-  div.className = 'inv-card animate-in ' + (above === true ? 'above-dma' : above === false ? 'below-dma' : '');
-  div.style.animationDelay = (i * 0.03) + 's';
-
-  const pnlPct  = c.pct_move;
-  const pnlInr  = c.pnl_inr;
-  const sign    = pnlPct != null ? (pnlPct >= 0 ? '+' : '') : '';
-  const pnlCls  = pnlPct != null ? (pnlPct >= 0 ? 'pos' : 'neg') : '';
-  const pnlInrStr = pnlInr != null
-    ? ` (${pnlInr >= 0 ? '+' : '−'}₹${Math.abs(pnlInr).toLocaleString('en-IN')})`
-    : '';
-
-  const scoreW = Math.min(100, Math.max(4, c.composite_score || 0));
-
-  const dmaStr = above === true
-    ? `<span style="color:var(--green)">▲ ${c.pct_from_dma != null ? Math.abs(c.pct_from_dma).toFixed(1)+'% above' : 'Above'} 21DMA</span>`
-    : above === false
-    ? `<span style="color:var(--red)">▼ Below 21DMA</span>`
-    : `<span style="color:var(--muted)">21DMA N/A</span>`;
-
-  const qBadge = c.q_pending ? `<span class="inv-q-badge">⏳ Q PENDING</span>` : '';
-
-  const livePriceId = `invlive-${c.symbol}-${i}`;
-
-  div.innerHTML = `
-    <div class="rank-badge">#${c.slot_rank}</div>
-    <div class="inv-sym">${c.symbol}${qBadge}${ssBadge(c.symbol)}</div>
-    <div style="display:flex;align-items:center;gap:8px;margin-top:3px;flex-wrap:wrap;">
-      <span id="${livePriceId}" style="font-size:13px;color:var(--muted);font-family:var(--font-mono);">₹${fmtPrice(c.cmp)}</span>
-    </div>
-    <div style="font-size:10px;color:var(--muted);margin-top:4px;">
-      Score <span style="color:var(--accent);font-weight:700;font-family:var(--font-head)">${c.composite_score}</span>
-      &nbsp;·&nbsp;${invRsTag(c.rs_tier)}
-      &nbsp;·&nbsp;${dmaStr}
-    </div>
-    ${invTriggerLine(c)}
-    <div class="inv-score-bar-wrap"><div class="inv-score-bar" style="width:${scoreW}%"></div></div>
-    <div class="inv-meta-row">
-      <span>Entry ₹${fmtPrice(c.entry_price)} → <span id="${livePriceId}-entry">₹${fmtPrice(c.cmp)}</span></span>
-      <span class="${pnlCls}">${pnlPct != null ? sign + pnlPct.toFixed(2) + '%' : '—'}${pnlInrStr}</span>
-    </div>
-    <div class="inv-meta-row" style="margin-top:5px;">
-      <span>EPS <span style="color:var(--text)">${fmtPct(c.eps_seq)}</span> · Sales <span style="color:var(--text)">${fmtPct(c.sales_seq)}</span></span>
-      <span>${c.days_held != null ? c.days_held : 0}d held</span>
-    </div>
-    <div class="inv-meta-row" style="margin-top:4px;">
-      <span>21DMA ₹${fmtPrice(c.dma21)}</span>
-      <span>${c.mcap_cr ? '₹'+Math.round(c.mcap_cr).toLocaleString('en-IN')+'Cr' : ''}</span>
-    </div>
-    <div class="inv-meta-row" style="margin-top:4px;">
-      <span style="color:var(--muted)">Entry: ${c.entry_date || '—'}</span>
-    </div>
-  `;
-
-  // Fetch live price asynchronously and update price display
-  fetchLivePrice(c.symbol).then(live => {
-    if (!live) return;
-    const price    = live.price;
-    const dayPct   = (live.changePct != null) ? live.changePct
-      : (live.prev && live.prev > 0 ? ((price - live.prev) / live.prev * 100) : null);
-    const arrow    = dayPct == null ? '' : dayPct >= 0 ? '▲' : '▼';
-    const clr      = dayPct == null ? 'var(--muted)' : dayPct >= 0 ? 'var(--green)' : 'var(--red)';
-    const dayStr   = dayPct != null
-      ? `<span style="color:${clr};font-weight:700;margin-left:6px;">${arrow}${Math.abs(dayPct).toFixed(2)}%</span>`
-      : '';
-    const liveEl   = document.getElementById(livePriceId);
-    const entryEl  = document.getElementById(`${livePriceId}-entry`);
-    if (liveEl)  liveEl.innerHTML  =
-      `<span style="color:var(--text-strong);font-weight:700;font-family:var(--font-head);font-size:15px;">₹${price.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>${dayStr}`;
-    if (entryEl) entryEl.textContent =
-      `₹${price.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
-  });
-
-  return div;
-}
-
-function buildInvWatchCard(w) {
-  const div = document.createElement('div');
-  div.className = 'inv-watch-card';
-  const aboveStr = w.above_21dma === true
-    ? `<span style="color:var(--green);font-size:10px">▲ Above DMA</span>`
-    : w.above_21dma === false
-    ? `<span style="color:var(--red);font-size:10px">▼ Below DMA</span>`
-    : '';
-  const qBadge = w.q_pending ? ` <span class="inv-q-badge">⏳</span>` : '';
-  div.innerHTML = `
-    <div class="inv-watch-rank">#${w.slot_rank}</div>
-    <div>
-      <div class="inv-watch-sym">${w.symbol}${qBadge}</div>
-      <div style="font-size:10px;color:var(--muted);margin-top:2px;">${invRsTag(w.rs_tier)} · Score ${w.composite_score}${invTriggerShort(w)}</div>
-    </div>
-    <div style="text-align:right;">
-      <div style="font-size:12px;color:var(--text);font-family:var(--font-head);font-weight:700">${w.cmp ? '₹'+fmtPrice(w.cmp) : '—'}</div>
-      <div style="margin-top:3px">${aboveStr}</div>
-    </div>
-  `;
-  return div;
-}
-
-// ── Growth trigger (concall catalyst scores; investment_index.py "catalyst" block) ──
-// Cards from rebalances before the trigger existed carry no trigger_* fields:
-// every helper returns '' for those, so older JSON renders exactly as before.
-function invTriggerColor(score) {
-  if (score == null) return 'var(--muted)';
-  if (score >= 70) return 'var(--green)';
-  if (score >= 45) return 'var(--amber)';
-  return 'var(--red)';
-}
-
-function invTriggerLine(c) {
-  if (!c || c.trigger_status === undefined) return '';
-  const st = c.trigger_status;
-  let body;
-  if (c.trigger_override) {
-    body = `<span style="color:var(--red);font-weight:700">⚠ Trigger 0</span> <span style="color:var(--red)">${escHtmlInv(c.trigger_override)}</span>`;
-  } else if (st === 'scored') {
-    const bits = [`<span style="color:${invTriggerColor(c.trigger_score)};font-weight:700;font-family:var(--font-head)">🎯 Trigger ${c.trigger_score}</span>`];
-    if (c.trigger_grade) bits.push(`cred. <span style="color:var(--text)">${escHtmlInv(c.trigger_grade)}</span>`);
-    if (c.trigger_ob_to_rev != null) bits.push(`OB <span style="color:var(--text)">${c.trigger_ob_to_rev}×</span> rev`);
-    if (c.trigger_fwd_pe != null) bits.push(`fwd PE <span style="color:var(--text)">${c.trigger_fwd_pe}</span>`);
-    if (c.trigger_next && c.trigger_next.due) bits.push(`next: ${escHtmlInv(c.trigger_next.text)} (${escHtmlInv(c.trigger_next.due)})`);
-    body = bits.join(' · ');
-  } else if (st === 'no_disclosure' || st === 'stale') {
-    body = `<span style="color:var(--muted)">🎯 No recent concall or deck</span>`;
-  } else {
-    body = `<span style="color:var(--muted)">🎯 Concall not read yet</span>`;
-  }
-  const title = c.trigger_summary ? ` title="${escHtmlInv(c.trigger_summary)}"` : '';
-  const src = c.trigger_source ? ` · <a href="${escHtmlInv(c.trigger_source)}" target="_blank" rel="noopener" style="color:var(--accent)">call</a>` : '';
-  return `<div style="font-size:10px;color:var(--muted);margin-top:4px;line-height:1.5"${title}>${body}${src}</div>`;
-}
-
-function invTriggerShort(w) {
-  if (!w || w.trigger_status === undefined) return '';
-  if (w.trigger_override) return ` · <span style="color:var(--red)">⚠ trigger 0</span>`;
-  if (w.trigger_status !== 'scored') return '';
-  return ` · <span style="color:${invTriggerColor(w.trigger_score)}">🎯 ${w.trigger_score}${w.trigger_grade ? ' ' + escHtmlInv(w.trigger_grade) : ''}</span>`;
-}
-
-function invRenderCatalyst(cat) {
-  let el = document.getElementById('invCatalyst');
-  if (!cat) { if (el) el.style.display = 'none'; return; }
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'invCatalyst';
-    el.style.cssText = 'font-size:11px;color:var(--muted);text-align:center;margin-top:8px;line-height:1.6';
-    const footer = document.getElementById('invFooter');
-    footer.parentNode.insertBefore(el, footer.nextSibling);
-  }
-  el.style.display = '';
-  if (!cat.active) {
-    el.innerHTML = `🎯 Growth trigger <b style="color:var(--amber)">OFF</b> this rebalance — ${escHtmlInv(cat.reason || '')} (legacy weights)`;
-    return;
-  }
-  const step = cat.step_in_cycle ? ` (step-in ${cat.step_in_cycle})` : '';
-  const plus = (cat.in_top20_only_with_trigger || []).map(escHtmlInv).join(', ');
-  const minus = (cat.in_top20_only_without_trigger || []).map(escHtmlInv).join(', ');
-  const diff = (plus || minus)
-    ? `Top 20 vs old weights: <span style="color:var(--green)">+${plus || '—'}</span> / <span style="color:var(--red)">−${minus || '—'}</span>`
-    : 'Top 20 is the same as with the old weights';
-  el.innerHTML = `🎯 Growth trigger <b style="color:var(--green)">ON</b>${step} · concall scores as of ${escHtmlInv(cat.as_of || '—')} · ${diff}`;
-}
-
-function escHtmlInv(v) {
-  return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-}
-
-function invRsTag(tier) {
-  if (tier === 'HIGH') return `<span class="tag tag-rs-high">HIGH RS</span>`;
-  if (tier === 'MID')  return `<span class="tag tag-rs-mid">MID RS</span>`;
-  if (tier === 'LOW')  return `<span class="tag tag-rs-low">LOW RS</span>`;
-  return `<span style="color:var(--muted);font-size:10px">N/A</span>`;
-}
-
-function fmtPrice(v) {
-  if (v == null) return '—';
-  return parseFloat(v).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
-}
-
-function fmtPct(v) {
-  if (v == null) return '—';
-  const n = parseFloat(v);
-  return (n >= 0 ? '+' : '') + n.toFixed(1) + '%';
-}
-
-function fmtInr(v) {
-  if (v == null) return '—';
-  if (v >= 10000000) return (v/10000000).toFixed(1) + 'Cr';
-  if (v >= 100000)   return (v/100000).toFixed(1) + 'L';
-  return v.toLocaleString('en-IN');
 }
 
 loadAllData();   // data comes from this site's /api/data, nothing to configure
